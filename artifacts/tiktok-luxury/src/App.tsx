@@ -12,6 +12,7 @@ import Competitors from "@/pages/competitors";
 import Automation from "@/pages/automation";
 import Generator from "@/pages/generator";
 import UsagePage from "@/pages/usage";
+import CalendarPage from "@/pages/calendar";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ function Router() {
         <Route path="/competitors" component={Competitors} />
         <Route path="/automation" component={Automation} />
         <Route path="/generator" component={Generator} />
+        <Route path="/calendar" component={CalendarPage} />
         <Route path="/usage" component={UsagePage} />
         <Route component={NotFound} />
       </Switch>

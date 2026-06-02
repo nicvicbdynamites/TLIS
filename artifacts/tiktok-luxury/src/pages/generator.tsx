@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Sparkles, Copy, RefreshCw, Zap, Film, Lightbulb, MessageSquare, ChevronDown, AlertCircle } from "lucide-react";
+import { Sparkles, Copy, RefreshCw, Zap, Film, Lightbulb, MessageSquare, ChevronDown, AlertCircle, CalendarDays, Check } from "lucide-react";
 import { trackGeneration } from "@/lib/usage";
+import { loadCalendar, saveToCalendar, type CalendarPlatform, type PostType } from "@/lib/calendar";
 
 const niches = ["Quiet Luxury Lifestyle", "Dark Feminine Aesthetic", "Old Money Fashion", "Silent Wealth Signals", "Minimalist Wealth Flex", "Luxury Morning Routine", "Cinematic Travel", "Understated Opulence"];
 const styles = ["Cinematic & Slow", "Fast-Cut Energy", "POV Narrative", "Day-in-the-Life", "Transformation Reveal", "Talking Head", "B-Roll Montage", "Luxury Unboxing"];
@@ -80,6 +81,7 @@ export default function Generator() {
   const [copied, setCopied] = useState<number | null>(null);
   const [generated, setGenerated] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [savedToCalendar, setSavedToCalendar] = useState<Record<number, boolean>>({});
 
   const currentTab = tabConfig.find(t => t.id === activeTab)!;
 
@@ -126,6 +128,24 @@ export default function Generator() {
     navigator.clipboard.writeText(text);
     setCopied(i);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const handleSaveToCalendar = (i: number, text: string) => {
+    const tabToType: Record<Tab, PostType> = {
+      hooks: "hook", captions: "caption", prompts: "prompt", ideas: "idea",
+    };
+    const platformMap: Record<string, CalendarPlatform> = {
+      "TikTok": "TikTok",
+      "Instagram Reels": "Instagram Reels",
+      "YouTube Shorts": "YouTube Shorts",
+      "Pinterest Idea Pins": "Pinterest",
+    };
+    const calPlatform: CalendarPlatform = platformMap[form.platform] ?? "TikTok";
+    const today = new Date().toISOString().slice(0, 10);
+    const current = loadCalendar();
+    saveToCalendar(current, text, tabToType[activeTab], calPlatform, form.niche, today);
+    setSavedToCalendar(prev => ({ ...prev, [i]: true }));
+    setTimeout(() => setSavedToCalendar(prev => ({ ...prev, [i]: false })), 3000);
   };
 
   return (
@@ -327,13 +347,26 @@ export default function Generator() {
                           <span className="text-xs px-2 py-0.5 bg-muted/30 border border-muted/50 rounded-full text-muted-foreground">{form.tone}</span>
                           <span className="text-xs px-2 py-0.5 bg-muted/30 border border-muted/50 rounded-full text-muted-foreground">{form.platform}</span>
                         </div>
-                        <button
-                          onClick={() => handleCopy(i, text)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary transition-all duration-200 flex-shrink-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                          {copied === i ? "Copied!" : "Copy"}
-                        </button>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => handleSaveToCalendar(i, text)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition-all duration-200 ${
+                              savedToCalendar[i]
+                                ? "bg-chart-2/10 border-chart-2/30 text-chart-2"
+                                : "bg-muted/20 hover:bg-primary/10 border-border hover:border-primary/30 text-muted-foreground hover:text-primary"
+                            }`}
+                          >
+                            {savedToCalendar[i] ? <Check className="h-3 w-3" /> : <CalendarDays className="h-3 w-3" />}
+                            {savedToCalendar[i] ? "Saved!" : "Calendar"}
+                          </button>
+                          <button
+                            onClick={() => handleCopy(i, text)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary transition-all duration-200"
+                          >
+                            <Copy className="h-3 w-3" />
+                            {copied === i ? "Copied!" : "Copy"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}

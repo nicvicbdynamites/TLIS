@@ -8,6 +8,7 @@ import {
   Bot,
   Sparkles,
   Activity,
+  CalendarDays,
   Menu,
   X
 } from "lucide-react";
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/competitors", label: "Competitors", icon: Users },
   { href: "/automation", label: "AI Automation", icon: Bot },
   { href: "/generator", label: "AI Content Generator", icon: Sparkles },
+  { href: "/calendar", label: "Content Calendar", icon: CalendarDays },
   { href: "/usage", label: "Usage Tracker", icon: Activity },
 ];
 
