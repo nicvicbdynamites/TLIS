@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "TikTok Luxury Intelligence System"
+version = "1.0.0"
+id = "artifacts/tiktok-luxury"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21837
+
+[services.development]
+run = "pnpm --filter @workspace/tiktok-luxury run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tiktok-luxury", "run", "build" ]
+publicDir = "artifacts/tiktok-luxury/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21837"
+BASE_PATH = "/"
