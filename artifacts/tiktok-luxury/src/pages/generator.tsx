@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Sparkles, Copy, RefreshCw, Zap, Film, Lightbulb, MessageSquare, ChevronDown, AlertCircle } from "lucide-react";
+import { trackGeneration } from "@/lib/usage";
 
 const niches = ["Quiet Luxury Lifestyle", "Dark Feminine Aesthetic", "Old Money Fashion", "Silent Wealth Signals", "Minimalist Wealth Flex", "Luxury Morning Routine", "Cinematic Travel", "Understated Opulence"];
 const styles = ["Cinematic & Slow", "Fast-Cut Energy", "POV Narrative", "Day-in-the-Life", "Transformation Reveal", "Talking Head", "B-Roll Montage", "Luxury Unboxing"];
@@ -102,6 +103,7 @@ export default function Generator() {
       const results = await callGenerateAPI(tab, form);
       setOutputs(results);
       setGenerated(true);
+      trackGeneration(tab, form.niche, form.tone);
     } catch (err: any) {
       const message = err?.message ?? "Generation failed. Please try again.";
       setError(message);

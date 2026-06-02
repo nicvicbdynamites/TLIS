@@ -7,6 +7,7 @@ import {
   Users, 
   Bot,
   Sparkles,
+  Activity,
   Menu,
   X
 } from "lucide-react";
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/competitors", label: "Competitors", icon: Users },
   { href: "/automation", label: "AI Automation", icon: Bot },
   { href: "/generator", label: "AI Content Generator", icon: Sparkles },
+  { href: "/usage", label: "Usage Tracker", icon: Activity },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

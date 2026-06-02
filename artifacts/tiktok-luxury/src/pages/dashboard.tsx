@@ -1,5 +1,7 @@
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { TrendingUp, Eye, Heart, Star, ArrowRight, Clock } from "lucide-react";
+import { TrendingUp, Eye, Heart, Star, ArrowRight, Clock, Activity, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
+import { loadUsage, formatCost, type UsageData } from "@/lib/usage";
 
 const growthData = [
   { month: "Jan", followers: 180000, views: 2400000 },
@@ -56,6 +58,59 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   }
   return null;
 };
+
+function UsageSummaryWidget() {
+  const [usage, setUsage] = useState<UsageData | null>(null);
+
+  useEffect(() => {
+    setUsage(loadUsage());
+    const id = setInterval(() => setUsage(loadUsage()), 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (!usage) return null;
+
+  const dailyPct = Math.min((usage.daily.generations / usage.limits.dailyGenerations) * 100, 100);
+  const nearLimit = dailyPct >= 80;
+  const overLimit = dailyPct >= 100;
+
+  return (
+    <div className={`luxury-card p-5 ${overLimit ? "border-destructive/40" : nearLimit ? "border-chart-2/40" : ""}`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Activity className={`h-4 w-4 ${overLimit ? "text-destructive" : nearLimit ? "text-chart-2" : "text-primary"}`} />
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">AI Usage</h2>
+        </div>
+        <a href="/usage" className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
+          Details <ArrowRight className="h-3 w-3" />
+        </a>
+      </div>
+      <div className="space-y-3">
+        <div>
+          <div className="flex justify-between text-xs mb-1.5">
+            <span className="text-muted-foreground uppercase tracking-wider">Today</span>
+            <span className={`font-mono ${overLimit ? "text-destructive" : nearLimit ? "text-chart-2" : "text-primary"}`}>
+              {usage.daily.generations} / {usage.limits.dailyGenerations}
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${overLimit ? "bg-destructive" : nearLimit ? "bg-chart-2" : "bg-primary"}`}
+              style={{ width: `${dailyPct}%` }}
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-between pt-1 border-t border-border">
+          <div className="flex items-center gap-1.5">
+            <Zap className="h-3 w-3 text-primary opacity-60" />
+            <span className="text-xs text-muted-foreground">{usage.session.generations} this session</span>
+          </div>
+          <span className="text-xs font-mono text-primary">{formatCost(usage.allTime.cost)} spent</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const stats = [
@@ -173,6 +228,7 @@ export default function Dashboard() {
           </div>
         </div>
 
+        <div className="flex flex-col gap-6">
         <div className="luxury-card p-6">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground mb-6">Quick Actions</h2>
           <div className="space-y-3">
@@ -195,6 +251,8 @@ export default function Dashboard() {
               </button>
             ))}
           </div>
+        </div>
+        <UsageSummaryWidget />
         </div>
       </div>
     </div>
