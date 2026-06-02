@@ -10,6 +10,7 @@ import Hooks from "@/pages/hooks";
 import Prompts from "@/pages/prompts";
 import Competitors from "@/pages/competitors";
 import Automation from "@/pages/automation";
+import Generator from "@/pages/generator";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ function Router() {
         <Route path="/prompts" component={Prompts} />
         <Route path="/competitors" component={Competitors} />
         <Route path="/automation" component={Automation} />
+        <Route path="/generator" component={Generator} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
