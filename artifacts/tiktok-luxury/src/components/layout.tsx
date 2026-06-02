@@ -9,6 +9,7 @@ import {
   Sparkles,
   Activity,
   CalendarDays,
+  BarChart3,
   Menu,
   X
 } from "lucide-react";
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/automation", label: "AI Automation", icon: Bot },
   { href: "/generator", label: "AI Content Generator", icon: Sparkles },
   { href: "/calendar", label: "Content Calendar", icon: CalendarDays },
+  { href: "/analytics", label: "Analytics Intelligence", icon: BarChart3 },
   { href: "/usage", label: "Usage Tracker", icon: Activity },
 ];
 

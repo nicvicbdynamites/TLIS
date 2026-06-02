@@ -13,6 +13,7 @@ import Automation from "@/pages/automation";
 import Generator from "@/pages/generator";
 import UsagePage from "@/pages/usage";
 import CalendarPage from "@/pages/calendar";
+import AnalyticsPage from "@/pages/analytics";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ function Router() {
         <Route path="/automation" component={Automation} />
         <Route path="/generator" component={Generator} />
         <Route path="/calendar" component={CalendarPage} />
+        <Route path="/analytics" component={AnalyticsPage} />
         <Route path="/usage" component={UsagePage} />
         <Route component={NotFound} />
       </Switch>
