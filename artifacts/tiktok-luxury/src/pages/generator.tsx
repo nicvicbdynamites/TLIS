@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles, Copy, RefreshCw, Zap, Film, Lightbulb, MessageSquare, ChevronDown } from "lucide-react";
+import { Sparkles, Copy, RefreshCw, Zap, Film, Lightbulb, MessageSquare, ChevronDown, AlertCircle } from "lucide-react";
 
 const niches = ["Quiet Luxury Lifestyle", "Dark Feminine Aesthetic", "Old Money Fashion", "Silent Wealth Signals", "Minimalist Wealth Flex", "Luxury Morning Routine", "Cinematic Travel", "Understated Opulence"];
 const styles = ["Cinematic & Slow", "Fast-Cut Energy", "POV Narrative", "Day-in-the-Life", "Transformation Reveal", "Talking Head", "B-Roll Montage", "Luxury Unboxing"];
@@ -7,46 +7,21 @@ const tones = ["Aspirational", "Mysterious", "Authoritative", "Intimate", "Provo
 const platforms = ["TikTok", "Instagram Reels", "YouTube Shorts", "Pinterest Idea Pins"];
 const audiences = ["Luxury Aspirants 18–24", "Affluent Millennials 25–34", "High-Net-Worth 35–45", "Fashion-Forward Women", "Old Money Enthusiasts", "Minimalist Lifestyle Seekers"];
 
-const hookOutputs = [
-  "POV: You found the one brand that old money families have been quietly wearing for three generations — and nobody told you.",
-  "The moment I stopped buying expensive things and started buying the right things, everything changed.",
-  "I wore a $120 outfit in a five-star hotel lobby and the concierge whispered something I'll never forget.",
-  "Things that signal real wealth — none of them have logos.",
-  "She looked at my bag. Then at me. Then she said, 'I didn't think anyone else knew about that brand.'",
-];
-
-const captionOutputs = [
-  "Wealth is not a display. It's a frequency. The right people recognise it without a label in sight. #QuietLuxury #OldMoney #LuxuryLifestyle",
-  "There's a version of luxury that doesn't shout. It doesn't need to. This is that version. Save this for when you're ready to upgrade your eye. #SilentWealth #LuxuryAesthetic",
-  "Everything in this frame cost less than a designer handbag. Everything about this frame looks like it didn't. The secret is taste — and taste is free. #MinimalistLuxury #GRWM",
-  "Curated over time. Never purchased in a rush. This is what a wardrobe looks like when you stop following trends and start building a legacy. #CapsuleWardrobe #LuxuryFashion",
-  "The most expensive thing I own is my standard. Because once you raise it, you can't unknow what quality actually feels like. #LuxuryMindset #EliteCreator",
-];
-
-const promptOutputs = [
-  "Static shot: single product centered on aged white oak. One directional light from camera-left, long shadow extending right. No movement for 6 seconds. Color grade: pulled highlights, lifted blacks, warm midtones. The product is the entire story.",
-  "Follow shot from behind: subject in camel coat, slow walk through a rain-slicked European street. Practical lights reflected in puddles. Score: single cello note sustained. Cut to black at 12 seconds. Never show the face.",
-  "Overhead reveal: hands unwrap silk tissue paper in real time. The item is hidden until second 9. Extreme close-up. No sound except the rustle of fabric. Color grade: cream and charcoal only. End on freeze frame.",
-  "Hyperlapse through the lobby of a heritage hotel at 6am — before anyone arrives. Empty grandeur. Gold sconces. Marble floors. Overlaid text: 'This is what mornings look like when you've decided.' Score: lo-fi piano.",
-  "Mirror shot: subject adjusting a single detail — collar, cuff, ring — in silence. The reflection is slightly soft. Direct eye contact with camera for two full seconds before cutting. No narration. No text.",
-];
-
-const ideaOutputs = [
-  "Series: '30 Days of One Color' — document a month wearing only one color palette, revealing how constraint forces taste. Post daily with consistent framing and score.",
-  "Concept: 'The Brand Audit' — film yourself going through your wardrobe and removing everything with a visible logo. React to what's left. The reveal is the content.",
-  "Viral format: 'Things I stopped buying when I got serious' — list-style with B-roll of luxury alternatives. End with your three non-negotiable standards.",
-  "Evergreen idea: 'Dress like old money on £300/month' — monthly series documenting a specific budget with receipts, sourcing, and the final look side-by-side with archival references.",
-  "Trend response: recreate a famous archival fashion moment using only current accessible pieces. Educational narration over the B-roll comparison. High share intent.",
-];
-
 type Tab = "hooks" | "captions" | "prompts" | "ideas";
 
-const tabConfig: { id: Tab; label: string; icon: typeof Zap; outputPool: string[]; desc: string }[] = [
-  { id: "hooks", label: "Generate Hooks", icon: Zap, outputPool: hookOutputs, desc: "Opening lines engineered for maximum 3-second retention" },
-  { id: "captions", label: "Generate Captions", icon: MessageSquare, outputPool: captionOutputs, desc: "Platform-optimised captions that amplify reach" },
-  { id: "prompts", label: "Cinematic Prompts", icon: Film, outputPool: promptOutputs, desc: "Director-level visual directions for your shoot" },
-  { id: "ideas", label: "Viral Ideas", icon: Lightbulb, outputPool: ideaOutputs, desc: "Content concepts with proven viral architecture" },
+const tabConfig: { id: Tab; label: string; icon: typeof Zap; desc: string }[] = [
+  { id: "hooks", label: "Generate Hooks", icon: Zap, desc: "Opening lines engineered for maximum 3-second retention" },
+  { id: "captions", label: "Generate Captions", icon: MessageSquare, desc: "Platform-optimised captions that amplify reach" },
+  { id: "prompts", label: "Cinematic Prompts", icon: Film, desc: "Director-level visual directions for your shoot" },
+  { id: "ideas", label: "Viral Ideas", icon: Lightbulb, desc: "Content concepts with proven viral architecture" },
 ];
+
+const loadingPhrases: Record<Tab, string[]> = {
+  hooks: ["Scanning viral patterns…", "Calibrating retention triggers…", "Writing your opening line…"],
+  captions: ["Analysing platform signals…", "Crafting caption copy…", "Optimising hashtag reach…"],
+  prompts: ["Composing shot directions…", "Setting scene and light…", "Finalising cinematic brief…"],
+  ideas: ["Mining trend data…", "Architecting concept framework…", "Packaging your content idea…"],
+};
 
 function SelectField({ label, options, value, onChange }: { label: string; options: string[]; value: string; onChange: (v: string) => void }) {
   return (
@@ -68,6 +43,25 @@ function SelectField({ label, options, value, onChange }: { label: string; optio
   );
 }
 
+async function callGenerateAPI(
+  type: Tab,
+  form: { niche: string; style: string; tone: string; platform: string; audience: string }
+): Promise<string[]> {
+  const res = await fetch("/api/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, ...form }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as any).error ?? `Server error ${res.status}`);
+  }
+
+  const data = await res.json() as { outputs: string[] };
+  return data.outputs;
+}
+
 export default function Generator() {
   const [form, setForm] = useState({
     niche: niches[0],
@@ -80,23 +74,48 @@ export default function Generator() {
   const [activeTab, setActiveTab] = useState<Tab>("hooks");
   const [outputs, setOutputs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingPhrase, setLoadingPhrase] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
   const [generated, setGenerated] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const currentTab = tabConfig.find(t => t.id === activeTab)!;
 
-  const handleGenerate = (tab: Tab) => {
+  const handleGenerate = async (tab: Tab, isRetry = false) => {
     setActiveTab(tab);
     setLoading(true);
+    setError(null);
     setGenerated(false);
     setOutputs([]);
-    const pool = tabConfig.find(t => t.id === tab)!.outputPool;
-    setTimeout(() => {
-      const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, 3);
-      setOutputs(shuffled);
-      setLoading(false);
+    if (!isRetry) setRetryCount(0);
+
+    const phrases = loadingPhrases[tab];
+    let phraseIndex = 0;
+    setLoadingPhrase(phrases[0]);
+    const phraseInterval = setInterval(() => {
+      phraseIndex = (phraseIndex + 1) % phrases.length;
+      setLoadingPhrase(phrases[phraseIndex]);
+    }, 1200);
+
+    try {
+      const results = await callGenerateAPI(tab, form);
+      setOutputs(results);
       setGenerated(true);
-    }, 1400);
+    } catch (err: any) {
+      const message = err?.message ?? "Generation failed. Please try again.";
+      setError(message);
+      setGenerated(false);
+    } finally {
+      clearInterval(phraseInterval);
+      setLoading(false);
+      setLoadingPhrase("");
+    }
+  };
+
+  const handleRetry = () => {
+    setRetryCount(c => c + 1);
+    handleGenerate(activeTab, true);
   };
 
   const handleRefresh = () => handleGenerate(activeTab);
@@ -153,15 +172,16 @@ export default function Generator() {
             {tabConfig.map(tab => (
               <button
                 key={tab.id}
-                onClick={() => handleGenerate(tab.id)}
-                className={`flex flex-col items-start gap-2 p-4 rounded-xl border transition-all duration-200 text-left group ${
-                  activeTab === tab.id && generated
-                    ? "bg-primary/10 border-primary/40 text-primary"
+                onClick={() => !loading && handleGenerate(tab.id)}
+                disabled={loading}
+                className={`flex flex-col items-start gap-2 p-4 rounded-xl border transition-all duration-200 text-left group disabled:opacity-50 disabled:cursor-not-allowed ${
+                  activeTab === tab.id && (generated || error)
+                    ? "bg-primary/10 border-primary/40"
                     : "bg-card border-card-border hover:border-primary/30 hover:bg-primary/5"
                 }`}
               >
-                <tab.icon className={`h-4 w-4 ${activeTab === tab.id && generated ? "text-primary" : "text-muted-foreground group-hover:text-primary transition-colors"}`} />
-                <span className="text-xs font-semibold uppercase tracking-wide leading-tight">
+                <tab.icon className={`h-4 w-4 ${activeTab === tab.id && (generated || error) ? "text-primary" : "text-muted-foreground group-hover:text-primary transition-colors"}`} />
+                <span className={`text-xs font-semibold uppercase tracking-wide leading-tight ${activeTab === tab.id && (generated || error) ? "text-primary" : "text-foreground"}`}>
                   {tab.label}
                 </span>
               </button>
@@ -172,18 +192,18 @@ export default function Generator() {
         {/* Output Panel */}
         <div className="lg:col-span-3">
           <div className="luxury-card min-h-[480px] flex flex-col">
-            <div className="p-5 border-b border-border flex items-center justify-between">
-              <div>
+            <div className="p-5 border-b border-border flex items-center justify-between gap-3">
+              <div className="min-w-0">
                 <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground flex items-center gap-2">
-                  <currentTab.icon className="h-4 w-4 text-primary" />
-                  {currentTab.label.replace("Generate ", "")}
+                  <currentTab.icon className="h-4 w-4 text-primary flex-shrink-0" />
+                  <span className="truncate">{currentTab.label.replace("Generate ", "")}</span>
                 </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">{currentTab.desc}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">{currentTab.desc}</p>
               </div>
-              {generated && !loading && (
+              {generated && !loading && !error && (
                 <button
                   onClick={handleRefresh}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border border-border hover:border-primary/40 hover:text-primary text-muted-foreground transition-all duration-200"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border border-border hover:border-primary/40 hover:text-primary text-muted-foreground transition-all duration-200 flex-shrink-0"
                 >
                   <RefreshCw className="h-3 w-3" />
                   Regenerate
@@ -194,24 +214,21 @@ export default function Generator() {
             <div className="flex-1 p-5">
               {/* Loading state */}
               {loading && (
-                <div className="h-full flex flex-col items-center justify-center gap-4">
+                <div className="h-full min-h-64 flex flex-col items-center justify-center gap-5">
                   <div className="relative">
-                    <div className="h-12 w-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+                    <div className="h-14 w-14 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
                     <Sparkles className="absolute inset-0 m-auto h-5 w-5 text-primary" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm text-foreground font-medium">Intelligence engine running…</p>
-                    <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest">Calibrating to your brief</p>
+                    <p className="text-sm text-foreground font-medium tabular-nums min-w-[220px]">{loadingPhrase}</p>
+                    <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest">GPT-4o mini · {form.niche}</p>
                   </div>
-                  <div className="flex gap-1.5 mt-2">
+                  <div className="flex gap-1.5">
                     {[0, 1, 2].map(i => (
-                      <div
-                        key={i}
-                        className="h-1.5 w-8 bg-primary/20 rounded-full overflow-hidden"
-                      >
+                      <div key={i} className="h-1.5 w-10 bg-primary/15 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primary rounded-full animate-pulse"
-                          style={{ animationDelay: `${i * 200}ms` }}
+                          style={{ animationDelay: `${i * 250}ms` }}
                         />
                       </div>
                     ))}
@@ -219,9 +236,42 @@ export default function Generator() {
                 </div>
               )}
 
+              {/* Error state */}
+              {!loading && error && (
+                <div className="h-full min-h-64 flex flex-col items-center justify-center gap-4 text-center px-6">
+                  <div className="h-14 w-14 rounded-full bg-destructive/10 border border-destructive/30 flex items-center justify-center">
+                    <AlertCircle className="h-6 w-6 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="text-foreground font-serif font-semibold">Generation failed</p>
+                    <p className="text-muted-foreground text-sm mt-1 max-w-xs">{error}</p>
+                    {retryCount < 3 && (
+                      <p className="text-xs text-muted-foreground/60 mt-1">Attempt {retryCount + 1} of 3</p>
+                    )}
+                  </div>
+                  <div className="flex gap-3">
+                    {retryCount < 3 && (
+                      <button
+                        onClick={handleRetry}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        Retry
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setError(null)}
+                      className="px-4 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition-all"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Empty state */}
-              {!loading && !generated && (
-                <div className="h-full flex flex-col items-center justify-center gap-4 text-center px-8">
+              {!loading && !error && !generated && (
+                <div className="h-full min-h-64 flex flex-col items-center justify-center gap-4 text-center px-8">
                   <div className="h-16 w-16 rounded-full bg-primary/5 border border-primary/20 flex items-center justify-center">
                     <Sparkles className="h-7 w-7 text-primary/60" />
                   </div>
@@ -245,31 +295,27 @@ export default function Generator() {
               )}
 
               {/* Output cards */}
-              {!loading && generated && outputs.length > 0 && (
+              {!loading && !error && generated && outputs.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="live-dot" />
                     <p className="text-xs text-primary uppercase tracking-widest">
-                      {outputs.length} outputs generated for {form.niche}
+                      {outputs.length} outputs · {form.niche} · {form.tone}
                     </p>
                   </div>
                   {outputs.map((text, i) => (
                     <div
-                      key={i}
-                      className="luxury-card p-5 group"
+                      key={`${activeTab}-${i}`}
+                      className="luxury-card p-5 group animate-in fade-in slide-in-from-bottom-2 duration-500"
                       style={{ animationDelay: `${i * 100}ms` }}
                     >
-                      <div className="flex items-start gap-3 justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono text-primary/60 uppercase tracking-widest">
-                            Output {String(i + 1).padStart(2, "0")}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-primary font-mono">
-                            {Math.floor(Math.random() * 15 + 80)}% match
-                          </span>
-                        </div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-mono text-primary/60 uppercase tracking-widest">
+                          Output {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <span className="text-xs px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-primary font-mono">
+                          GPT-4o mini
+                        </span>
                       </div>
 
                       <p className="text-sm text-foreground leading-relaxed">{text}</p>
