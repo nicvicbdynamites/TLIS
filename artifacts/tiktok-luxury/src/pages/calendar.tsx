@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ChevronLeft, ChevronRight, Plus, X, Clock, Trash2,
   Star, CalendarDays, CheckCircle2, Flame, Edit3, Check,
@@ -9,6 +9,11 @@ import {
   AI_WINDOWS, STATUS_CONFIG, PLATFORM_ABBR, NICHES, PLATFORMS, STATUSES,
   type CalendarPost, type PostStatus, type CalendarPlatform, type PostType,
 } from "@/lib/calendar";
+import {
+  syncCalendarWithCloud, upsertPostToCloud, deletePostFromCloud,
+} from "@/lib/supabase";
+import { useSync } from "@/hooks/useSync";
+import { SyncStatusBar } from "@/components/SyncStatus";
 
 const ALL = "All";
 
@@ -265,6 +270,22 @@ export default function CalendarPage() {
   const [activePlatformTab, setActivePlatformTab] = useState<CalendarPlatform>("TikTok");
   const [inlineEditId, setInlineEditId] = useState<string | null>(null);
   const [inlineNote, setInlineNote] = useState("");
+  const sync = useSync();
+
+  // Cloud sync on mount — merge local + cloud, cloud wins on ID conflicts
+  useEffect(() => {
+    sync.setSyncing();
+    syncCalendarWithCloud(posts).then(({ posts: merged, synced }) => {
+      if (synced) {
+        setPosts(merged);
+        saveCalendar(merged);
+        sync.setSynced();
+      } else {
+        sync.setError("Cloud unavailable — local data in use");
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const weekDays = getWeekDays(weekOffset);
   const weekRange = formatWeekRange(weekDays);
@@ -310,6 +331,9 @@ export default function CalendarPage() {
     if (dragId && day !== posts.find(p => p.id === dragId)?.scheduledDay) {
       const updated = movePost(posts, dragId, day);
       setPosts(updated);
+      // Optimistic cloud sync
+      const moved = updated.find(p => p.id === dragId);
+      if (moved) upsertPostToCloud(moved).catch(() => null);
     }
     setDragId(null);
     setDragOverDay(null);
@@ -321,11 +345,15 @@ export default function CalendarPage() {
   };
 
   const handleStatusChange = (id: string, status: PostStatus) => {
-    setPosts(updatePost(posts, id, { status }));
+    const updated = updatePost(posts, id, { status });
+    setPosts(updated);
+    const changed = updated.find(p => p.id === id);
+    if (changed) upsertPostToCloud(changed).catch(() => null);
   };
 
   const handleDelete = (id: string) => {
     setPosts(deletePost(posts, id));
+    deletePostFromCloud(id).catch(() => null);
   };
 
   const handleSaveNew = (form: ReturnType<typeof Object.fromEntries> | any) => {
@@ -340,6 +368,9 @@ export default function CalendarPage() {
       scheduledTime: form.scheduledTime || null,
     });
     setPosts(updated);
+    // Sync the newest post to cloud
+    const newest = updated[updated.length - 1];
+    if (newest) upsertPostToCloud(newest).catch(() => null);
     setShowModal(false);
     setEditingPost(null);
   };
@@ -362,6 +393,8 @@ export default function CalendarPage() {
       scheduledTime: form.scheduledTime || null,
     });
     setPosts(updated);
+    const changed = updated.find(p => p.id === editingPost!.id);
+    if (changed) upsertPostToCloud(changed).catch(() => null);
     setShowModal(false);
     setEditingPost(null);
   };

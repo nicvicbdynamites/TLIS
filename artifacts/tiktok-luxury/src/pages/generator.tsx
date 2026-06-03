@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Sparkles, Copy, RefreshCw, Zap, Film, Lightbulb, MessageSquare, ChevronDown, AlertCircle, CalendarDays, Check } from "lucide-react";
 import { trackGeneration } from "@/lib/usage";
 import { loadCalendar, saveToCalendar, type CalendarPlatform, type PostType } from "@/lib/calendar";
+import { insertGenerationToCloud } from "@/lib/supabase";
 
 const niches = ["Quiet Luxury Lifestyle", "Dark Feminine Aesthetic", "Old Money Fashion", "Silent Wealth Signals", "Minimalist Wealth Flex", "Luxury Morning Routine", "Cinematic Travel", "Understated Opulence"];
 const styles = ["Cinematic & Slow", "Fast-Cut Energy", "POV Narrative", "Day-in-the-Life", "Transformation Reveal", "Talking Head", "B-Roll Montage", "Luxury Unboxing"];
@@ -105,7 +106,11 @@ export default function Generator() {
       const results = await callGenerateAPI(tab, form);
       setOutputs(results);
       setGenerated(true);
-      trackGeneration(tab, form.niche, form.tone);
+      const usageData = trackGeneration(tab, form.niche, form.tone);
+      // Async cloud sync — non-blocking, localStorage already updated
+      if (usageData.history.length > 0) {
+        insertGenerationToCloud(usageData.history[0]).catch(() => null);
+      }
     } catch (err: any) {
       const message = err?.message ?? "Generation failed. Please try again.";
       setError(message);

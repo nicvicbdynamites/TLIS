@@ -16,6 +16,8 @@ import {
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { SyncStatusBar } from "@/components/SyncStatus";
+import { useSync } from "@/hooks/useSync";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -33,6 +35,7 @@ const navItems = [
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sync = useSync();
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row overflow-hidden selection:bg-primary/30">
@@ -94,7 +97,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="p-4 mt-auto border-t border-sidebar-border bg-black/20">
+        <div className="p-4 mt-auto border-t border-sidebar-border bg-black/20 space-y-3">
+          <SyncStatusBar
+            status={sync.status}
+            lastSynced={sync.lastSynced}
+            isConnected={sync.isConnected}
+            error={sync.error}
+          />
           <div className="flex items-center gap-3 px-2 py-2">
             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/80 to-primary/20 p-[1px]">
               <div className="h-full w-full rounded-full bg-sidebar flex items-center justify-center">

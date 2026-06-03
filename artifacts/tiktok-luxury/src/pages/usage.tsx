@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar,
 } from "recharts";
@@ -12,6 +12,7 @@ import {
   TYPE_LABELS, TIER_LABELS,
   type UsageData, type TierType, type GenerationType,
 } from "@/lib/usage";
+import { syncGenerationsWithCloud } from "@/lib/supabase";
 
 const TYPE_ICONS: Record<GenerationType, typeof Zap> = {
   hooks: Zap,
@@ -104,11 +105,33 @@ export default function UsagePage() {
   const [customDailyLimit, setCustomDailyLimit] = useState(String(data.limits.dailyGenerations));
 
   const reload = useCallback(() => setData(loadUsage()), []);
+  const didSyncRef = useRef(false);
 
   useEffect(() => {
     const id = setInterval(reload, 3000);
     return () => clearInterval(id);
   }, [reload]);
+
+  // Cloud sync on mount — pull history from Supabase, merge with local
+  useEffect(() => {
+    if (didSyncRef.current) return;
+    didSyncRef.current = true;
+    const current = loadUsage();
+    syncGenerationsWithCloud(current.history).then(({ history, synced }) => {
+      if (synced && history.length > current.history.length) {
+        // Rebuild allTime totals from merged history
+        const allTimeCost = history.reduce((s, e) => s + e.cost, 0);
+        setData(prev => ({
+          ...prev,
+          history,
+          allTime: {
+            generations: history.length,
+            cost: allTimeCost,
+          },
+        }));
+      }
+    }).catch(() => null);
+  }, []);
 
   const overDaily = isOverDailyLimit(data);
   const nearDaily = isNearDailyLimit(data);
