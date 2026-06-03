@@ -10,6 +10,7 @@ import {
   Activity,
   CalendarDays,
   BarChart3,
+  Database,
   Menu,
   X
 } from "lucide-react";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/competitors", label: "Competitors", icon: Users },
   { href: "/automation", label: "AI Automation", icon: Bot },
   { href: "/generator", label: "AI Content Generator", icon: Sparkles },
+  { href: "/vault", label: "Intelligence Vault", icon: Database },
   { href: "/calendar", label: "Content Calendar", icon: CalendarDays },
   { href: "/analytics", label: "Analytics Intelligence", icon: BarChart3 },
   { href: "/usage", label: "Usage Tracker", icon: Activity },

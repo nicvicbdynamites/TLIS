@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Sparkles, Copy, RefreshCw, Zap, Film, Lightbulb, MessageSquare, ChevronDown, AlertCircle, CalendarDays, Check } from "lucide-react";
+import { Sparkles, Copy, RefreshCw, Zap, Film, Lightbulb, MessageSquare, ChevronDown, AlertCircle, CalendarDays, Check, Database } from "lucide-react";
 import { trackGeneration } from "@/lib/usage";
 import { loadCalendar, saveToCalendar, type CalendarPlatform, type PostType } from "@/lib/calendar";
-import { insertGenerationToCloud } from "@/lib/supabase";
+import { insertGenerationToCloud, upsertVaultEntryToCloud } from "@/lib/supabase";
+import { loadVault, saveVault, addVaultEntry, createVaultEntry, type ContentType, type VaultPlatform } from "@/lib/vault";
 
 const niches = ["Quiet Luxury Lifestyle", "Dark Feminine Aesthetic", "Old Money Fashion", "Silent Wealth Signals", "Minimalist Wealth Flex", "Luxury Morning Routine", "Cinematic Travel", "Understated Opulence"];
 const styles = ["Cinematic & Slow", "Fast-Cut Energy", "POV Narrative", "Day-in-the-Life", "Transformation Reveal", "Talking Head", "B-Roll Montage", "Luxury Unboxing"];
@@ -83,6 +84,7 @@ export default function Generator() {
   const [generated, setGenerated] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [savedToCalendar, setSavedToCalendar] = useState<Record<number, boolean>>({});
+  const [savedToVault, setSavedToVault] = useState<Record<number, boolean>>({});
 
   const currentTab = tabConfig.find(t => t.id === activeTab)!;
 
@@ -133,6 +135,33 @@ export default function Generator() {
     navigator.clipboard.writeText(text);
     setCopied(i);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const handleSaveToVault = (i: number, text: string) => {
+    const tabToType: Record<Tab, ContentType> = {
+      hooks: "hook", captions: "caption", prompts: "script", ideas: "idea",
+    };
+    const platformMap: Record<string, VaultPlatform> = {
+      "TikTok": "TikTok",
+      "Instagram Reels": "Instagram",
+      "YouTube Shorts": "YouTube",
+      "Pinterest Idea Pins": "Pinterest",
+    };
+    const entry = createVaultEntry({
+      content: text,
+      type: tabToType[activeTab],
+      platform: platformMap[form.platform] ?? "TikTok",
+      niche: form.niche,
+      tone: form.tone,
+      source: "generator",
+      model: "gpt-4o-mini",
+      prompt: `Type: ${activeTab} | Niche: ${form.niche} | Style: ${form.style} | Tone: ${form.tone} | Platform: ${form.platform} | Audience: ${form.audience}`,
+    });
+    const current = loadVault();
+    saveVault(addVaultEntry(current, entry));
+    upsertVaultEntryToCloud(entry).catch(() => null);
+    setSavedToVault(prev => ({ ...prev, [i]: true }));
+    setTimeout(() => setSavedToVault(prev => ({ ...prev, [i]: false })), 3000);
   };
 
   const handleSaveToCalendar = (i: number, text: string) => {
@@ -353,6 +382,17 @@ export default function Generator() {
                           <span className="text-xs px-2 py-0.5 bg-muted/30 border border-muted/50 rounded-full text-muted-foreground">{form.platform}</span>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => handleSaveToVault(i, text)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition-all duration-200 ${
+                              savedToVault[i]
+                                ? "bg-primary/15 border-primary/40 text-primary"
+                                : "bg-muted/20 hover:bg-primary/10 border-border hover:border-primary/30 text-muted-foreground hover:text-primary"
+                            }`}
+                          >
+                            {savedToVault[i] ? <Check className="h-3 w-3" /> : <Database className="h-3 w-3" />}
+                            {savedToVault[i] ? "Vaulted!" : "Vault"}
+                          </button>
                           <button
                             onClick={() => handleSaveToCalendar(i, text)}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition-all duration-200 ${

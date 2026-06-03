@@ -142,3 +142,151 @@ CREATE TRIGGER set_calendar_posts_updated_at
 --
 -- CREATE POLICY "users_own_outputs" ON public.saved_outputs
 --   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- ──────────────────────────────────────────────
+--  TABLE: vault_collections
+--  User-created folders for organising vault entries
+-- ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.vault_collections (
+  id          TEXT        PRIMARY KEY,
+  device_id   TEXT        NOT NULL DEFAULT '',
+  user_id     UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
+  name        TEXT        NOT NULL DEFAULT '',
+  description TEXT        NOT NULL DEFAULT '',
+  color       TEXT        NOT NULL DEFAULT 'gold'
+                          CHECK (color IN ('gold','amber','rose','indigo','emerald','slate')),
+  icon        TEXT        NOT NULL DEFAULT 'folder',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ──────────────────────────────────────────────
+--  TABLE: vault_entries
+--  Permanently saved AI-generated content with full metadata,
+--  AI scoring, semantic search preparation, and team-ready structure.
+--
+--  Vector-DB readiness:
+--    The search_keywords TEXT[] column seeds keyword extraction.
+--    When pgvector is available, add:
+--      embedding VECTOR(1536)
+--    and populate it with OpenAI ada-002 embeddings of the content field.
+--    Then replace keyword search with: ORDER BY embedding <=> query_embedding
+-- ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.vault_entries (
+  id               TEXT          PRIMARY KEY,
+  device_id        TEXT          NOT NULL DEFAULT '',
+  user_id          UUID          REFERENCES auth.users(id) ON DELETE SET NULL,
+
+  -- Content
+  title            TEXT          NOT NULL DEFAULT '',
+  content          TEXT          NOT NULL DEFAULT '',
+  prompt           TEXT          NOT NULL DEFAULT '',
+  prompt_template  TEXT          NOT NULL DEFAULT '',
+
+  -- Classification
+  type             TEXT          NOT NULL DEFAULT 'other'
+                                 CHECK (type IN ('hook','caption','script','idea','hashtags','thread','bio','ad','other')),
+  niche            TEXT          NOT NULL DEFAULT '',
+  platform         TEXT          NOT NULL DEFAULT 'TikTok',
+  tone             TEXT          NOT NULL DEFAULT '',
+
+  -- AI metadata
+  source           TEXT          NOT NULL DEFAULT 'generator'
+                                 CHECK (source IN ('generator','manual','import')),
+  model            TEXT          NOT NULL DEFAULT 'gpt-4o-mini',
+
+  -- Scoring
+  ai_score         SMALLINT      NOT NULL DEFAULT 0 CHECK (ai_score BETWEEN 0 AND 100),
+  viral_potential  SMALLINT      NOT NULL DEFAULT 0 CHECK (viral_potential BETWEEN 0 AND 100),
+
+  -- User interaction
+  is_favourite     BOOLEAN       NOT NULL DEFAULT FALSE,
+  tags             TEXT[]        NOT NULL DEFAULT '{}',
+  collection_id    TEXT          REFERENCES public.vault_collections(id) ON DELETE SET NULL,
+  views            INTEGER       NOT NULL DEFAULT 0,
+
+  -- Semantic search preparation (vector-DB-ready)
+  search_keywords  TEXT[]        NOT NULL DEFAULT '{}',
+  embedding_ready  BOOLEAN       NOT NULL DEFAULT FALSE,
+  -- Future: embedding VECTOR(1536),  -- add when pgvector is enabled
+
+  -- Campaign / team structure
+  campaign_id      TEXT,
+  -- Future: team_id TEXT REFERENCES public.teams(id) ON DELETE SET NULL,
+
+  -- Timestamps
+  created_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  last_accessed    TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+-- ──────────────────────────────────────────────
+--  ROW LEVEL SECURITY — vault tables
+-- ──────────────────────────────────────────────
+
+ALTER TABLE public.vault_collections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vault_entries      ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "pre_auth_all" ON public.vault_collections
+  FOR ALL USING (true) WITH CHECK (true);
+
+CREATE POLICY "pre_auth_all" ON public.vault_entries
+  FOR ALL USING (true) WITH CHECK (true);
+
+-- ──────────────────────────────────────────────
+--  INDEXES — vault tables
+-- ──────────────────────────────────────────────
+
+CREATE INDEX IF NOT EXISTS idx_vault_collections_device_id
+  ON public.vault_collections(device_id);
+
+CREATE INDEX IF NOT EXISTS idx_vault_entries_device_id
+  ON public.vault_entries(device_id);
+
+CREATE INDEX IF NOT EXISTS idx_vault_entries_created_at
+  ON public.vault_entries(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_vault_entries_is_favourite
+  ON public.vault_entries(device_id, is_favourite) WHERE is_favourite = TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_vault_entries_ai_score
+  ON public.vault_entries(ai_score DESC);
+
+CREATE INDEX IF NOT EXISTS idx_vault_entries_type
+  ON public.vault_entries(device_id, type);
+
+CREATE INDEX IF NOT EXISTS idx_vault_entries_collection
+  ON public.vault_entries(collection_id) WHERE collection_id IS NOT NULL;
+
+-- GIN index for fast array search on tags and keywords
+CREATE INDEX IF NOT EXISTS idx_vault_entries_tags
+  ON public.vault_entries USING GIN (tags);
+
+CREATE INDEX IF NOT EXISTS idx_vault_entries_search_keywords
+  ON public.vault_entries USING GIN (search_keywords);
+
+-- ──────────────────────────────────────────────
+--  UPDATED_AT TRIGGER — vault_entries
+-- ──────────────────────────────────────────────
+
+DROP TRIGGER IF EXISTS set_vault_entries_updated_at ON public.vault_entries;
+CREATE TRIGGER set_vault_entries_updated_at
+  BEFORE UPDATE ON public.vault_entries
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ──────────────────────────────────────────────
+--  UPGRADE PATH: vault_entries auth policies
+-- ──────────────────────────────────────────────
+-- DROP POLICY "pre_auth_all" ON public.vault_collections;
+-- DROP POLICY "pre_auth_all" ON public.vault_entries;
+--
+-- CREATE POLICY "users_own_vault_collections" ON public.vault_collections
+--   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+--
+-- CREATE POLICY "users_own_vault_entries" ON public.vault_entries
+--   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+--
+-- FUTURE: team_member_access policy for collaboration:
+-- CREATE POLICY "team_vault_access" ON public.vault_entries
+--   FOR SELECT USING (
+--     team_id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid())
+--   );

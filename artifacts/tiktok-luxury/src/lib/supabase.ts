@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { CalendarPost } from "./calendar";
 import type { HistoryEntry } from "./usage";
+import type { VaultEntry, VaultCollection, VaultState } from "./vault";
 
 // ──────────────────────────────────────────────
 //  Client initialisation
@@ -352,4 +353,230 @@ export async function fetchSavedOutputsFromCloud(): Promise<SavedOutput[]> {
     console.error("[TLIS] fetchSavedOutputsFromCloud:", err);
     return [];
   }
+}
+
+// ──────────────────────────────────────────────
+//  Intelligence Vault — cloud operations
+//  Tables: vault_entries, vault_collections
+// ──────────────────────────────────────────────
+
+export async function upsertVaultEntryToCloud(entry: VaultEntry): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from("vault_entries").upsert(
+      vaultEntryToRow(entry),
+      { onConflict: "id" }
+    );
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("[TLIS] upsertVaultEntryToCloud:", err);
+    return false;
+  }
+}
+
+export async function upsertManyVaultEntriesToCloud(entries: VaultEntry[]): Promise<boolean> {
+  if (!supabase || entries.length === 0) return false;
+  try {
+    const { error } = await supabase.from("vault_entries").upsert(
+      entries.map(vaultEntryToRow),
+      { onConflict: "id" }
+    );
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("[TLIS] upsertManyVaultEntriesToCloud:", err);
+    return false;
+  }
+}
+
+export async function fetchVaultEntriesFromCloud(): Promise<VaultEntry[]> {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from("vault_entries")
+      .select("*")
+      .eq("device_id", getDeviceId())
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (error) throw error;
+    return (data ?? []).map(rowToVaultEntry);
+  } catch (err) {
+    console.error("[TLIS] fetchVaultEntriesFromCloud:", err);
+    return [];
+  }
+}
+
+export async function deleteVaultEntryFromCloud(id: string): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from("vault_entries").delete().eq("id", id);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("[TLIS] deleteVaultEntryFromCloud:", err);
+    return false;
+  }
+}
+
+export async function upsertVaultCollectionToCloud(col: VaultCollection): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from("vault_collections").upsert(
+      {
+        id:          col.id,
+        device_id:   getDeviceId(),
+        name:        col.name,
+        description: col.description,
+        color:       col.color,
+        icon:        col.icon,
+        created_at:  col.createdAt,
+      },
+      { onConflict: "id" }
+    );
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("[TLIS] upsertVaultCollectionToCloud:", err);
+    return false;
+  }
+}
+
+export async function fetchVaultCollectionsFromCloud(): Promise<VaultCollection[]> {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from("vault_collections")
+      .select("*")
+      .eq("device_id", getDeviceId())
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(row => ({
+      id:          String(row.id),
+      name:        String(row.name ?? ""),
+      description: String(row.description ?? ""),
+      color:       (row.color as VaultCollection["color"]) ?? "gold",
+      icon:        String(row.icon ?? "folder"),
+      createdAt:   String(row.created_at),
+    }));
+  } catch (err) {
+    console.error("[TLIS] fetchVaultCollectionsFromCloud:", err);
+    return [];
+  }
+}
+
+export async function deleteVaultCollectionFromCloud(id: string): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from("vault_collections").delete().eq("id", id);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("[TLIS] deleteVaultCollectionFromCloud:", err);
+    return false;
+  }
+}
+
+/**
+ * Full vault sync — merges local state with cloud. Cloud wins on ID conflicts.
+ * Local-only entries/collections are pushed up.
+ */
+export async function syncVaultWithCloud(
+  local: VaultState
+): Promise<{ state: VaultState; synced: boolean }> {
+  if (!supabase) return { state: local, synced: false };
+
+  try {
+    const [cloudEntries, cloudCollections] = await Promise.all([
+      fetchVaultEntriesFromCloud(),
+      fetchVaultCollectionsFromCloud(),
+    ]);
+
+    // Entries — cloud wins on conflict
+    const cloudEntryMap = new Map(cloudEntries.map(e => [e.id, e]));
+    const localOnlyEntries = local.entries.filter(e => !cloudEntryMap.has(e.id));
+    const mergedEntries: VaultEntry[] = [
+      ...cloudEntries,
+      ...localOnlyEntries,
+    ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+    // Collections — cloud wins on conflict
+    const cloudColMap = new Map(cloudCollections.map(c => [c.id, c]));
+    const localOnlyCols = local.collections.filter(c => !cloudColMap.has(c.id));
+    const mergedCollections: VaultCollection[] = [...cloudCollections, ...localOnlyCols];
+
+    // Push local-only items to cloud
+    const pushPromises: Promise<unknown>[] = [];
+    if (localOnlyEntries.length > 0)    pushPromises.push(upsertManyVaultEntriesToCloud(localOnlyEntries));
+    if (localOnlyCols.length > 0)       pushPromises.push(Promise.all(localOnlyCols.map(upsertVaultCollectionToCloud)));
+    await Promise.allSettled(pushPromises);
+
+    return {
+      state: { entries: mergedEntries, collections: mergedCollections, recentlyViewed: local.recentlyViewed },
+      synced: true,
+    };
+  } catch (err) {
+    console.error("[TLIS] syncVaultWithCloud:", err);
+    return { state: local, synced: false };
+  }
+}
+
+// Row <-> domain converters
+
+function vaultEntryToRow(e: VaultEntry) {
+  return {
+    id:               e.id,
+    device_id:        getDeviceId(),
+    title:            e.title,
+    content:          e.content,
+    prompt:           e.prompt,
+    prompt_template:  e.promptTemplate,
+    type:             e.type,
+    niche:            e.niche,
+    platform:         e.platform,
+    tone:             e.tone,
+    source:           e.source,
+    model:            e.model,
+    ai_score:         e.aiScore,
+    viral_potential:  e.viralPotential,
+    is_favourite:     e.isFavourite,
+    tags:             e.tags,
+    collection_id:    e.collectionId,
+    views:            e.views,
+    search_keywords:  e.searchKeywords,
+    embedding_ready:  e.embeddingReady,
+    campaign_id:      e.campaignId,
+    created_at:       e.createdAt,
+    updated_at:       e.updatedAt,
+    last_accessed:    e.lastAccessed,
+  };
+}
+
+function rowToVaultEntry(row: Record<string, unknown>): VaultEntry {
+  return {
+    id:              String(row.id),
+    title:           String(row.title           ?? ""),
+    content:         String(row.content         ?? ""),
+    prompt:          String(row.prompt          ?? ""),
+    promptTemplate:  String(row.prompt_template ?? ""),
+    type:            (row.type as VaultEntry["type"])             ?? "other",
+    niche:           String(row.niche           ?? ""),
+    platform:        (row.platform as VaultEntry["platform"])     ?? "TikTok",
+    tone:            String(row.tone            ?? ""),
+    source:          (row.source as VaultEntry["source"])         ?? "generator",
+    model:           String(row.model           ?? "gpt-4o-mini"),
+    aiScore:         Number(row.ai_score        ?? 0),
+    viralPotential:  Number(row.viral_potential ?? 0),
+    isFavourite:     Boolean(row.is_favourite),
+    tags:            Array.isArray(row.tags)         ? (row.tags as string[])          : [],
+    collectionId:    row.collection_id           ? String(row.collection_id)   : null,
+    views:           Number(row.views            ?? 0),
+    searchKeywords:  Array.isArray(row.search_keywords) ? (row.search_keywords as string[]) : [],
+    embeddingReady:  Boolean(row.embedding_ready),
+    campaignId:      row.campaign_id             ? String(row.campaign_id)     : null,
+    deviceId:        String(row.device_id        ?? ""),
+    createdAt:       String(row.created_at       ?? new Date().toISOString()),
+    updatedAt:       String(row.updated_at       ?? new Date().toISOString()),
+    lastAccessed:    String(row.last_accessed    ?? new Date().toISOString()),
+  };
 }
