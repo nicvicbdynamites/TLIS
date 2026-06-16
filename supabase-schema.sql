@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS public.calendar_posts (
   status        TEXT        NOT NULL DEFAULT 'draft'
                             CHECK (status IN ('draft','scheduled','posted','viral')),
   scheduled_day TEXT,
-  scheduled_time TEXT,
+  scheduled_timfe TEXT,
   note          TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
