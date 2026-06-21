@@ -1,5 +1,6 @@
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
-import { TrendingUp, TrendingDown, Target, Zap } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Zap, Sparkles } from "lucide-react";
+import { Link } from "wouter";
 
 const niches = [
   { name: "Quiet Luxury Lifestyle", score: 94, demand: "Explosive", competition: "Low", growth: "+312%", status: "hot" },
@@ -130,21 +131,22 @@ export default function Niche() {
       </div>
 
       <div className="luxury-card overflow-hidden">
-        <div className="p-6 border-b border-border">
+        <div className="p-6 border-b border-border flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Niche Opportunity Matrix</h2>
+          <p className="text-xs text-muted-foreground">Click any row to generate content for that niche</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                {["Niche", "Score", "Demand", "Competition", "Growth", "Status"].map((h) => (
+                {["Niche", "Score", "Demand", "Competition", "Growth", "Status", ""].map((h) => (
                   <th key={h} className="text-left px-6 py-3 text-xs uppercase tracking-widest text-muted-foreground font-medium">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {niches.map((n, i) => (
-                <tr key={i} className="border-b border-border/50 hover:bg-primary/5 transition-colors cursor-pointer">
+                <tr key={i} className="border-b border-border/50 hover:bg-primary/5 transition-colors group">
                   <td className="px-6 py-4 text-sm font-medium text-foreground">{n.name}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
@@ -161,6 +163,14 @@ export default function Niche() {
                     <span className={`text-xs px-2 py-1 rounded-full border font-medium uppercase tracking-wide ${statusStyles[n.status]}`}>
                       {n.status}
                     </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <Link href={`/generator?niche=${encodeURIComponent(n.name)}&tab=hooks`}>
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary border border-transparent group-hover:border-primary/30 group-hover:bg-primary/10 px-2.5 py-1.5 rounded-md transition-all duration-200 whitespace-nowrap cursor-pointer">
+                        <Sparkles className="h-3 w-3" />
+                        Generate
+                      </span>
+                    </Link>
                   </td>
                 </tr>
               ))}

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Copy, Bookmark, BookmarkCheck, Search, Filter } from "lucide-react";
+import { Copy, Bookmark, BookmarkCheck, Search, Filter, Sparkles } from "lucide-react";
+import { Link } from "wouter";
 
 const categories = ["All", "Emotional", "Curiosity", "Shock", "Luxury", "Identity", "FOMO"];
 
@@ -45,10 +46,18 @@ export default function Hooks() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 space-y-8">
-      <div>
-        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Module 02</p>
-        <h1 className="text-3xl md:text-4xl font-serif font-bold luxury-gradient-text mb-2">Viral Hooks Database</h1>
-        <p className="text-muted-foreground text-sm">Battle-tested opening lines engineered for maximum retention and virality.</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Module 02</p>
+          <h1 className="text-3xl md:text-4xl font-serif font-bold luxury-gradient-text mb-2">Viral Hooks Database</h1>
+          <p className="text-muted-foreground text-sm">Battle-tested opening lines engineered for maximum retention and virality.</p>
+        </div>
+        <Link href="/generator?tab=hooks">
+          <span className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all duration-200 cursor-pointer flex-shrink-0">
+            <Sparkles className="h-4 w-4" />
+            Generate AI Hooks
+          </span>
+        </Link>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">

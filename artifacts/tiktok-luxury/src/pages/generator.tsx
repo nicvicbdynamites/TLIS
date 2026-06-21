@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useSearch } from "wouter";
 import {
   Sparkles, Copy, RefreshCw, Zap, Film, Lightbulb, MessageSquare,
-  ChevronDown, AlertCircle, CalendarDays, Check, Database, Wifi,
+  ChevronDown, AlertCircle, CalendarDays, Check, Database, Wifi, ExternalLink,
 } from "lucide-react";
 import { trackGeneration } from "@/lib/usage";
 import { loadCalendar, saveToCalendar, type CalendarPlatform, type PostType } from "@/lib/calendar";
@@ -87,7 +88,7 @@ function SkeletonCard({ index, streamingText }: { index: number; streamingText?:
         </span>
         <span className="flex items-center gap-1.5 text-xs px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-primary font-mono">
           <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-          Gemini 2.5 Flash
+          Gemini 2.0 Flash
         </span>
       </div>
 
@@ -139,7 +140,7 @@ function OutputCard({
           Output {String(index + 1).padStart(2, "0")}
         </span>
         <span className="text-xs px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-primary font-mono">
-          Gemini 2.5 Flash
+          Gemini 2.0 Flash
         </span>
       </div>
 
@@ -202,12 +203,15 @@ export default function Generator() {
     audience: audiences[0],
   });
 
+  const search = useSearch();
+
   const [activeTab, setActiveTab]         = useState<Tab>("hooks");
   const [streamOutputs, setStreamOutputs] = useState<StreamOutput[]>([]);
   const [finalOutputs, setFinalOutputs]   = useState<string[]>([]);
   const [loading, setLoading]             = useState(false);
   const [loadingPhrase, setLoadingPhrase] = useState("");
   const [error, setError]                 = useState<string | null>(null);
+  const [errorCode, setErrorCode]         = useState<string | null>(null);
   const [retryCount, setRetryCount]       = useState(0);
   const [retrying, setRetrying]           = useState(false);
   const [generated, setGenerated]         = useState(false);
@@ -219,6 +223,21 @@ export default function Generator() {
   const autoVaulted = useRef<Set<number>>(new Set());
   const abortRef    = useRef<AbortController | null>(null);
   const phraseTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Read URL params on first mount to pre-configure the brief
+  useEffect(() => {
+    if (!search) return;
+    const params = new URLSearchParams(search);
+    const tab = params.get("tab") as Tab | null;
+    const niche = params.get("niche");
+    if (tab && (["hooks","captions","prompts","ideas"] as Tab[]).includes(tab)) {
+      setActiveTab(tab);
+    }
+    if (niche && niches.includes(niche)) {
+      setForm(f => ({ ...f, niche }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => () => {
@@ -238,7 +257,7 @@ export default function Generator() {
       niche: currentForm.niche,
       tone: currentForm.tone,
       source: "generator",
-      model: "gemini-2.5-flash",
+      model: "gemini-2.0-flash",
       prompt: `Type: ${tab} | Niche: ${currentForm.niche} | Style: ${currentForm.style} | Tone: ${currentForm.tone} | Platform: ${currentForm.platform} | Audience: ${currentForm.audience}`,
     });
     const current = loadVault();
@@ -257,6 +276,7 @@ export default function Generator() {
     setActiveTab(tab);
     setLoading(true);
     setError(null);
+    setErrorCode(null);
     setGenerated(false);
     setStreamOutputs([]);
     setFinalOutputs([]);
@@ -369,7 +389,9 @@ export default function Generator() {
 
           // Error
           if (event.error) {
-            throw new Error(event.error);
+            const err = new Error(event.error as string);
+            (err as any).code = event.code;
+            throw err;
           }
 
           // All done
@@ -393,6 +415,7 @@ export default function Generator() {
       if (err?.name === "AbortError") return; // user navigated away
       const msg = err?.message ?? "Generation failed. Please try again.";
       setError(msg);
+      setErrorCode((err as any)?.code ?? null);
       setGenerated(false);
       setStreamOutputs([]);
     } finally {
@@ -418,7 +441,7 @@ export default function Generator() {
       type: TAB_TO_CONTENT_TYPE[activeTab],
       platform: PLATFORM_TO_VAULT[form.platform] ?? "TikTok",
       niche: form.niche, tone: form.tone,
-      source: "generator", model: "gemini-2.5-flash",
+      source: "generator", model: "gemini-2.0-flash",
       prompt: `Type: ${activeTab} | Niche: ${form.niche} | Style: ${form.style} | Tone: ${form.tone} | Platform: ${form.platform} | Audience: ${form.audience}`,
     });
     const current = loadVault();
@@ -452,7 +475,7 @@ export default function Generator() {
           <p className="text-muted-foreground text-sm">Configure your creative brief. Let the intelligence engine do the rest.</p>
           <span className="flex items-center gap-1.5 text-[10px] text-primary bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 font-mono flex-shrink-0">
             <Wifi className="h-2.5 w-2.5" />
-            Gemini 2.5 Flash
+            Gemini 2.0 Flash
           </span>
         </div>
       </div>
@@ -549,7 +572,7 @@ export default function Generator() {
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-foreground font-medium tabular-nums min-w-[220px]">{loadingPhrase}</p>
-                    <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest">Gemini 2.5 Flash · {form.niche}</p>
+                    <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest">Gemini 2.0 Flash · {form.niche}</p>
                   </div>
                   <div className="flex gap-1.5">
                     {[0,1,2].map(i => (
@@ -567,7 +590,7 @@ export default function Generator() {
                   <div className="flex items-center gap-2 mb-2">
                     <div className="live-dot" />
                     <p className="text-xs text-primary uppercase tracking-widest">
-                      Streaming · Gemini 2.5 Flash · {form.niche}
+                      Streaming · Gemini 2.0 Flash · {form.niche}
                     </p>
                   </div>
                   {streamOutputs.map((out, i) => (
@@ -591,33 +614,81 @@ export default function Generator() {
               {/* ── Error state ── */}
               {!loading && error && (
                 <div className="h-full min-h-64 flex flex-col items-center justify-center gap-4 text-center px-6">
-                  <div className="h-14 w-14 rounded-full bg-destructive/10 border border-destructive/30 flex items-center justify-center">
-                    <AlertCircle className="h-6 w-6 text-destructive" />
-                  </div>
-                  <div>
-                    <p className="text-foreground font-serif font-semibold">Generation failed</p>
-                    <p className="text-muted-foreground text-sm mt-1 max-w-xs">{error}</p>
-                    {retryCount < 3 && (
-                      <p className="text-xs text-muted-foreground/60 mt-1">Attempt {retryCount + 1} of 3</p>
-                    )}
-                  </div>
-                  <div className="flex gap-3">
-                    {retryCount < 3 && (
-                      <button
-                        onClick={handleRetry}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all"
-                      >
-                        <RefreshCw className="h-3 w-3" />
-                        Retry
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setError(null)}
-                      className="px-4 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition-all"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
+                  {errorCode === "QUOTA_EXHAUSTED" ? (
+                    <>
+                      <div className="h-14 w-14 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
+                        <Wifi className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="max-w-sm">
+                        <p className="text-foreground font-serif font-semibold text-lg">Daily quota reached</p>
+                        <p className="text-muted-foreground text-sm mt-2 leading-relaxed">
+                          The free Gemini API tier has been exhausted for today. Quota resets automatically at midnight Pacific time.
+                        </p>
+                        <div className="mt-4 space-y-2 text-left bg-muted/20 rounded-lg p-4 border border-border">
+                          <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold mb-2">Unblock now</p>
+                          <div className="flex items-start gap-2">
+                            <span className="text-xs text-primary font-mono mt-0.5">01</span>
+                            <p className="text-xs text-foreground">Enable billing on your Google Cloud project to lift the limit instantly</p>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-xs text-primary font-mono mt-0.5">02</span>
+                            <p className="text-xs text-foreground">Get a fresh key from a new Google account at aistudio.google.com/apikey and update GEMINI_API_KEY in Secrets</p>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-xs text-primary font-mono mt-0.5">03</span>
+                            <p className="text-xs text-foreground">Wait for midnight Pacific — quota resets automatically</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <a
+                          href="https://aistudio.google.com/apikey"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          Get new API key
+                        </a>
+                        <button
+                          onClick={() => { setError(null); setErrorCode(null); }}
+                          className="px-4 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition-all"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-14 w-14 rounded-full bg-destructive/10 border border-destructive/30 flex items-center justify-center">
+                        <AlertCircle className="h-6 w-6 text-destructive" />
+                      </div>
+                      <div>
+                        <p className="text-foreground font-serif font-semibold">Generation failed</p>
+                        <p className="text-muted-foreground text-sm mt-1 max-w-xs">{error}</p>
+                        {retryCount < 3 && (
+                          <p className="text-xs text-muted-foreground/60 mt-1">Attempt {retryCount + 1} of 3</p>
+                        )}
+                      </div>
+                      <div className="flex gap-3">
+                        {retryCount < 3 && (
+                          <button
+                            onClick={handleRetry}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all"
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                            Retry
+                          </button>
+                        )}
+                        <button
+                          onClick={() => { setError(null); setErrorCode(null); }}
+                          className="px-4 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition-all"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 

@@ -1,6 +1,7 @@
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { TrendingUp, Eye, Heart, Star, ArrowRight, Clock, Activity, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import { loadUsage, formatCost, type UsageData } from "@/lib/usage";
 
 const growthData = [
@@ -112,7 +113,17 @@ function UsageSummaryWidget() {
   );
 }
 
+const QUICK_ACTIONS = [
+  { label: "Generate Hook",  sub: "AI writes viral opener",   href: "/generator?tab=hooks" },
+  { label: "Analyze Niche",  sub: "Scan market gaps",         href: "/niche" },
+  { label: "Spy Competitor", sub: "Deep content audit",       href: "/competitors" },
+  { label: "Schedule Post",  sub: "Optimal time AI pick",     href: "/calendar" },
+  { label: "New Prompt",     sub: "Cinematic direction",      href: "/prompts" },
+];
+
 export default function Dashboard() {
+  const [, navigate] = useLocation();
+
   const stats = [
     { label: "Total Followers", value: "2.45M", change: "+12.4%", icon: TrendingUp },
     { label: "Total Views", value: "84.2M", change: "+45.2%", icon: Eye },
@@ -232,15 +243,10 @@ export default function Dashboard() {
         <div className="luxury-card p-6">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground mb-6">Quick Actions</h2>
           <div className="space-y-3">
-            {[
-              { label: "Generate Hook", sub: "AI writes viral opener" },
-              { label: "Analyze Niche", sub: "Scan market gaps" },
-              { label: "Spy Competitor", sub: "Deep content audit" },
-              { label: "Schedule Post", sub: "Optimal time AI pick" },
-              { label: "New Prompt", sub: "Cinematic direction" },
-            ].map((action, i) => (
+            {QUICK_ACTIONS.map((action, i) => (
               <button
                 key={i}
+                onClick={() => navigate(action.href)}
                 className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 text-left group"
               >
                 <div>

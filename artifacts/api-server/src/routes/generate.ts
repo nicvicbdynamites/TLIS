@@ -223,17 +223,17 @@ async function streamWithCascade(
 }
 
 // ── Error response helpers ────────────────────────────────────────────────
-function errorMessage(err: any): { status: number; message: string } {
+function errorMessage(err: any): { status: number; message: string; code: string } {
   if (isMissingKey(err)) {
-    return { status: 500, message: "Gemini API key not configured or invalid. Check your GEMINI_API_KEY secret." };
+    return { status: 500, code: "NO_KEY", message: "Gemini API key not configured or invalid. Check your GEMINI_API_KEY secret." };
   }
   if (isRateLimit(err)) {
-    return { status: 429, message: "Rate limit reached. Please wait a moment and try again." };
+    return { status: 429, code: "QUOTA_EXHAUSTED", message: "Daily quota exhausted on all models. The free tier resets at midnight Pacific time. You can get a fresh API key at aistudio.google.com/apikey or enable billing to lift the limit." };
   }
   if (isPermDenied(err)) {
-    return { status: 403, message: "All available models are blocked for this API key. Get a free key at https://aistudio.google.com/apikey and update GEMINI_API_KEY in Secrets." };
+    return { status: 403, code: "PERMISSION_DENIED", message: "All available models are blocked for this API key. Get a free key at aistudio.google.com/apikey and update GEMINI_API_KEY in Secrets." };
   }
-  return { status: 500, message: "Generation failed. Please try again." };
+  return { status: 500, code: "ERROR", message: "Generation failed. Please try again." };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -323,8 +323,7 @@ router.post("/generate/stream", async (req: Request, res: Response) => {
     res.end();
   } catch (err: any) {
     req.log.error({ err }, "Gemini /generate/stream failed");
-    const { message } = errorMessage(err);
-    const code = isMissingKey(err) ? "NO_KEY" : isRateLimit(err) ? "RATE_LIMIT" : isPermDenied(err) ? "PERMISSION_DENIED" : "ERROR";
+    const { message, code } = errorMessage(err);
     send({ error: message, code });
     res.end();
   }
