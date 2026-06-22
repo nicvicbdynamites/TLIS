@@ -614,7 +614,42 @@ export default function Generator() {
               {/* ── Error state ── */}
               {!loading && error && (
                 <div className="h-full min-h-64 flex flex-col items-center justify-center gap-4 text-center px-6">
-                  {errorCode === "QUOTA_EXHAUSTED" ? (
+                  {errorCode === "CREDITS_DEPLETED" ? (
+                    <>
+                      <div className="h-14 w-14 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
+                        <Wifi className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="max-w-sm">
+                        <p className="text-foreground font-serif font-semibold text-lg">Billing credits depleted</p>
+                        <p className="text-muted-foreground text-sm mt-2 leading-relaxed">
+                          The Google Cloud project behind this API key has run out of prepaid credits. This is a billing issue — not a daily quota reset.
+                        </p>
+                        <div className="mt-4 space-y-2 text-left bg-muted/20 rounded-lg p-4 border border-border">
+                          <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold mb-2">Unblock now</p>
+                          <div className="flex items-start gap-2">
+                            <span className="text-xs text-primary font-mono mt-0.5">01</span>
+                            <p className="text-xs text-foreground">Go to <span className="text-primary">ai.studio/projects</span> → find the project → add billing credits or switch to pay-as-you-go</p>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-xs text-primary font-mono mt-0.5">02</span>
+                            <p className="text-xs text-foreground">Or create a brand-new API key in a fresh project at <span className="text-primary">aistudio.google.com/apikey</span> — new projects get free-tier quota automatically</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all">
+                          <ExternalLink className="h-3 w-3" />
+                          Get new API key
+                        </a>
+                        <a href="https://ai.studio/projects" target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition-all">
+                          <ExternalLink className="h-3 w-3" />
+                          Manage billing
+                        </a>
+                      </div>
+                    </>
+                  ) : errorCode === "QUOTA_EXHAUSTED" ? (
                     <>
                       <div className="h-14 w-14 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
                         <Wifi className="h-6 w-6 text-primary" />

@@ -100,6 +100,13 @@ function isRateLimit(err: any): boolean {
   );
 }
 
+function isCreditsDepleted(err: any): boolean {
+  return (
+    err?.status === 429 &&
+    String(err?.message).includes("prepayment credits are depleted")
+  );
+}
+
 function isPermDenied(err: any): boolean {
   return (
     err?.status === 403 ||
@@ -226,6 +233,9 @@ async function streamWithCascade(
 function errorMessage(err: any): { status: number; message: string; code: string } {
   if (isMissingKey(err)) {
     return { status: 500, code: "NO_KEY", message: "Gemini API key not configured or invalid. Check your GEMINI_API_KEY secret." };
+  }
+  if (isCreditsDepleted(err)) {
+    return { status: 429, code: "CREDITS_DEPLETED", message: "Prepaid billing credits are depleted on this API key's project. Add credits at ai.studio/projects or switch to a free-tier key from a new project." };
   }
   if (isRateLimit(err)) {
     return { status: 429, code: "QUOTA_EXHAUSTED", message: "Daily quota exhausted on all models. The free tier resets at midnight Pacific time. You can get a fresh API key at aistudio.google.com/apikey or enable billing to lift the limit." };
