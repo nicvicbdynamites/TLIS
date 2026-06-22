@@ -34,4 +34,4 @@ externalPort = 80
 [userenv]
 
 [userenv.shared]
-GEMINI_API_KEY = "AQ.Ab8RN6Jz1lvISEkqkQ_8nA1yOJ-y6pRjYlKn6SFQKs_38co0Bg"
+GEMINI_API_KEY = "AQ.Ab8RN6J-2ef1kTfwl96EO1xcOe15Gfo2NLGmpTxNOs8kCQITMA"
