@@ -397,10 +397,11 @@ export async function fetchVaultEntriesFromCloud(): Promise<VaultEntry[]> {
       .from("vault_entries")
       .select("*")
       .eq("device_id", getDeviceId())
-      .order("created_at", { ascending: false })
       .limit(500);
     if (error) throw error;
-    return (data ?? []).map(rowToVaultEntry);
+    // Sort client-side by createdAt descending (avoids dependency on DB column ordering)
+    const entries = (data ?? []).map(rowToVaultEntry);
+    return entries.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   } catch (err) {
     console.error("[TLIS] fetchVaultEntriesFromCloud:", err);
     return [];
@@ -564,7 +565,7 @@ function rowToVaultEntry(row: Record<string, unknown>): VaultEntry {
     platform:        (row.platform as VaultEntry["platform"])     ?? "TikTok",
     tone:            String(row.tone            ?? ""),
     source:          (row.source as VaultEntry["source"])         ?? "generator",
-    model:           String(row.model           ?? "gpt-4o-mini"),
+    model:           String(row.model           ?? "gemini-2.5-flash"),
     aiScore:         Number(row.ai_score        ?? 0),
     viralPotential:  Number(row.viral_potential ?? 0),
     isFavourite:     Boolean(row.is_favourite),

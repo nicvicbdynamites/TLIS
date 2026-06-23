@@ -1,0 +1,2 @@
+- [TLIS Supabase schema](tlis-supabase-schema.md) — vault_entries is missing created_at/updated_at/last_accessed; vault_collections never existed; supabase-schema.sql has the fix
+- [TLIS model cascade](tlis-model-cascade.md) — gemini-2.5-flash → gemini-2.0-flash → gemini-1.5-flash; gemini-2.0-flash-lite is 404 on billing projects

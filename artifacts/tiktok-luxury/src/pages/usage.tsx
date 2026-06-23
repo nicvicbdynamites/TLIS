@@ -170,7 +170,7 @@ export default function UsagePage() {
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 space-y-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Module 07</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Module 10</p>
           <h1 className="text-3xl md:text-4xl font-serif font-bold luxury-gradient-text mb-2">Usage Tracker</h1>
           <p className="text-muted-foreground text-sm">Real-time AI consumption analytics. Every generation accounted for.</p>
         </div>
@@ -235,7 +235,7 @@ export default function UsagePage() {
         <StatCard
           label="Session Cost"
           value={formatCost(data.session.cost)}
-          sub="GPT-4o mini · ~$0.0004/gen"
+          sub="Gemini 2.5 Flash · ~$0.0004/gen"
           icon={ShieldCheck}
         />
         <StatCard

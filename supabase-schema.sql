@@ -160,6 +160,28 @@ CREATE TABLE IF NOT EXISTS public.vault_collections (
 );
 
 -- ──────────────────────────────────────────────
+--  UPGRADE: add missing columns to vault_entries if upgrading from an older schema
+-- ──────────────────────────────────────────────
+ALTER TABLE public.vault_entries
+  ADD COLUMN IF NOT EXISTS prompt           TEXT        NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS prompt_template  TEXT        NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS platform         TEXT        NOT NULL DEFAULT 'TikTok',
+  ADD COLUMN IF NOT EXISTS source           TEXT        NOT NULL DEFAULT 'generator',
+  ADD COLUMN IF NOT EXISTS model            TEXT        NOT NULL DEFAULT 'gemini-2.5-flash',
+  ADD COLUMN IF NOT EXISTS ai_score         SMALLINT    NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS viral_potential  SMALLINT    NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS is_favourite     BOOLEAN     NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS tags             TEXT[]      NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS collection_id    TEXT,
+  ADD COLUMN IF NOT EXISTS views            INTEGER     NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS search_keywords  TEXT[]      NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS embedding_ready  BOOLEAN     NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS campaign_id      TEXT,
+  ADD COLUMN IF NOT EXISTS created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS last_accessed    TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- ──────────────────────────────────────────────
 --  TABLE: vault_entries
 --  Permanently saved AI-generated content with full metadata,
 --  AI scoring, semantic search preparation, and team-ready structure.

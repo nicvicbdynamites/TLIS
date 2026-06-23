@@ -850,7 +850,7 @@ export default function VaultPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">MODULE 09</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">MODULE 07</p>
           <h1 className="text-3xl md:text-4xl font-serif font-bold luxury-gradient-text mb-2">Intelligence Vault</h1>
           <p className="text-muted-foreground text-sm">
             Your permanent AI creative intelligence database. Every output, scored, indexed, and searchable.
