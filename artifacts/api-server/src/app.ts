@@ -37,10 +37,8 @@ app.use(cors({
     if (!origin) return cb(null, true);
     // In dev (no REPLIT_DOMAINS set), allow all origins
     if (allowedOrigins.length === 0) return cb(null, true);
-    // In production, allow known Replit domains and localhost
-    const allowed =
-      allowedOrigins.some(o => origin.startsWith(o)) ||
-      origin.startsWith("http://localhost");
+    // In production, allow only known Replit domains
+    const allowed = allowedOrigins.some(o => origin.startsWith(o));
     // Pass false (not an error) — browser will enforce the block client-side
     cb(null, allowed);
   },
