@@ -88,7 +88,7 @@ function SkeletonCard({ index, streamingText }: { index: number; streamingText?:
         </span>
         <span className="flex items-center gap-1.5 text-xs px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-primary font-mono">
           <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-          Gemini 2.0 Flash
+          Gemini 2.5 Flash
         </span>
       </div>
 
@@ -140,7 +140,7 @@ function OutputCard({
           Output {String(index + 1).padStart(2, "0")}
         </span>
         <span className="text-xs px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-primary font-mono">
-          Gemini 2.0 Flash
+          Gemini 2.5 Flash
         </span>
       </div>
 
@@ -257,7 +257,7 @@ export default function Generator() {
       niche: currentForm.niche,
       tone: currentForm.tone,
       source: "generator",
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       prompt: `Type: ${tab} | Niche: ${currentForm.niche} | Style: ${currentForm.style} | Tone: ${currentForm.tone} | Platform: ${currentForm.platform} | Audience: ${currentForm.audience}`,
     });
     const current = loadVault();
@@ -441,7 +441,7 @@ export default function Generator() {
       type: TAB_TO_CONTENT_TYPE[activeTab],
       platform: PLATFORM_TO_VAULT[form.platform] ?? "TikTok",
       niche: form.niche, tone: form.tone,
-      source: "generator", model: "gemini-2.0-flash",
+      source: "generator", model: "gemini-2.5-flash",
       prompt: `Type: ${activeTab} | Niche: ${form.niche} | Style: ${form.style} | Tone: ${form.tone} | Platform: ${form.platform} | Audience: ${form.audience}`,
     });
     const current = loadVault();
@@ -475,7 +475,7 @@ export default function Generator() {
           <p className="text-muted-foreground text-sm">Configure your creative brief. Let the intelligence engine do the rest.</p>
           <span className="flex items-center gap-1.5 text-[10px] text-primary bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 font-mono flex-shrink-0">
             <Wifi className="h-2.5 w-2.5" />
-            Gemini 2.0 Flash
+            Gemini 2.5 Flash
           </span>
         </div>
       </div>
@@ -572,7 +572,7 @@ export default function Generator() {
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-foreground font-medium tabular-nums min-w-[220px]">{loadingPhrase}</p>
-                    <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest">Gemini 2.0 Flash · {form.niche}</p>
+                    <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest">Gemini 2.5 Flash · {form.niche}</p>
                   </div>
                   <div className="flex gap-1.5">
                     {[0,1,2].map(i => (
@@ -590,7 +590,7 @@ export default function Generator() {
                   <div className="flex items-center gap-2 mb-2">
                     <div className="live-dot" />
                     <p className="text-xs text-primary uppercase tracking-widest">
-                      Streaming · Gemini 2.0 Flash · {form.niche}
+                      Streaming · Gemini 2.5 Flash · {form.niche}
                     </p>
                   </div>
                   {streamOutputs.map((out, i) => (

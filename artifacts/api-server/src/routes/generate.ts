@@ -4,11 +4,13 @@ import { GoogleGenAI } from "@google/genai";
 const router: IRouter = Router();
 
 // ── Model cascade: try in order, skip on 403/404, retry on 429 ──────────
-// gemini-2.5-flash / gemini-2.5-flash-lite require billing or allowlisted projects.
-// gemini-2.0-flash and gemini-2.0-flash-lite are available on free AI Studio keys.
+// gemini-2.5-flash  — current recommended model, requires billing or allowlisted project
+// gemini-2.0-flash  — previous gen (free-tier friendly, may be deprecated on paid projects)
+// gemini-1.5-flash  — stable fallback available on most project types
 const MODEL_CASCADE = [
+  "gemini-2.5-flash",
   "gemini-2.0-flash",
-  "gemini-2.0-flash-lite",
+  "gemini-1.5-flash",
 ];
 
 function getClient(): GoogleGenAI {
