@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
+import { AuthProvider } from "@/lib/auth";
 import Dashboard from "@/pages/dashboard";
 import Niche from "@/pages/niche";
 import Hooks from "@/pages/hooks";
@@ -16,28 +17,39 @@ import CalendarPage from "@/pages/calendar";
 import AnalyticsPage from "@/pages/analytics";
 import VaultPage from "@/pages/vault";
 import ContentPackPage from "@/pages/content-pack";
+import AuthPage from "@/pages/auth";
+import ProfilePage from "@/pages/profile";
 
 const queryClient = new QueryClient();
 
-function Router() {
+function AppRoutes() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/niche" component={Niche} />
-        <Route path="/hooks" component={Hooks} />
-        <Route path="/prompts" component={Prompts} />
-        <Route path="/competitors" component={Competitors} />
-        <Route path="/automation" component={Automation} />
-        <Route path="/generator" component={Generator} />
-        <Route path="/vault" component={VaultPage} />
-        <Route path="/calendar" component={CalendarPage} />
-        <Route path="/analytics" component={AnalyticsPage} />
-        <Route path="/usage" component={UsagePage} />
-        <Route path="/content-pack" component={ContentPackPage} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      {/* Auth page — no sidebar */}
+      <Route path="/login" component={AuthPage} />
+
+      {/* All other routes — inside Layout */}
+      <Route>
+        <Layout>
+          <Switch>
+            <Route path="/"             component={Dashboard}     />
+            <Route path="/niche"        component={Niche}         />
+            <Route path="/hooks"        component={Hooks}         />
+            <Route path="/prompts"      component={Prompts}       />
+            <Route path="/competitors"  component={Competitors}   />
+            <Route path="/automation"   component={Automation}    />
+            <Route path="/generator"    component={Generator}     />
+            <Route path="/vault"        component={VaultPage}     />
+            <Route path="/calendar"     component={CalendarPage}  />
+            <Route path="/analytics"    component={AnalyticsPage} />
+            <Route path="/usage"        component={UsagePage}     />
+            <Route path="/content-pack" component={ContentPackPage} />
+            <Route path="/profile"      component={ProfilePage}   />
+            <Route                      component={NotFound}      />
+          </Switch>
+        </Layout>
+      </Route>
+    </Switch>
   );
 }
 
@@ -46,7 +58,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

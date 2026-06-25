@@ -1,2 +1,4 @@
 - [TLIS Supabase schema](tlis-supabase-schema.md) — vault_entries is missing created_at/updated_at/last_accessed; vault_collections never existed; supabase-schema.sql has the fix
 - [TLIS model cascade](tlis-model-cascade.md) — gemini-2.5-flash → gemini-2.0-flash → gemini-1.5-flash; gemini-2.0-flash-lite is 404 on billing projects
+- [Supabase vs local postgres](supabase-local-split.md) — DATABASE_URL = api-server local DB only; Supabase cloud is separate and has zero custom tables (all 404); app works on localStorage fallbacks.
+- [Auth session persistence](supabase-local-split.md) — Supabase client required persistSession:true + autoRefreshToken + detectSessionInUrl for sessions to survive page reloads.

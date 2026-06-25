@@ -12,6 +12,9 @@ import {
   BarChart3,
   Database,
   Package,
+  UserCircle,
+  LogIn,
+  LogOut,
   Menu,
   X
 } from "lucide-react";
@@ -20,21 +23,92 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SyncStatusBar } from "@/components/SyncStatus";
 import { useSync } from "@/hooks/useSync";
+import { useAuth } from "@/lib/auth";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/niche", label: "Niche Intelligence", icon: Target },
-  { href: "/hooks", label: "Viral Hooks", icon: Zap },
-  { href: "/prompts", label: "Prompt Vault", icon: Film },
-  { href: "/competitors", label: "Competitors", icon: Users },
-  { href: "/automation", label: "AI Automation", icon: Bot },
-  { href: "/generator", label: "AI Content Generator", icon: Sparkles },
-  { href: "/vault", label: "Intelligence Vault", icon: Database },
-  { href: "/calendar", label: "Content Calendar", icon: CalendarDays },
-  { href: "/analytics", label: "Analytics Intelligence", icon: BarChart3 },
-  { href: "/usage", label: "Usage Tracker", icon: Activity },
-  { href: "/content-pack", label: "Content Pack Generator", icon: Package },
+  { href: "/",            label: "Dashboard",              icon: LayoutDashboard },
+  { href: "/niche",       label: "Niche Intelligence",     icon: Target          },
+  { href: "/hooks",       label: "Viral Hooks",            icon: Zap             },
+  { href: "/prompts",     label: "Prompt Vault",           icon: Film            },
+  { href: "/competitors", label: "Competitors",            icon: Users           },
+  { href: "/automation",  label: "AI Automation",          icon: Bot             },
+  { href: "/generator",   label: "AI Content Generator",   icon: Sparkles        },
+  { href: "/vault",       label: "Intelligence Vault",     icon: Database        },
+  { href: "/calendar",    label: "Content Calendar",       icon: CalendarDays    },
+  { href: "/analytics",   label: "Analytics Intelligence", icon: BarChart3       },
+  { href: "/usage",       label: "Usage Tracker",          icon: Activity        },
+  { href: "/content-pack", label: "Content Pack Generator", icon: Package        },
+  { href: "/profile",     label: "User Profile",           icon: UserCircle      },
 ];
+
+function UserSection() {
+  const { user, loading, signOut } = useAuth();
+  const [, navigate] = useLocation();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    await signOut();
+    setSigningOut(false);
+    navigate("/");
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-3 px-2 py-2">
+        <div className="h-10 w-10 rounded-full bg-primary/10 animate-pulse" />
+        <div className="flex flex-col gap-1">
+          <div className="h-3 w-24 bg-primary/10 rounded animate-pulse" />
+          <div className="h-2 w-16 bg-primary/5 rounded animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Link href="/login">
+        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/40 transition-all cursor-pointer">
+          <LogIn className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium text-primary tracking-wide">Sign In</span>
+        </div>
+      </Link>
+    );
+  }
+
+  const initials = user.email
+    ? user.email.slice(0, 2).toUpperCase()
+    : "EL";
+  const shortEmail = user.email && user.email.length > 22
+    ? user.email.slice(0, 20) + "…"
+    : (user.email ?? "");
+
+  return (
+    <div className="space-y-2">
+      <Link href="/profile">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-secondary/30 transition-colors cursor-pointer group">
+          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/80 to-primary/20 p-[1px] flex-shrink-0">
+            <div className="h-full w-full rounded-full bg-sidebar flex items-center justify-center">
+              <span className="font-serif text-xs font-bold text-primary">{initials}</span>
+            </div>
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-semibold text-foreground truncate">{shortEmail}</span>
+            <span className="text-[10px] text-muted-foreground font-mono">Authenticated</span>
+          </div>
+        </div>
+      </Link>
+      <button
+        onClick={handleSignOut}
+        disabled={signingOut}
+        className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all disabled:opacity-50"
+      >
+        <LogOut className="h-3 w-3" />
+        {signingOut ? "Signing out…" : "Sign out"}
+      </button>
+    </div>
+  );
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -108,17 +182,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             isConnected={sync.isConnected}
             error={sync.error}
           />
-          <div className="flex items-center gap-3 px-2 py-2">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/80 to-primary/20 p-[1px]">
-              <div className="h-full w-full rounded-full bg-sidebar flex items-center justify-center">
-                <span className="font-serif text-sm font-bold text-primary">EL</span>
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold text-foreground">Elite Creator</span>
-              <span className="text-xs text-muted-foreground font-mono">Tier: Platinum</span>
-            </div>
-          </div>
+          <UserSection />
         </div>
       </aside>
 

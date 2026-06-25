@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import type { CalendarPost } from "./calendar";
 import type { HistoryEntry } from "./usage";
 import type { VaultEntry, VaultCollection, VaultState } from "./vault";
@@ -14,7 +14,11 @@ const isConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
 export const supabase: SupabaseClient | null = isConfigured
   ? createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false },
+      auth: {
+        persistSession:    true,
+        autoRefreshToken:  true,
+        detectSessionInUrl: true,
+      },
       global: { headers: { "x-app-name": "tlis" } },
     })
   : null;
@@ -580,6 +584,119 @@ function rowToVaultEntry(row: Record<string, unknown>): VaultEntry {
     updatedAt:       String(row.updated_at       ?? new Date().toISOString()),
     lastAccessed:    String(row.last_accessed    ?? new Date().toISOString()),
   };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  User Profiles — subscription-ready
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface UserProfile {
+  id:                 string;
+  email:              string | null;
+  fullName:           string | null;
+  avatarUrl:          string | null;
+  plan:               "free" | "pro" | "enterprise";
+  creditsUsed:        number;
+  creditsLimit:       number;
+  stripeCustomerId:   string | null;
+  subscriptionStatus: string | null;
+  createdAt:          string;
+  updatedAt:          string;
+}
+
+function rowToProfile(row: Record<string, unknown>): UserProfile {
+  return {
+    id:                 String(row["id"]),
+    email:              row["email"] ? String(row["email"]) : null,
+    fullName:           row["full_name"] ? String(row["full_name"]) : null,
+    avatarUrl:          row["avatar_url"] ? String(row["avatar_url"]) : null,
+    plan:               (row["plan"] as UserProfile["plan"]) ?? "free",
+    creditsUsed:        Number(row["credits_used"]  ?? 0),
+    creditsLimit:       Number(row["credits_limit"] ?? 100),
+    stripeCustomerId:   row["stripe_customer_id"] ? String(row["stripe_customer_id"]) : null,
+    subscriptionStatus: row["subscription_status"] ? String(row["subscription_status"]) : null,
+    createdAt:          String(row["created_at"] ?? new Date().toISOString()),
+    updatedAt:          String(row["updated_at"] ?? new Date().toISOString()),
+  };
+}
+
+export async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+  if (error || !data) return null;
+  return rowToProfile(data as Record<string, unknown>);
+}
+
+export async function createOrUpdateProfile(user: User): Promise<void> {
+  if (!supabase) return;
+  try {
+    await supabase
+      .from("profiles")
+      .upsert(
+        {
+          id:         user.id,
+          email:      user.email ?? null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
+  } catch {
+    // Table may not exist yet — fail silently
+  }
+}
+
+/**
+ * Migrates all device-scoped rows to the authenticated user's account.
+ * Gracefully skips tables that don't have a user_id column yet.
+ */
+export async function migrateDeviceDataToUser(userId: string): Promise<{
+  success: boolean; migrated: number; error?: string;
+}> {
+  if (!supabase) return { success: false, migrated: 0, error: "Supabase not configured" };
+
+  const deviceId = getDeviceId();
+  const tables = [
+    "calendar_posts",
+    "vault_collections",
+    "vault_entries",
+    "ai_generations",
+    "content_packs",
+  ] as const;
+
+  let totalMigrated = 0;
+  let anySuccess    = false;
+
+  for (const table of tables) {
+    try {
+      const { data, error } = await supabase
+        .from(table)
+        .update({ user_id: userId, updated_at: new Date().toISOString() })
+        .eq("device_id", deviceId)
+        .is("user_id", null)
+        .select("id");
+      if (!error) {
+        anySuccess = true;
+        totalMigrated += Array.isArray(data) ? data.length : 0;
+      }
+    } catch {
+      // Table may not have user_id column yet — skip silently
+    }
+  }
+
+  if (!anySuccess) {
+    return {
+      success: false,
+      migrated: 0,
+      error:
+        "No tables could be migrated. Apply supabase-schema.sql in your Supabase SQL editor first, then try again.",
+    };
+  }
+
+  return { success: true, migrated: totalMigrated };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
