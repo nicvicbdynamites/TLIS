@@ -69,20 +69,37 @@ ALTER TABLE public.calendar_posts  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ai_generations   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saved_outputs    ENABLE ROW LEVEL SECURITY;
 
--- PRE-AUTH: allow all anonymous operations
--- When Supabase Auth is added, replace these with user-scoped policies:
---   DROP POLICY "pre_auth_all" ON public.<table>;
---   CREATE POLICY "users_own_data" ON public.<table>
---     FOR ALL USING (auth.uid() = user_id);
+-- Auth-scoped policies (Module 12 — Supabase Auth is active)
+--   Authenticated users: row must belong to them (auth.uid() = user_id)
+--   Anonymous users:     row must be unowned (user_id IS NULL — device-local data)
+--   No cross-user reads or writes possible.
 
-CREATE POLICY "pre_auth_all" ON public.calendar_posts
-  FOR ALL USING (true) WITH CHECK (true);
+-- calendar_posts
+CREATE POLICY "auth_own_calendar_posts" ON public.calendar_posts
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "pre_auth_all" ON public.ai_generations
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_unowned_calendar_posts" ON public.calendar_posts
+  FOR ALL TO anon
+  USING (user_id IS NULL) WITH CHECK (user_id IS NULL);
 
-CREATE POLICY "pre_auth_all" ON public.saved_outputs
-  FOR ALL USING (true) WITH CHECK (true);
+-- ai_generations
+CREATE POLICY "auth_own_ai_generations" ON public.ai_generations
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "anon_unowned_ai_generations" ON public.ai_generations
+  FOR ALL TO anon
+  USING (user_id IS NULL) WITH CHECK (user_id IS NULL);
+
+-- saved_outputs
+CREATE POLICY "auth_own_saved_outputs" ON public.saved_outputs
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "anon_unowned_saved_outputs" ON public.saved_outputs
+  FOR ALL TO anon
+  USING (user_id IS NULL) WITH CHECK (user_id IS NULL);
 
 -- ──────────────────────────────────────────────
 --  INDEXES
@@ -128,20 +145,9 @@ CREATE TRIGGER set_calendar_posts_updated_at
 
 -- ──────────────────────────────────────────────
 --  UPGRADE PATH: When adding Supabase Auth
--- ──────────────────────────────────────────────
--- 1. Drop all pre_auth_all policies above
--- 2. Uncomment and run the user-scoped policies below
--- 3. Run a migration to set user_id = auth.uid() for existing rows
---    matched by device_id where the user registers with their device
---
--- CREATE POLICY "users_own_calendar" ON public.calendar_posts
---   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
---
--- CREATE POLICY "users_own_generations" ON public.ai_generations
---   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
---
--- CREATE POLICY "users_own_outputs" ON public.saved_outputs
---   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+-- NOTE: Auth-scoped RLS is already applied above (Module 12).
+-- To migrate existing device-local rows to a user after sign-up, call
+-- migrateDeviceDataToUser(user) from the profile page (supabase.ts).
 
 -- ──────────────────────────────────────────────
 --  TABLE: vault_collections
@@ -248,11 +254,21 @@ CREATE TABLE IF NOT EXISTS public.vault_entries (
 ALTER TABLE public.vault_collections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vault_entries      ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "pre_auth_all" ON public.vault_collections
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "auth_own_vault_collections" ON public.vault_collections
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "pre_auth_all" ON public.vault_entries
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_unowned_vault_collections" ON public.vault_collections
+  FOR ALL TO anon
+  USING (user_id IS NULL) WITH CHECK (user_id IS NULL);
+
+CREATE POLICY "auth_own_vault_entries" ON public.vault_entries
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "anon_unowned_vault_entries" ON public.vault_entries
+  FOR ALL TO anon
+  USING (user_id IS NULL) WITH CHECK (user_id IS NULL);
 
 -- ──────────────────────────────────────────────
 --  INDEXES — vault tables
@@ -389,27 +405,19 @@ CREATE INDEX IF NOT EXISTS content_packs_created_at_idx ON public.content_packs(
 
 ALTER TABLE public.content_packs ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "pre_auth_all" ON public.content_packs
+CREATE POLICY "auth_own_content_packs" ON public.content_packs
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "anon_unowned_content_packs" ON public.content_packs
   FOR ALL TO anon
-  USING (true) WITH CHECK (true);
+  USING (user_id IS NULL) WITH CHECK (user_id IS NULL);
 
 DROP TRIGGER IF EXISTS set_content_packs_updated_at ON public.content_packs;
 CREATE TRIGGER set_content_packs_updated_at
   BEFORE UPDATE ON public.content_packs
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
--- ──────────────────────────────────────────────
---  UPGRADE PATH: vault_entries auth policies
--- ──────────────────────────────────────────────
--- DROP POLICY "pre_auth_all" ON public.vault_collections;
--- DROP POLICY "pre_auth_all" ON public.vault_entries;
---
--- CREATE POLICY "users_own_vault_collections" ON public.vault_collections
---   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
---
--- CREATE POLICY "users_own_vault_entries" ON public.vault_entries
---   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
---
 -- FUTURE: team_member_access policy for collaboration:
 -- CREATE POLICY "team_vault_access" ON public.vault_entries
 --   FOR SELECT USING (
