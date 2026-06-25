@@ -114,11 +114,11 @@ function UsageSummaryWidget() {
 }
 
 const QUICK_ACTIONS = [
+  { label: "Content Pack",   sub: "Full pack in one click",   href: "/content-pack" },
   { label: "Generate Hook",  sub: "AI writes viral opener",   href: "/generator?tab=hooks" },
   { label: "Analyze Niche",  sub: "Scan market gaps",         href: "/niche" },
   { label: "Spy Competitor", sub: "Deep content audit",       href: "/competitors" },
   { label: "Schedule Post",  sub: "Optimal time AI pick",     href: "/calendar" },
-  { label: "New Prompt",     sub: "Cinematic direction",      href: "/prompts" },
 ];
 
 export default function Dashboard() {

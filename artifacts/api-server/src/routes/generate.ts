@@ -19,9 +19,63 @@ function getClient(): GoogleGenAI {
   return new GoogleGenAI({ apiKey: key });
 }
 
-type GenerationType = "hooks" | "captions" | "prompts" | "ideas";
+type GenerationType = "hooks" | "captions" | "prompts" | "ideas" | "content-pack";
+
+// ── Content Pack types ─────────────────────────────────────────────────────
+export interface ContentPack {
+  hook: string;
+  caption: string;
+  video_prompt: string;
+  hashtags: string[];
+  cta: string;
+  best_posting_time: string;
+}
 
 // ── Prompt builders ────────────────────────────────────────────────────────
+function buildContentPackPrompt(
+  niche: string, style: string, tone: string, platform: string, audience: string,
+): string {
+  return `You are an elite TikTok content strategist specialising in luxury lifestyle creators. Your outputs are precise, evocative, and instantly actionable. Never use emojis. Write with authority and restraint.
+
+Generate a complete content pack for a single luxury TikTok video. Return ONLY a valid JSON object with exactly these six keys. No markdown fences, no extra keys, no explanation.
+
+{
+  "hook": "One viral opening line (1–2 sentences). Pattern interruption, POV framing, or curiosity gap. Engineered for the first 3 seconds.",
+  "caption": "2–4 sentence caption that extends the video's emotional message. End with exactly 5 targeted hashtags on a new line.",
+  "video_prompt": "3–5 sentence cinematic direction. Specify shot type, movement, lighting, colour grade, and what NOT to do. Precise enough for a solo creator with a phone.",
+  "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5", "#tag6", "#tag7"],
+  "cta": "One direct call-to-action sentence. Specific, not generic. Matches the tone and niche.",
+  "best_posting_time": "One sentence naming the optimal day and time window with a brief reason (e.g. 'Tuesday 7–9 PM — peak scroll window for aspirational content')."
+}
+
+Creator brief:
+- Niche: ${niche}
+- Video Style: ${style}
+- Tone: ${tone}
+- Platform: ${platform}
+- Target Audience: ${audience}`;
+}
+
+function parseContentPack(raw: string): ContentPack {
+  const cleaned = raw
+    .replace(/^```(?:json)?\s*/im, "")
+    .replace(/\s*```$/m, "")
+    .trim();
+  try {
+    const parsed = JSON.parse(cleaned) as Partial<ContentPack>;
+    return {
+      hook:              String(parsed.hook              ?? ""),
+      caption:           String(parsed.caption           ?? ""),
+      video_prompt:      String(parsed.video_prompt      ?? ""),
+      hashtags:          Array.isArray(parsed.hashtags) ? parsed.hashtags.map(String) : [],
+      cta:               String(parsed.cta               ?? ""),
+      best_posting_time: String(parsed.best_posting_time ?? ""),
+    };
+  } catch {
+    return { hook: raw, caption: "", video_prompt: "", hashtags: [], cta: "", best_posting_time: "" };
+  }
+}
+
 function buildPrompt(
   type: GenerationType,
   niche: string,
@@ -55,6 +109,8 @@ function buildPrompt(
 - Be format-specific and executable within a week
 - Have genuine share-worthiness — something people would send to a friend
 - Be 2–4 sentences describing the concept and why it works`,
+
+    "content-pack": "",
   };
 
   return `You are an elite TikTok content strategist specialising in luxury lifestyle creators. Your outputs are precise, evocative, and instantly actionable. Never use emojis. Write with authority and restraint.
@@ -338,6 +394,30 @@ router.post("/generate/stream", async (req: Request, res: Response) => {
     const { message, code } = errorMessage(err);
     send({ error: message, code });
     res.end();
+  }
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+//  POST /api/generate/content-pack  — returns one structured ContentPack
+// ────────────────────────────────────────────────────────────────────────────
+router.post("/generate/content-pack", async (req: Request, res: Response) => {
+  const { niche, style, tone, platform, audience } = req.body as {
+    niche: string; style: string; tone: string; platform: string; audience: string;
+  };
+
+  if (!niche || !style || !tone || !platform || !audience) {
+    res.status(400).json({ error: "Missing required fields" }); return;
+  }
+
+  try {
+    const prompt = buildContentPackPrompt(niche, style, tone, platform, audience);
+    const { text, model } = await generateWithCascade(prompt, req.log);
+    const pack = parseContentPack(text);
+    res.json({ pack, model });
+  } catch (err: any) {
+    req.log.error({ err }, "Gemini /generate/content-pack failed");
+    const { status, message } = errorMessage(err);
+    res.status(status).json({ error: message });
   }
 });
 

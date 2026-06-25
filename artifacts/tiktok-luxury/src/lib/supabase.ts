@@ -581,3 +581,103 @@ function rowToVaultEntry(row: Record<string, unknown>): VaultEntry {
     lastAccessed:    String(row.last_accessed    ?? new Date().toISOString()),
   };
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+//  Content Packs
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface ContentPackRecord {
+  id:              string;
+  niche:           string;
+  style:           string;
+  tone:            string;
+  platform:        string;
+  audience:        string;
+  hook:            string;
+  caption:         string;
+  videoPrompt:     string;
+  hashtags:        string[];
+  cta:             string;
+  bestPostingTime: string;
+  model:           string;
+  isFavourite:     boolean;
+  createdAt:       string;
+}
+
+function contentPackToRow(p: ContentPackRecord, deviceId: string): Record<string, unknown> {
+  return {
+    id:               p.id,
+    device_id:        deviceId,
+    niche:            p.niche,
+    style:            p.style,
+    tone:             p.tone,
+    platform:         p.platform,
+    audience:         p.audience,
+    hook:             p.hook,
+    caption:          p.caption,
+    video_prompt:     p.videoPrompt,
+    hashtags:         p.hashtags,
+    cta:              p.cta,
+    best_posting_time: p.bestPostingTime,
+    model:            p.model,
+    is_favourite:     p.isFavourite,
+    updated_at:       new Date().toISOString(),
+  };
+}
+
+function rowToContentPack(row: Record<string, unknown>): ContentPackRecord {
+  return {
+    id:              String(row["id"]),
+    niche:           String(row["niche"]            ?? ""),
+    style:           String(row["style"]            ?? ""),
+    tone:            String(row["tone"]             ?? ""),
+    platform:        String(row["platform"]         ?? "TikTok"),
+    audience:        String(row["audience"]         ?? ""),
+    hook:            String(row["hook"]             ?? ""),
+    caption:         String(row["caption"]          ?? ""),
+    videoPrompt:     String(row["video_prompt"]     ?? ""),
+    hashtags:        Array.isArray(row["hashtags"]) ? (row["hashtags"] as string[]) : [],
+    cta:             String(row["cta"]              ?? ""),
+    bestPostingTime: String(row["best_posting_time"] ?? ""),
+    model:           String(row["model"]            ?? "gemini-2.5-flash"),
+    isFavourite:     Boolean(row["is_favourite"]),
+    createdAt:       String(row["created_at"]       ?? new Date().toISOString()),
+  };
+}
+
+export async function saveContentPackToCloud(pack: ContentPackRecord): Promise<boolean> {
+  if (!supabase) return false;
+  const deviceId = getDeviceId();
+  const { error } = await supabase
+    .from("content_packs")
+    .upsert(contentPackToRow(pack, deviceId));
+  return !error;
+}
+
+export async function fetchContentPacksFromCloud(): Promise<ContentPackRecord[]> {
+  if (!supabase) return [];
+  const deviceId = getDeviceId();
+  const { data, error } = await supabase
+    .from("content_packs")
+    .select("*")
+    .eq("device_id", deviceId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error || !data) return [];
+  return (data as Record<string, unknown>[]).map(rowToContentPack);
+}
+
+export async function deleteContentPackFromCloud(id: string): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase.from("content_packs").delete().eq("id", id);
+  return !error;
+}
+
+export async function toggleContentPackFavourite(id: string, isFavourite: boolean): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase
+    .from("content_packs")
+    .update({ is_favourite: isFavourite, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  return !error;
+}

@@ -296,6 +296,43 @@ CREATE TRIGGER set_vault_entries_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ──────────────────────────────────────────────
+--  TABLE: content_packs  (Module 11)
+-- ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.content_packs (
+  id                  TEXT        PRIMARY KEY,
+  device_id           TEXT        NOT NULL DEFAULT '',
+  niche               TEXT        NOT NULL DEFAULT '',
+  style               TEXT        NOT NULL DEFAULT '',
+  tone                TEXT        NOT NULL DEFAULT '',
+  platform            TEXT        NOT NULL DEFAULT 'TikTok',
+  audience            TEXT        NOT NULL DEFAULT '',
+  hook                TEXT        NOT NULL DEFAULT '',
+  caption             TEXT        NOT NULL DEFAULT '',
+  video_prompt        TEXT        NOT NULL DEFAULT '',
+  hashtags            TEXT[]      NOT NULL DEFAULT '{}',
+  cta                 TEXT        NOT NULL DEFAULT '',
+  best_posting_time   TEXT        NOT NULL DEFAULT '',
+  model               TEXT        NOT NULL DEFAULT 'gemini-2.5-flash',
+  is_favourite        BOOLEAN     NOT NULL DEFAULT false,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS content_packs_device_id_idx  ON public.content_packs(device_id);
+CREATE INDEX IF NOT EXISTS content_packs_created_at_idx ON public.content_packs(created_at DESC);
+
+ALTER TABLE public.content_packs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "pre_auth_all" ON public.content_packs
+  FOR ALL TO anon
+  USING (true) WITH CHECK (true);
+
+DROP TRIGGER IF EXISTS set_content_packs_updated_at ON public.content_packs;
+CREATE TRIGGER set_content_packs_updated_at
+  BEFORE UPDATE ON public.content_packs
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ──────────────────────────────────────────────
 --  UPGRADE PATH: vault_entries auth policies
 -- ──────────────────────────────────────────────
 -- DROP POLICY "pre_auth_all" ON public.vault_collections;

@@ -11,6 +11,7 @@ import {
   CalendarDays,
   BarChart3,
   Database,
+  Package,
   Menu,
   X
 } from "lucide-react";
@@ -32,6 +33,7 @@ const navItems = [
   { href: "/calendar", label: "Content Calendar", icon: CalendarDays },
   { href: "/analytics", label: "Analytics Intelligence", icon: BarChart3 },
   { href: "/usage", label: "Usage Tracker", icon: Activity },
+  { href: "/content-pack", label: "Content Pack Generator", icon: Package },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

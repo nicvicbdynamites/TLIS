@@ -15,6 +15,7 @@ import UsagePage from "@/pages/usage";
 import CalendarPage from "@/pages/calendar";
 import AnalyticsPage from "@/pages/analytics";
 import VaultPage from "@/pages/vault";
+import ContentPackPage from "@/pages/content-pack";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ function Router() {
         <Route path="/calendar" component={CalendarPage} />
         <Route path="/analytics" component={AnalyticsPage} />
         <Route path="/usage" component={UsagePage} />
+        <Route path="/content-pack" component={ContentPackPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
