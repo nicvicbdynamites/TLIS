@@ -12,13 +12,14 @@ import { supabase } from "./supabase";
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface AuthContextValue {
-  user:         User | null;
-  session:      Session | null;
-  loading:      boolean;
-  signIn:        (email: string, password: string) => Promise<string | null>;
-  signUp:        (email: string, password: string) => Promise<string | null>;
-  signOut:       () => Promise<void>;
-  resetPassword: (email: string) => Promise<string | null>;
+  user:            User | null;
+  session:         Session | null;
+  loading:         boolean;
+  signIn:          (email: string, password: string) => Promise<string | null>;
+  signUp:          (email: string, password: string) => Promise<string | null>;
+  signOut:         () => Promise<void>;
+  resetPassword:   (email: string) => Promise<string | null>;
+  setNewPassword:  (password: string) => Promise<string | null>;
 }
 
 // ── Context ────────────────────────────────────────────────────────────────
@@ -70,8 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string, password: string
   ): Promise<string | null> => {
     if (!supabase) return "Authentication not configured";
-    const redirectTo =
-      `${window.location.origin}${(import.meta.env.BASE_URL as string | undefined) ?? "/"}`;
+    // Always redirect to the /login page so the user lands on the auth UI
+    // after clicking the confirmation link.
+    // window.location.origin resolves to the correct domain in both dev and
+    // production — Supabase just needs that domain whitelisted (see dashboard).
+    const redirectTo = `${window.location.origin}/login`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -89,17 +93,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string
   ): Promise<string | null> => {
     if (!supabase) return "Authentication not configured";
-    const redirectTo =
-      `${window.location.origin}${(import.meta.env.BASE_URL as string | undefined) ?? "/"}`;
+    // Redirect to /login so the recovery token lands on the auth page, which
+    // detects type=recovery in the URL hash and shows the set-new-password form.
+    const redirectTo = `${window.location.origin}/login`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
     });
     return error?.message ?? null;
   }, []);
 
+  const setNewPassword = useCallback(async (
+    password: string
+  ): Promise<string | null> => {
+    if (!supabase) return "Authentication not configured";
+    const { error } = await supabase.auth.updateUser({ password });
+    return error?.message ?? null;
+  }, []);
+
   return (
     <AuthContext.Provider
-      value={{ user, session, loading, signIn, signUp, signOut, resetPassword }}
+      value={{ user, session, loading, signIn, signUp, signOut, resetPassword, setNewPassword }}
     >
       {children}
     </AuthContext.Provider>

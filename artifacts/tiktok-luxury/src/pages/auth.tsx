@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Eye, EyeOff, LogIn, UserPlus, KeyRound, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Eye, EyeOff, LogIn, UserPlus, KeyRound, CheckCircle, AlertCircle, Loader2, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
-type Tab = "login" | "signup" | "reset";
+type Tab = "login" | "signup" | "reset" | "newpass";
 
 function InputField({
   label, type = "text", value, onChange, placeholder, autoComplete,
@@ -68,7 +69,7 @@ function SubmitButton({
 }
 
 export default function AuthPage() {
-  const { user, loading: authLoading, signIn, signUp, resetPassword } = useAuth();
+  const { user, loading: authLoading, signIn, signUp, resetPassword, setNewPassword } = useAuth();
   const [, navigate] = useLocation();
   const [tab, setTab]               = useState<Tab>("login");
   const [email, setEmail]           = useState("");
@@ -77,20 +78,59 @@ export default function AuthPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState<string | null>(null);
   const [success, setSuccess]       = useState<string | null>(null);
-  const firstInput                  = useRef<HTMLInputElement>(null);
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (but not during a recovery session)
   useEffect(() => {
-    if (!authLoading && user) navigate("/");
-  }, [user, authLoading, navigate]);
+    if (!authLoading && user && tab !== "newpass") navigate("/");
+  }, [user, authLoading, navigate, tab]);
 
-  // Reset form when tab changes
+  // Detect Supabase email-link callbacks in the URL hash.
+  // Supabase appends #access_token=...&type=recovery (or type=signup) after
+  // the user clicks the email link. detectSessionInUrl processes the token,
+  // then onAuthStateChange fires — but we also need to switch the UI.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash) return;
+
+    const params = new URLSearchParams(hash.replace(/^#/, ""));
+    const type   = params.get("type");
+
+    if (type === "recovery") {
+      // Clear the hash so a page refresh doesn't re-trigger this
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+      setTab("newpass");
+      setError(null);
+      setSuccess(null);
+    } else if (type === "signup") {
+      // Email confirmed — supabase detectSessionInUrl already logs them in
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+      setSuccess("Email confirmed! You are now signed in.");
+      setTimeout(() => navigate("/"), 1500);
+    }
+  }, [navigate]);
+
+  // Also listen for PASSWORD_RECOVERY auth event as a belt-and-suspenders check
+  useEffect(() => {
+    if (!supabase) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setTab("newpass");
+        setError(null);
+        setSuccess(null);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Reset form state when switching tabs manually
   useEffect(() => {
     setError(null);
     setSuccess(null);
     setPassword("");
     setConfirmPass("");
   }, [tab]);
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,17 +145,13 @@ export default function AuthPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (password !== confirmPass) {
-      setError("Passwords do not match."); return;
-    }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters."); return;
-    }
+    if (password !== confirmPass) { setError("Passwords do not match."); return; }
+    if (password.length < 8)     { setError("Password must be at least 8 characters."); return; }
     setSubmitting(true);
     const err = await signUp(email, password);
     setSubmitting(false);
     if (err) { setError(err); return; }
-    setSuccess("Check your email to confirm your account. You can close this tab.");
+    setSuccess("Check your email to confirm your account, then sign in.");
   };
 
   const handleReset = async (e: React.FormEvent) => {
@@ -128,6 +164,19 @@ export default function AuthPage() {
     setSuccess("Password reset link sent. Check your inbox.");
   };
 
+  const handleSetNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (password !== confirmPass) { setError("Passwords do not match."); return; }
+    if (password.length < 8)     { setError("Password must be at least 8 characters."); return; }
+    setSubmitting(true);
+    const err = await setNewPassword(password);
+    setSubmitting(false);
+    if (err) { setError(err); return; }
+    setSuccess("Password updated. Redirecting…");
+    setTimeout(() => navigate("/"), 1500);
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -136,7 +185,7 @@ export default function AuthPage() {
     );
   }
 
-  const tabs: { id: Tab; icon: typeof LogIn; label: string }[] = [
+  const visibleTabs: { id: Tab; icon: typeof LogIn; label: string }[] = [
     { id: "login",  icon: LogIn,    label: "Sign In"  },
     { id: "signup", icon: UserPlus, label: "Create Account" },
     { id: "reset",  icon: KeyRound, label: "Reset Password" },
@@ -144,7 +193,6 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Background glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-[400px] h-[200px] bg-primary/3 rounded-full blur-3xl pointer-events-none" />
 
@@ -157,26 +205,39 @@ export default function AuthPage() {
           </p>
         </div>
 
-        {/* Card */}
         <div className="luxury-card p-8 space-y-6">
-          {/* Tabs */}
-          <div className="flex rounded-lg border border-border bg-black/40 p-1 gap-1">
-            {tabs.map(t => (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-md text-xs font-semibold transition-all duration-200 tracking-wide",
-                  tab === t.id
-                    ? "bg-primary/15 text-primary border border-primary/30"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <t.icon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{t.label}</span>
-              </button>
-            ))}
-          </div>
+
+          {/* ── Tabs (hidden during recovery flow) ── */}
+          {tab !== "newpass" && (
+            <div className="flex rounded-lg border border-border bg-black/40 p-1 gap-1">
+              {visibleTabs.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-md text-xs font-semibold transition-all duration-200 tracking-wide",
+                    tab === t.id
+                      ? "bg-primary/15 text-primary border border-primary/30"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <t.icon className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* ── Set New Password header (recovery flow) ── */}
+          {tab === "newpass" && (
+            <div className="flex items-center gap-3 pb-2 border-b border-border">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm font-semibold text-foreground tracking-wide">Set New Password</p>
+                <p className="text-xs text-muted-foreground">Choose a strong password for your account</p>
+              </div>
+            </div>
+          )}
 
           {/* Success */}
           {success && (
@@ -194,124 +255,63 @@ export default function AuthPage() {
             </div>
           )}
 
-          {/* ── Sign In form ── */}
+          {/* ── Sign In ── */}
           {tab === "login" && !success && (
             <form onSubmit={handleLogin} className="space-y-4">
-              <InputField
-                label="Email"
-                type="email"
-                value={email}
-                onChange={setEmail}
-                placeholder="you@example.com"
-                autoComplete="email"
-              />
-              <InputField
-                label="Password"
-                type="password"
-                value={password}
-                onChange={setPassword}
-                placeholder="••••••••"
-                autoComplete="current-password"
-              />
-              <SubmitButton
-                loading={submitting}
-                icon={LogIn}
-                label="Sign In"
-                loadingLabel="Signing in..."
-              />
-              <button
-                type="button"
-                onClick={() => setTab("reset")}
-                className="w-full text-center text-xs text-muted-foreground hover:text-primary transition-colors py-1"
-              >
+              <InputField label="Email" type="email" value={email} onChange={setEmail}
+                placeholder="you@example.com" autoComplete="email" />
+              <InputField label="Password" type="password" value={password} onChange={setPassword}
+                placeholder="••••••••" autoComplete="current-password" />
+              <SubmitButton loading={submitting} icon={LogIn} label="Sign In" loadingLabel="Signing in…" />
+              <button type="button" onClick={() => setTab("reset")}
+                className="w-full text-center text-xs text-muted-foreground hover:text-primary transition-colors py-1">
                 Forgot your password?
               </button>
             </form>
           )}
 
-          {/* ── Create Account form ── */}
+          {/* ── Create Account ── */}
           {tab === "signup" && !success && (
             <form onSubmit={handleSignUp} className="space-y-4">
-              <InputField
-                label="Email"
-                type="email"
-                value={email}
-                onChange={setEmail}
-                placeholder="you@example.com"
-                autoComplete="email"
-              />
-              <InputField
-                label="Password"
-                type="password"
-                value={password}
-                onChange={setPassword}
-                placeholder="Min. 8 characters"
-                autoComplete="new-password"
-              />
-              <InputField
-                label="Confirm Password"
-                type="password"
-                value={confirmPass}
-                onChange={setConfirmPass}
-                placeholder="Repeat password"
-                autoComplete="new-password"
-              />
-              <SubmitButton
-                loading={submitting}
-                icon={UserPlus}
-                label="Create Account"
-                loadingLabel="Creating account..."
-              />
+              <InputField label="Email" type="email" value={email} onChange={setEmail}
+                placeholder="you@example.com" autoComplete="email" />
+              <InputField label="Password" type="password" value={password} onChange={setPassword}
+                placeholder="Min. 8 characters" autoComplete="new-password" />
+              <InputField label="Confirm Password" type="password" value={confirmPass} onChange={setConfirmPass}
+                placeholder="Repeat password" autoComplete="new-password" />
+              <SubmitButton loading={submitting} icon={UserPlus} label="Create Account" loadingLabel="Creating account…" />
             </form>
           )}
 
-          {/* ── Reset Password form ── */}
+          {/* ── Reset Password ── */}
           {tab === "reset" && !success && (
             <form onSubmit={handleReset} className="space-y-4">
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Enter your email address and we will send you a password reset link.
               </p>
-              <InputField
-                label="Email"
-                type="email"
-                value={email}
-                onChange={setEmail}
-                placeholder="you@example.com"
-                autoComplete="email"
-              />
-              <SubmitButton
-                loading={submitting}
-                icon={KeyRound}
-                label="Send Reset Link"
-                loadingLabel="Sending..."
-              />
+              <InputField label="Email" type="email" value={email} onChange={setEmail}
+                placeholder="you@example.com" autoComplete="email" />
+              <SubmitButton loading={submitting} icon={KeyRound} label="Send Reset Link" loadingLabel="Sending…" />
+            </form>
+          )}
+
+          {/* ── Set New Password (recovery callback) ── */}
+          {tab === "newpass" && !success && (
+            <form onSubmit={handleSetNewPassword} className="space-y-4">
+              <InputField label="New Password" type="password" value={password} onChange={setPassword}
+                placeholder="Min. 8 characters" autoComplete="new-password" />
+              <InputField label="Confirm New Password" type="password" value={confirmPass} onChange={setConfirmPass}
+                placeholder="Repeat password" autoComplete="new-password" />
+              <SubmitButton loading={submitting} icon={ShieldCheck} label="Set New Password" loadingLabel="Saving…" />
             </form>
           )}
 
           {/* Footer */}
-          {!success && (
+          {!success && tab !== "newpass" && (
             <p className="text-center text-xs text-muted-foreground pt-2 border-t border-border">
-              {tab === "login"  && (
-                <>No account?{" "}
-                  <button onClick={() => setTab("signup")} className="text-primary hover:underline">
-                    Create one
-                  </button>
-                </>
-              )}
-              {tab === "signup" && (
-                <>Already have an account?{" "}
-                  <button onClick={() => setTab("login")} className="text-primary hover:underline">
-                    Sign in
-                  </button>
-                </>
-              )}
-              {tab === "reset" && (
-                <>Remember it?{" "}
-                  <button onClick={() => setTab("login")} className="text-primary hover:underline">
-                    Sign in
-                  </button>
-                </>
-              )}
+              {tab === "login"  && (<>No account?{" "}<button onClick={() => setTab("signup")} className="text-primary hover:underline">Create one</button></>)}
+              {tab === "signup" && (<>Already have an account?{" "}<button onClick={() => setTab("login")} className="text-primary hover:underline">Sign in</button></>)}
+              {tab === "reset"  && (<>Remember it?{" "}<button onClick={() => setTab("login")} className="text-primary hover:underline">Sign in</button></>)}
             </p>
           )}
         </div>
