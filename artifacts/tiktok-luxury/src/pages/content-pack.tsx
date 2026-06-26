@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Package, Sparkles, Copy, Check, Database, CalendarDays,
   Clock, Film, Hash, Zap, MessageSquare, RefreshCw, Wifi,
-  ChevronDown, AlertCircle, Star, Trash2,
+  ChevronDown, AlertCircle, Star, Trash2, Briefcase, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trackGeneration } from "@/lib/usage";
@@ -11,11 +11,15 @@ import {
   loadVault, saveVault, addVaultEntry, createVaultEntry,
 } from "@/lib/vault";
 import {
-  insertGenerationToCloud, upsertVaultEntryToCloud, upsertPostToCloud,
+  insertGenerationToCloud,
+  upsertVaultEntryWithWorkspaceToCloud,
+  upsertPostWithWorkspaceToCloud,
+  updateWorkflowStageToCloud,
   saveContentPackToCloud, fetchContentPacksFromCloud,
   deleteContentPackFromCloud, toggleContentPackFavourite,
   type ContentPackRecord,
 } from "@/lib/supabase";
+import { useActiveWorkspace } from "@/lib/workspace-context";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -144,14 +148,58 @@ function EmptyState() {
   );
 }
 
+// ── Workflow Progress ──────────────────────────────────────────────────────
+
+const WORKFLOW_STAGES = ["generated", "saved", "scheduled", "published"] as const;
+type WorkflowStage = typeof WORKFLOW_STAGES[number];
+const STAGE_LABELS: Record<WorkflowStage, string> = {
+  generated: "Generated",
+  saved:     "Saved to Vault",
+  scheduled: "Scheduled",
+  published: "Published",
+};
+
+function WorkflowProgress({
+  stage, packId, onStageChange,
+}: {
+  stage: string;
+  packId: string;
+  onStageChange: (id: string, stage: string) => void;
+}) {
+  const idx = WORKFLOW_STAGES.indexOf(stage as WorkflowStage);
+  return (
+    <div className="pt-2.5 border-t border-border/60 space-y-1.5">
+      <div className="flex items-center gap-0.5">
+        {WORKFLOW_STAGES.map((s, i) => (
+          <button
+            key={s}
+            onClick={() => onStageChange(packId, s)}
+            title={STAGE_LABELS[s]}
+            className="flex-1 group"
+          >
+            <div className={cn(
+              "h-1 rounded-full transition-all duration-200 group-hover:opacity-80",
+              i <= idx ? "bg-primary" : "bg-primary/15"
+            )} />
+          </button>
+        ))}
+      </div>
+      <p className="text-[10px] text-primary/60 uppercase tracking-widest">
+        {STAGE_LABELS[stage as WorkflowStage] ?? stage}
+      </p>
+    </div>
+  );
+}
+
 // ── History Item ───────────────────────────────────────────────────────────
 
 function HistoryItem({
-  pack, onDelete, onToggleFav,
+  pack, onDelete, onToggleFav, onStageChange,
 }: {
   pack: ContentPackRecord;
   onDelete: (id: string) => void;
   onToggleFav: (id: string, fav: boolean) => void;
+  onStageChange: (id: string, stage: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   return (
@@ -203,6 +251,11 @@ function HistoryItem({
           </div>
         </div>
       )}
+      <WorkflowProgress
+        stage={pack.workflowStage}
+        packId={pack.id}
+        onStageChange={onStageChange}
+      />
     </div>
   );
 }
@@ -226,11 +279,13 @@ export default function ContentPackGenerator() {
   const [savedToVault, setSavedToVault]   = useState(false);
   const [savedToCalendar, setSavedToCalendar] = useState(false);
   const [savedToPacks, setSavedToPacks]   = useState(false);
-  const [isSavingPack, setIsSavingPack]   = useState(false);
-  const [savePackError, setSavePackError] = useState(false);
-  const [allCopied, setAllCopied]         = useState(false);
-  const [history, setHistory]             = useState<ContentPackRecord[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
+  const [isSavingPack, setIsSavingPack]             = useState(false);
+  const [savePackError, setSavePackError]           = useState(false);
+  const [allCopied, setAllCopied]                   = useState(false);
+  const [history, setHistory]                       = useState<ContentPackRecord[]>([]);
+  const [historyLoading, setHistoryLoading]         = useState(true);
+  const [currentSavedPackId, setCurrentSavedPackId] = useState<string | null>(null);
+  const { activeWorkspace, setActiveWorkspace }     = useActiveWorkspace();
 
   const phraseTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef    = useRef<AbortController | null>(null);
@@ -248,6 +303,21 @@ export default function ContentPackGenerator() {
     abortRef.current?.abort();
     if (phraseTimer.current) clearInterval(phraseTimer.current);
   }, []);
+
+  // Pre-fill from active workspace (fires once per workspace switch)
+  useEffect(() => {
+    if (!activeWorkspace) return;
+    setForm(f => ({
+      ...f,
+      niche:    niches.includes(activeWorkspace.niche)       ? activeWorkspace.niche       : f.niche,
+      audience: audiences.includes(activeWorkspace.audience) ? activeWorkspace.audience    : f.audience,
+      platform: activeWorkspace.platform === "Instagram"     ? "Instagram Reels"
+               : activeWorkspace.platform === "YouTube"      ? "YouTube Shorts"
+               : activeWorkspace.platform === "TikTok"       ? "TikTok"
+               : f.platform,
+    }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeWorkspace?.id]);
 
   // ── Generate ─────────────────────────────────────────────────────────────
   const handleGenerate = useCallback(async () => {
@@ -333,12 +403,18 @@ export default function ContentPackGenerator() {
         prompt: `Content Pack ${label} | Niche: ${form.niche} | Style: ${form.style} | Tone: ${form.tone}`,
       });
       state = addVaultEntry(state, entry);
-      upsertVaultEntryToCloud(entry).catch(() => null);
+      upsertVaultEntryWithWorkspaceToCloud(entry, activeWorkspace?.id ?? null).catch(() => null);
     });
     saveVault(state);
+    if (currentSavedPackId) {
+      updateWorkflowStageToCloud(currentSavedPackId, "saved").catch(() => null);
+      setHistory(prev => prev.map(p =>
+        p.id === currentSavedPackId ? { ...p, workflowStage: "saved" } : p
+      ));
+    }
     setSavedToVault(true);
     setTimeout(() => setSavedToVault(false), 3000);
-  }, [pack, form, model]);
+  }, [pack, form, model, currentSavedPackId, activeWorkspace?.id]);
 
   // ── Add to Calendar ───────────────────────────────────────────────────────
   const handleAddToCalendar = useCallback(() => {
@@ -354,19 +430,26 @@ export default function ContentPackGenerator() {
     const updated = saveToCalendar(calState, pack.hook, "hook", calPlatform, form.niche, today);
     const newPost = updated[updated.length - 1];
     if (newPost) {
-      upsertPostToCloud(newPost).catch(() => null);
+      upsertPostWithWorkspaceToCloud(newPost, activeWorkspace?.id ?? null).catch(() => null);
+    }
+    if (currentSavedPackId) {
+      updateWorkflowStageToCloud(currentSavedPackId, "scheduled").catch(() => null);
+      setHistory(prev => prev.map(p =>
+        p.id === currentSavedPackId ? { ...p, workflowStage: "scheduled" } : p
+      ));
     }
     setSavedToCalendar(true);
     setTimeout(() => setSavedToCalendar(false), 3000);
-  }, [pack, form]);
+  }, [pack, form, currentSavedPackId, activeWorkspace?.id]);
 
   // ── Save Pack to Supabase ──────────────────────────────────────────────────
   const handleSavePack = useCallback(async () => {
     if (!pack || isSavingPack) return;
     setIsSavingPack(true);
     setSavePackError(false);
+    const packId = crypto.randomUUID();
     const record: ContentPackRecord = {
-      id:              crypto.randomUUID(),
+      id:             packId,
       niche:           form.niche,
       style:           form.style,
       tone:            form.tone,
@@ -381,10 +464,13 @@ export default function ContentPackGenerator() {
       model:           model || "gemini-2.5-flash",
       isFavourite:     false,
       createdAt:       new Date().toISOString(),
+      workspaceId:     activeWorkspace?.id,
+      workflowStage:   "generated",
     };
     const ok = await saveContentPackToCloud(record);
     setIsSavingPack(false);
     if (ok) {
+      setCurrentSavedPackId(packId);
       setHistory(prev => [record, ...prev]);
       setSavedToPacks(true);
       setTimeout(() => setSavedToPacks(false), 3000);
@@ -420,6 +506,11 @@ export default function ContentPackGenerator() {
     setHistory(prev => prev.map(p => p.id === id ? { ...p, isFavourite: fav } : p));
   }, []);
 
+  const handleUpdateWorkflowStage = useCallback(async (id: string, stage: string) => {
+    await updateWorkflowStageToCloud(id, stage);
+    setHistory(prev => prev.map(p => p.id === id ? { ...p, workflowStage: stage } : p));
+  }, []);
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 space-y-8">
       {/* Header */}
@@ -443,6 +534,23 @@ export default function ContentPackGenerator() {
               <Sparkles className="h-4 w-4 text-primary" />
               <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Creative Brief</h2>
             </div>
+
+            {activeWorkspace && (
+              <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-primary/10 border border-primary/25">
+                <Briefcase className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-primary font-medium truncate">{activeWorkspace.workspaceName}</p>
+                  <p className="text-[10px] text-muted-foreground">Active workspace · fields auto-filled</p>
+                </div>
+                <button
+                  onClick={() => setActiveWorkspace(null)}
+                  title="Clear active workspace"
+                  className="text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
 
             <SelectField label="Niche"           options={niches}     value={form.niche}    onChange={v => setForm(f => ({ ...f, niche: v }))} />
             <SelectField label="Video Style"     options={styles}     value={form.style}    onChange={v => setForm(f => ({ ...f, style: v }))} />
@@ -650,6 +758,7 @@ export default function ContentPackGenerator() {
                   pack={p}
                   onDelete={handleDeleteHistory}
                   onToggleFav={handleToggleFav}
+                  onStageChange={handleUpdateWorkflowStage}
                 />
               ))}
             </div>

@@ -1,1 +1,2 @@
-- [Supabase RLS user_id pattern](supabase-rls-user-id.md) — all write payloads must include user_id or auth RLS rejects with 403; fetch functions need auth-aware branching.
+- [TLIS Workspace Workflow Engine](tlis-module13.md) — Module 13 wires all modules via Active Workspace; SQL migration still needed in Supabase dashboard
+- [TLIS Supabase auth pattern](tlis-supabase-auth.md) — getAuthUserId()/getDeviceId() used for RLS; vaultEntryToRow/calendarPostToRow are module-private helpers

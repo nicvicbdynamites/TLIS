@@ -734,6 +734,8 @@ export interface ContentPackRecord {
   model:           string;
   isFavourite:     boolean;
   createdAt:       string;
+  workspaceId?:    string;
+  workflowStage:   string;
 }
 
 function contentPackToRow(p: ContentPackRecord, deviceId: string, userId: string | null): Record<string, unknown> {
@@ -754,6 +756,8 @@ function contentPackToRow(p: ContentPackRecord, deviceId: string, userId: string
     best_posting_time: p.bestPostingTime,
     model:            p.model,
     is_favourite:     p.isFavourite,
+    workspace_id:     p.workspaceId ?? null,
+    workflow_stage:   p.workflowStage ?? "generated",
     updated_at:       new Date().toISOString(),
   };
 }
@@ -775,6 +779,8 @@ function rowToContentPack(row: Record<string, unknown>): ContentPackRecord {
     model:           String(row["model"]            ?? "gemini-2.5-flash"),
     isFavourite:     Boolean(row["is_favourite"]),
     createdAt:       String(row["created_at"]       ?? new Date().toISOString()),
+    workspaceId:     row["workspace_id"] ? String(row["workspace_id"]) : undefined,
+    workflowStage:   String(row["workflow_stage"]   ?? "generated"),
   };
 }
 
@@ -958,5 +964,82 @@ export async function fetchWorkspaceStatsFromCloud(): Promise<WorkspaceStats> {
   } catch (err) {
     console.error("[TLIS] fetchWorkspaceStatsFromCloud:", err);
     return zero;
+  }
+}
+
+// ── Workspace Workflow Engine — linking helpers ────────────────────────────
+
+export async function upsertVaultEntryWithWorkspaceToCloud(
+  entry: VaultEntry,
+  workspaceId: string | null,
+): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const userId = await getAuthUserId();
+    const row = { ...vaultEntryToRow(entry, userId), workspace_id: workspaceId };
+    const { error } = await supabase.from("vault_entries").upsert(row, { onConflict: "id" });
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("[TLIS] upsertVaultEntryWithWorkspaceToCloud:", err);
+    return false;
+  }
+}
+
+export async function upsertPostWithWorkspaceToCloud(
+  post: CalendarPost,
+  workspaceId: string | null,
+): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const userId = await getAuthUserId();
+    const row = { ...calendarPostToRow(post, userId), workspace_id: workspaceId };
+    const { error } = await supabase.from("calendar_posts").upsert(row, { onConflict: "id" });
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("[TLIS] upsertPostWithWorkspaceToCloud:", err);
+    return false;
+  }
+}
+
+export async function fetchWorkspaceLinkedCountsFromCloud(
+  workspaceId: string,
+): Promise<{ contentPacks: number; vaultEntries: number; calendarPosts: number }> {
+  const zero = { contentPacks: 0, vaultEntries: 0, calendarPosts: 0 };
+  if (!supabase) return zero;
+  try {
+    const sb = supabase;
+    const [cpRes, veRes, calRes] = await Promise.all([
+      sb.from("content_packs").select("*", { count: "exact", head: true }).eq("workspace_id", workspaceId),
+      sb.from("vault_entries").select("*", { count: "exact", head: true }).eq("workspace_id", workspaceId),
+      sb.from("calendar_posts").select("*", { count: "exact", head: true }).eq("workspace_id", workspaceId),
+    ]);
+    return {
+      contentPacks:  cpRes.count  ?? 0,
+      vaultEntries:  veRes.count  ?? 0,
+      calendarPosts: calRes.count ?? 0,
+    };
+  } catch (err) {
+    console.error("[TLIS] fetchWorkspaceLinkedCountsFromCloud:", err);
+    return zero;
+  }
+}
+
+export async function updateWorkflowStageToCloud(
+  id: string,
+  stage: string,
+): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase
+      .from("content_packs")
+      .update({ workflow_stage: stage, updated_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("[TLIS] updateWorkflowStageToCloud:", err);
+    return false;
   }
 }

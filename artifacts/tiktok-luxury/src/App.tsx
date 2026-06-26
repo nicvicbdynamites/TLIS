@@ -20,6 +20,7 @@ import ContentPackPage from "@/pages/content-pack";
 import AuthPage from "@/pages/auth";
 import ProfilePage from "@/pages/profile";
 import WorkspacePage from "@/pages/workspace";
+import { WorkspaceProvider } from "@/lib/workspace-context";
 
 const queryClient = new QueryClient();
 
@@ -61,7 +62,9 @@ function App() {
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <AuthProvider>
-            <AppRoutes />
+            <WorkspaceProvider>
+              <AppRoutes />
+            </WorkspaceProvider>
           </AuthProvider>
         </WouterRouter>
         <Toaster />

@@ -23,6 +23,7 @@ import {
 } from "@/lib/supabase";
 import type { VaultEntry } from "@/lib/vault";
 import type { CalendarPost } from "@/lib/calendar";
+import { useActiveWorkspace } from "@/lib/workspace-context";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -218,23 +219,31 @@ function StatCard({
 // ── Workspace Card (list item) ────────────────────────────────────────────────
 
 function WorkspaceCard({
-  workspace, onEdit, onDelete, onOpen, deleting,
+  workspace, onEdit, onDelete, onOpen, deleting, isActive,
 }: {
   workspace: TikTokWorkspace;
   onEdit: () => void;
   onDelete: () => void;
   onOpen: () => void;
   deleting: boolean;
+  isActive: boolean;
 }) {
   return (
-    <div className="luxury-card p-5 space-y-4 hover:border-primary/30 transition-colors">
+    <div className={cn("luxury-card p-5 space-y-4 transition-colors", isActive ? "border-primary/50 shadow-sm shadow-primary/10" : "hover:border-primary/30")}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 text-primary">
+          <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 text-primary border", isActive ? "bg-primary/20 border-primary/40" : "bg-primary/10 border-primary/20")}>
             <Globe className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-foreground truncate">{workspace.workspaceName}</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm font-semibold text-foreground truncate">{workspace.workspaceName}</h3>
+              {isActive && (
+                <span className="flex-shrink-0 text-[9px] font-mono uppercase tracking-widest text-primary bg-primary/15 border border-primary/30 px-1.5 py-0.5 rounded">
+                  Active
+                </span>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground truncate">
               {workspace.username ? `@${workspace.username}` : "—"}
               {workspace.accountName ? ` · ${workspace.accountName}` : ""}
@@ -269,7 +278,7 @@ function WorkspaceCard({
           className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary transition-all min-h-[44px] flex-1 justify-center"
         >
           <ExternalLink className="h-3.5 w-3.5" />
-          Open
+          {isActive ? "Open (Active)" : "Open & Activate"}
         </button>
         <button
           onClick={onEdit}
@@ -450,11 +459,11 @@ function WorkspaceDetail({
       fetchVaultEntriesFromCloud(),
       fetchCalendarFromCloud(),
     ]).then(([cp, ve, cal]) => {
-      setPacks(cp.filter(p => p.niche === workspace.niche));
+      setPacks(cp.filter(p => p.workspaceId === workspace.id));
       setVault(ve.filter(e => e.niche === workspace.niche));
       setPosts(cal.filter(p => p.niche === workspace.niche));
     }).finally(() => setLoading(false));
-  }, [workspace.niche]);
+  }, [workspace.id, workspace.niche]);
 
   const tabs: Array<{ id: DetailTab; label: string; count: number; icon: React.ElementType }> = [
     { id: "overview",  label: "Overview",       count: 0,            icon: Briefcase    },
@@ -665,6 +674,7 @@ export default function WorkspacePage() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [, navigate]  = useLocation();
+  const { activeWorkspace, setActiveWorkspace } = useActiveWorkspace();
 
   const [view, setView]           = useState<PageView>("list");
   const [workspaces, setWorkspaces] = useState<TikTokWorkspace[]>([]);
@@ -704,6 +714,7 @@ export default function WorkspacePage() {
     const ok = await upsertWorkspaceToCloud(workspace);
     if (ok) {
       await load();
+      if (activeWorkspace?.id === workspace.id) setActiveWorkspace(workspace);
       setView("list");
       toast({
         title: isEdit ? "Workspace updated" : "Workspace created",
@@ -719,6 +730,7 @@ export default function WorkspacePage() {
     setDeletingId(id);
     const ok = await deleteWorkspaceFromCloud(id);
     if (ok) {
+      if (activeWorkspace?.id === id) setActiveWorkspace(null);
       setWorkspaces(prev => prev.filter(w => w.id !== id));
       setStats(s => ({ ...s, workspaces: Math.max(0, s.workspaces - 1) }));
       toast({ title: "Workspace deleted" });
@@ -736,6 +748,7 @@ export default function WorkspacePage() {
 
   const openDetail = (w: TikTokWorkspace) => {
     setSelected(w);
+    setActiveWorkspace(w);
     setView("detail");
   };
 
@@ -892,6 +905,7 @@ export default function WorkspacePage() {
               onDelete={() => handleDelete(w.id)}
               onOpen={() => openDetail(w)}
               deleting={deletingId === w.id}
+              isActive={activeWorkspace?.id === w.id}
             />
           ))}
         </div>
