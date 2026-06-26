@@ -165,27 +165,10 @@ CREATE TABLE IF NOT EXISTS public.vault_collections (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ──────────────────────────────────────────────
---  UPGRADE: add missing columns to vault_entries if upgrading from an older schema
--- ──────────────────────────────────────────────
-ALTER TABLE public.vault_entries
-  ADD COLUMN IF NOT EXISTS prompt           TEXT        NOT NULL DEFAULT '',
-  ADD COLUMN IF NOT EXISTS prompt_template  TEXT        NOT NULL DEFAULT '',
-  ADD COLUMN IF NOT EXISTS platform         TEXT        NOT NULL DEFAULT 'TikTok',
-  ADD COLUMN IF NOT EXISTS source           TEXT        NOT NULL DEFAULT 'generator',
-  ADD COLUMN IF NOT EXISTS model            TEXT        NOT NULL DEFAULT 'gemini-2.5-flash',
-  ADD COLUMN IF NOT EXISTS ai_score         SMALLINT    NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS viral_potential  SMALLINT    NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS is_favourite     BOOLEAN     NOT NULL DEFAULT FALSE,
-  ADD COLUMN IF NOT EXISTS tags             TEXT[]      NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS collection_id    TEXT,
-  ADD COLUMN IF NOT EXISTS views            INTEGER     NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS search_keywords  TEXT[]      NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS embedding_ready  BOOLEAN     NOT NULL DEFAULT FALSE,
-  ADD COLUMN IF NOT EXISTS campaign_id      TEXT,
-  ADD COLUMN IF NOT EXISTS created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  ADD COLUMN IF NOT EXISTS updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  ADD COLUMN IF NOT EXISTS last_accessed    TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- NOTE: The ALTER TABLE upgrade block for vault_entries has been moved to
+-- AFTER the CREATE TABLE vault_entries statement below. It was previously
+-- placed here (before CREATE TABLE), which caused an error on fresh installs
+-- because the table didn't exist yet at that point in execution.
 
 -- ──────────────────────────────────────────────
 --  TABLE: vault_entries
@@ -312,6 +295,29 @@ CREATE TRIGGER set_vault_entries_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ──────────────────────────────────────────────
+--  UPGRADE PATH: add columns to vault_entries when upgrading from an older schema
+--  (safe to run on a fresh install — ADD COLUMN IF NOT EXISTS is idempotent)
+-- ──────────────────────────────────────────────
+ALTER TABLE public.vault_entries
+  ADD COLUMN IF NOT EXISTS prompt           TEXT        NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS prompt_template  TEXT        NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS platform         TEXT        NOT NULL DEFAULT 'TikTok',
+  ADD COLUMN IF NOT EXISTS source           TEXT        NOT NULL DEFAULT 'generator',
+  ADD COLUMN IF NOT EXISTS model            TEXT        NOT NULL DEFAULT 'gemini-2.5-flash',
+  ADD COLUMN IF NOT EXISTS ai_score         SMALLINT    NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS viral_potential  SMALLINT    NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS is_favourite     BOOLEAN     NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS tags             TEXT[]      NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS collection_id    TEXT,
+  ADD COLUMN IF NOT EXISTS views            INTEGER     NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS search_keywords  TEXT[]      NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS embedding_ready  BOOLEAN     NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS campaign_id      TEXT,
+  ADD COLUMN IF NOT EXISTS created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS last_accessed    TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- ──────────────────────────────────────────────
 --  TABLE: profiles  (Module 12 — subscription-ready)
 --  Mirror of auth.users with subscription metadata.
 --  Auto-populated by the trigger below on user creation.
@@ -383,6 +389,7 @@ CREATE TRIGGER on_auth_user_created
 CREATE TABLE IF NOT EXISTS public.content_packs (
   id                  TEXT        PRIMARY KEY,
   device_id           TEXT        NOT NULL DEFAULT '',
+  user_id             UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
   niche               TEXT        NOT NULL DEFAULT '',
   style               TEXT        NOT NULL DEFAULT '',
   tone                TEXT        NOT NULL DEFAULT '',
