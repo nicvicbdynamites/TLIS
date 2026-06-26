@@ -28,6 +28,16 @@ export function isSupabaseReady(): boolean {
 }
 
 // ──────────────────────────────────────────────
+//  Auth user ID — reads from the cached session,
+//  no network round-trip. Returns null for anon.
+// ──────────────────────────────────────────────
+export async function getAuthUserId(): Promise<string | null> {
+  if (!supabase) return null;
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user?.id ?? null;
+}
+
+// ──────────────────────────────────────────────
 //  Device ID — pre-auth user identifier
 //  UUID generated once, stored in localStorage
 //  Upgrade path: replace with auth.uid() when Supabase Auth is added
@@ -70,12 +80,10 @@ export async function checkSupabaseConnection(): Promise<boolean> {
 export async function fetchCalendarFromCloud(): Promise<CalendarPost[]> {
   if (!supabase) return [];
   try {
-    const deviceId = getDeviceId();
-    const { data, error } = await supabase
-      .from("calendar_posts")
-      .select("*")
-      .eq("device_id", deviceId)
-      .order("created_at", { ascending: false });
+    const userId = await getAuthUserId();
+    let q = supabase.from("calendar_posts").select("*").order("created_at", { ascending: false });
+    if (!userId) q = q.eq("device_id", getDeviceId());
+    const { data, error } = await q;
     if (error) throw error;
     return (data ?? []).map(rowToCalendarPost);
   } catch (err) {
@@ -87,9 +95,10 @@ export async function fetchCalendarFromCloud(): Promise<CalendarPost[]> {
 export async function upsertPostToCloud(post: CalendarPost): Promise<boolean> {
   if (!supabase) return false;
   try {
+    const userId = await getAuthUserId();
     const { error } = await supabase
       .from("calendar_posts")
-      .upsert(calendarPostToRow(post), { onConflict: "id" });
+      .upsert(calendarPostToRow(post, userId), { onConflict: "id" });
     if (error) throw error;
     return true;
   } catch (err) {
@@ -101,9 +110,10 @@ export async function upsertPostToCloud(post: CalendarPost): Promise<boolean> {
 export async function upsertManyPostsToCloud(posts: CalendarPost[]): Promise<boolean> {
   if (!supabase || posts.length === 0) return false;
   try {
+    const userId = await getAuthUserId();
     const { error } = await supabase
       .from("calendar_posts")
-      .upsert(posts.map(calendarPostToRow), { onConflict: "id" });
+      .upsert(posts.map(p => calendarPostToRow(p, userId)), { onConflict: "id" });
     if (error) throw error;
     return true;
   } catch (err) {
@@ -169,10 +179,11 @@ export async function syncCalendarWithCloud(
 }
 
 // Row <-> domain type conversions
-function calendarPostToRow(post: CalendarPost) {
+function calendarPostToRow(post: CalendarPost, userId: string | null) {
   return {
     id: post.id,
     device_id: getDeviceId(),
+    user_id: userId,
     title: post.title,
     content: post.content,
     type: post.type,
@@ -210,10 +221,12 @@ function rowToCalendarPost(row: Record<string, unknown>): CalendarPost {
 export async function insertGenerationToCloud(entry: HistoryEntry): Promise<boolean> {
   if (!supabase) return false;
   try {
+    const userId = await getAuthUserId();
     const { error } = await supabase.from("ai_generations").upsert(
       {
         id: entry.id,
         device_id: getDeviceId(),
+        user_id: userId,
         type: entry.type,
         niche: entry.niche,
         tone: entry.tone,
@@ -233,12 +246,10 @@ export async function insertGenerationToCloud(entry: HistoryEntry): Promise<bool
 export async function fetchGenerationsFromCloud(limit = 100): Promise<HistoryEntry[]> {
   if (!supabase) return [];
   try {
-    const { data, error } = await supabase
-      .from("ai_generations")
-      .select("*")
-      .eq("device_id", getDeviceId())
-      .order("created_at", { ascending: false })
-      .limit(limit);
+    const userId = await getAuthUserId();
+    let qg = supabase.from("ai_generations").select("*").order("created_at", { ascending: false }).limit(limit);
+    if (!userId) qg = qg.eq("device_id", getDeviceId());
+    const { data, error } = await qg;
     if (error) throw error;
     return (data ?? []).map(row => ({
       id: String(row.id),
@@ -310,10 +321,12 @@ export interface SavedOutput {
 export async function saveOutputToCloud(output: SavedOutput): Promise<boolean> {
   if (!supabase) return false;
   try {
+    const userId = await getAuthUserId();
     const { error } = await supabase.from("saved_outputs").upsert(
       {
         id: output.id,
         device_id: getDeviceId(),
+        user_id: userId,
         type: output.type,
         niche: output.niche,
         platform: output.platform,
@@ -336,11 +349,10 @@ export async function saveOutputToCloud(output: SavedOutput): Promise<boolean> {
 export async function fetchSavedOutputsFromCloud(): Promise<SavedOutput[]> {
   if (!supabase) return [];
   try {
-    const { data, error } = await supabase
-      .from("saved_outputs")
-      .select("*")
-      .eq("device_id", getDeviceId())
-      .order("created_at", { ascending: false });
+    const userId = await getAuthUserId();
+    let qso = supabase.from("saved_outputs").select("*").order("created_at", { ascending: false });
+    if (!userId) qso = qso.eq("device_id", getDeviceId());
+    const { data, error } = await qso;
     if (error) throw error;
     return (data ?? []).map(row => ({
       id: String(row.id),
@@ -367,8 +379,9 @@ export async function fetchSavedOutputsFromCloud(): Promise<SavedOutput[]> {
 export async function upsertVaultEntryToCloud(entry: VaultEntry): Promise<boolean> {
   if (!supabase) return false;
   try {
+    const userId = await getAuthUserId();
     const { error } = await supabase.from("vault_entries").upsert(
-      vaultEntryToRow(entry),
+      vaultEntryToRow(entry, userId),
       { onConflict: "id" }
     );
     if (error) throw error;
@@ -382,8 +395,9 @@ export async function upsertVaultEntryToCloud(entry: VaultEntry): Promise<boolea
 export async function upsertManyVaultEntriesToCloud(entries: VaultEntry[]): Promise<boolean> {
   if (!supabase || entries.length === 0) return false;
   try {
+    const userId = await getAuthUserId();
     const { error } = await supabase.from("vault_entries").upsert(
-      entries.map(vaultEntryToRow),
+      entries.map(e => vaultEntryToRow(e, userId)),
       { onConflict: "id" }
     );
     if (error) throw error;
@@ -397,11 +411,10 @@ export async function upsertManyVaultEntriesToCloud(entries: VaultEntry[]): Prom
 export async function fetchVaultEntriesFromCloud(): Promise<VaultEntry[]> {
   if (!supabase) return [];
   try {
-    const { data, error } = await supabase
-      .from("vault_entries")
-      .select("*")
-      .eq("device_id", getDeviceId())
-      .limit(500);
+    const userId = await getAuthUserId();
+    let qve = supabase.from("vault_entries").select("*").limit(500);
+    if (!userId) qve = qve.eq("device_id", getDeviceId());
+    const { data, error } = await qve;
     if (error) throw error;
     // Sort client-side by createdAt descending (avoids dependency on DB column ordering)
     const entries = (data ?? []).map(rowToVaultEntry);
@@ -427,10 +440,12 @@ export async function deleteVaultEntryFromCloud(id: string): Promise<boolean> {
 export async function upsertVaultCollectionToCloud(col: VaultCollection): Promise<boolean> {
   if (!supabase) return false;
   try {
+    const userId = await getAuthUserId();
     const { error } = await supabase.from("vault_collections").upsert(
       {
         id:          col.id,
         device_id:   getDeviceId(),
+        user_id:     userId,
         name:        col.name,
         description: col.description,
         color:       col.color,
@@ -450,11 +465,10 @@ export async function upsertVaultCollectionToCloud(col: VaultCollection): Promis
 export async function fetchVaultCollectionsFromCloud(): Promise<VaultCollection[]> {
   if (!supabase) return [];
   try {
-    const { data, error } = await supabase
-      .from("vault_collections")
-      .select("*")
-      .eq("device_id", getDeviceId())
-      .order("created_at", { ascending: true });
+    const userId = await getAuthUserId();
+    let qvc = supabase.from("vault_collections").select("*").order("created_at", { ascending: true });
+    if (!userId) qvc = qvc.eq("device_id", getDeviceId());
+    const { data, error } = await qvc;
     if (error) throw error;
     return (data ?? []).map(row => ({
       id:          String(row.id),
@@ -528,10 +542,11 @@ export async function syncVaultWithCloud(
 
 // Row <-> domain converters
 
-function vaultEntryToRow(e: VaultEntry) {
+function vaultEntryToRow(e: VaultEntry, userId: string | null) {
   return {
     id:               e.id,
     device_id:        getDeviceId(),
+    user_id:          userId,
     title:            e.title,
     content:          e.content,
     prompt:           e.prompt,
@@ -721,10 +736,11 @@ export interface ContentPackRecord {
   createdAt:       string;
 }
 
-function contentPackToRow(p: ContentPackRecord, deviceId: string): Record<string, unknown> {
+function contentPackToRow(p: ContentPackRecord, deviceId: string, userId: string | null): Record<string, unknown> {
   return {
     id:               p.id,
     device_id:        deviceId,
+    user_id:          userId,
     niche:            p.niche,
     style:            p.style,
     tone:             p.tone,
@@ -765,22 +781,26 @@ function rowToContentPack(row: Record<string, unknown>): ContentPackRecord {
 export async function saveContentPackToCloud(pack: ContentPackRecord): Promise<boolean> {
   if (!supabase) return false;
   const deviceId = getDeviceId();
+  const userId = await getAuthUserId();
   const { error } = await supabase
     .from("content_packs")
-    .upsert(contentPackToRow(pack, deviceId));
+    .upsert(contentPackToRow(pack, deviceId, userId));
+  if (error) console.error("[TLIS] saveContentPackToCloud:", error);
   return !error;
 }
 
 export async function fetchContentPacksFromCloud(): Promise<ContentPackRecord[]> {
   if (!supabase) return [];
-  const deviceId = getDeviceId();
-  const { data, error } = await supabase
+  const userId = await getAuthUserId();
+  let query = supabase
     .from("content_packs")
     .select("*")
-    .eq("device_id", deviceId)
     .order("created_at", { ascending: false })
     .limit(50);
-  if (error || !data) return [];
+  if (!userId) query = query.eq("device_id", getDeviceId());
+  const { data, error } = await query;
+  if (error) { console.error("[TLIS] fetchContentPacksFromCloud:", error); return []; }
+  if (!data) return [];
   return (data as Record<string, unknown>[]).map(rowToContentPack);
 }
 
