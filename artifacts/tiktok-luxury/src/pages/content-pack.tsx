@@ -226,6 +226,8 @@ export default function ContentPackGenerator() {
   const [savedToVault, setSavedToVault]   = useState(false);
   const [savedToCalendar, setSavedToCalendar] = useState(false);
   const [savedToPacks, setSavedToPacks]   = useState(false);
+  const [isSavingPack, setIsSavingPack]   = useState(false);
+  const [savePackError, setSavePackError] = useState(false);
   const [allCopied, setAllCopied]         = useState(false);
   const [history, setHistory]             = useState<ContentPackRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
@@ -360,7 +362,9 @@ export default function ContentPackGenerator() {
 
   // ── Save Pack to Supabase ──────────────────────────────────────────────────
   const handleSavePack = useCallback(async () => {
-    if (!pack) return;
+    if (!pack || isSavingPack) return;
+    setIsSavingPack(true);
+    setSavePackError(false);
     const record: ContentPackRecord = {
       id:              crypto.randomUUID(),
       niche:           form.niche,
@@ -379,12 +383,16 @@ export default function ContentPackGenerator() {
       createdAt:       new Date().toISOString(),
     };
     const ok = await saveContentPackToCloud(record);
+    setIsSavingPack(false);
     if (ok) {
       setHistory(prev => [record, ...prev]);
       setSavedToPacks(true);
       setTimeout(() => setSavedToPacks(false), 3000);
+    } else {
+      setSavePackError(true);
+      setTimeout(() => setSavePackError(false), 3000);
     }
-  }, [pack, form, model]);
+  }, [pack, form, model, isSavingPack]);
 
   // ── Copy All ──────────────────────────────────────────────────────────────
   const handleCopyAll = useCallback(() => {
@@ -509,62 +517,72 @@ export default function ContentPackGenerator() {
 
           {!loading && pack && (
             <>
-              {/* ── Model Badge ── */}
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-[10px] text-primary bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 font-mono">
+              {/* ── Model Badge + Actions ── */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="flex items-center gap-1.5 text-[10px] text-primary bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 font-mono mr-auto">
                   <Wifi className="h-2.5 w-2.5" />
                   {model || "Gemini 2.5 Flash"}
                 </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleCopyAll}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition-all duration-200",
-                      allCopied
-                        ? "bg-primary/15 border-primary/40 text-primary"
-                        : "bg-muted/20 hover:bg-primary/10 border-border hover:border-primary/30 text-muted-foreground hover:text-primary"
-                    )}
-                  >
-                    {allCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                    {allCopied ? "Copied!" : "Copy All"}
-                  </button>
-                  <button
-                    onClick={handleSaveToVault}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition-all duration-200",
-                      savedToVault
-                        ? "bg-primary/15 border-primary/40 text-primary"
-                        : "bg-muted/20 hover:bg-primary/10 border-border hover:border-primary/30 text-muted-foreground hover:text-primary"
-                    )}
-                  >
-                    {savedToVault ? <Check className="h-3 w-3" /> : <Database className="h-3 w-3" />}
-                    {savedToVault ? "Vaulted!" : "Save to Vault"}
-                  </button>
-                  <button
-                    onClick={handleAddToCalendar}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition-all duration-200",
-                      savedToCalendar
-                        ? "bg-chart-2/10 border-chart-2/30 text-chart-2"
-                        : "bg-muted/20 hover:bg-primary/10 border-border hover:border-primary/30 text-muted-foreground hover:text-primary"
-                    )}
-                  >
-                    {savedToCalendar ? <Check className="h-3 w-3" /> : <CalendarDays className="h-3 w-3" />}
-                    {savedToCalendar ? "Added!" : "Calendar"}
-                  </button>
-                  <button
-                    onClick={handleSavePack}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition-all duration-200",
-                      savedToPacks
-                        ? "bg-primary/15 border-primary/40 text-primary"
-                        : "bg-primary/10 hover:bg-primary/20 border-primary/30 hover:border-primary/50 text-primary"
-                    )}
-                  >
-                    {savedToPacks ? <Check className="h-3 w-3" /> : <Package className="h-3 w-3" />}
-                    {savedToPacks ? "Saved!" : "Save Pack"}
-                  </button>
-                </div>
+                <button
+                  onClick={handleCopyAll}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-md text-xs border transition-all duration-200",
+                    allCopied
+                      ? "bg-primary/15 border-primary/40 text-primary"
+                      : "bg-muted/20 hover:bg-primary/10 border-border hover:border-primary/30 text-muted-foreground hover:text-primary"
+                  )}
+                >
+                  {allCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                  {allCopied ? "Copied!" : "Copy All"}
+                </button>
+                <button
+                  onClick={handleSaveToVault}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-md text-xs border transition-all duration-200",
+                    savedToVault
+                      ? "bg-primary/15 border-primary/40 text-primary"
+                      : "bg-muted/20 hover:bg-primary/10 border-border hover:border-primary/30 text-muted-foreground hover:text-primary"
+                  )}
+                >
+                  {savedToVault ? <Check className="h-3 w-3" /> : <Database className="h-3 w-3" />}
+                  {savedToVault ? "Vaulted!" : "Save to Vault"}
+                </button>
+                <button
+                  onClick={handleAddToCalendar}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-md text-xs border transition-all duration-200",
+                    savedToCalendar
+                      ? "bg-chart-2/10 border-chart-2/30 text-chart-2"
+                      : "bg-muted/20 hover:bg-primary/10 border-border hover:border-primary/30 text-muted-foreground hover:text-primary"
+                  )}
+                >
+                  {savedToCalendar ? <Check className="h-3 w-3" /> : <CalendarDays className="h-3 w-3" />}
+                  {savedToCalendar ? "Added!" : "Calendar"}
+                </button>
+                <button
+                  onClick={handleSavePack}
+                  disabled={isSavingPack}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-md text-xs border transition-all duration-200",
+                    savedToPacks
+                      ? "bg-primary/15 border-primary/40 text-primary"
+                      : savePackError
+                        ? "bg-destructive/10 border-destructive/40 text-destructive"
+                        : isSavingPack
+                          ? "bg-primary/5 border-primary/20 text-primary/40 cursor-not-allowed"
+                          : "bg-primary/10 hover:bg-primary/20 border-primary/30 hover:border-primary/50 text-primary"
+                  )}
+                >
+                  {savedToPacks ? (
+                    <><Check className="h-3 w-3" />Saved!</>
+                  ) : savePackError ? (
+                    <><AlertCircle className="h-3 w-3" />Save Failed</>
+                  ) : isSavingPack ? (
+                    <><RefreshCw className="h-3 w-3 animate-spin" />Saving...</>
+                  ) : (
+                    <><Package className="h-3 w-3" />Save Pack</>
+                  )}
+                </button>
               </div>
 
               {/* ── Hook ── */}
