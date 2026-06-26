@@ -13,6 +13,7 @@ import {
   Database,
   Package,
   UserCircle,
+  Briefcase,
   LogIn,
   LogOut,
   Menu,
@@ -38,6 +39,7 @@ const navItems = [
   { href: "/analytics",   label: "Analytics Intelligence", icon: BarChart3       },
   { href: "/usage",       label: "Usage Tracker",          icon: Activity        },
   { href: "/content-pack", label: "Content Pack Generator", icon: Package        },
+  { href: "/workspace",   label: "TikTok Workspace",       icon: Briefcase       },
   { href: "/profile",     label: "User Profile",           icon: UserCircle      },
 ];
 

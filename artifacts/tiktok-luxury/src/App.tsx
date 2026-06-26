@@ -19,6 +19,7 @@ import VaultPage from "@/pages/vault";
 import ContentPackPage from "@/pages/content-pack";
 import AuthPage from "@/pages/auth";
 import ProfilePage from "@/pages/profile";
+import WorkspacePage from "@/pages/workspace";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ function AppRoutes() {
             <Route path="/analytics"    component={AnalyticsPage} />
             <Route path="/usage"        component={UsagePage}     />
             <Route path="/content-pack" component={ContentPackPage} />
+            <Route path="/workspace"    component={WorkspacePage}  />
             <Route path="/profile"      component={ProfilePage}   />
             <Route                      component={NotFound}      />
           </Switch>

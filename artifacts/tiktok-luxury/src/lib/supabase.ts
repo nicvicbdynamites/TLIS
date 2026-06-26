@@ -818,3 +818,145 @@ export async function toggleContentPackFavourite(id: string, isFavourite: boolea
     .eq("id", id);
   return !error;
 }
+
+// ──────────────────────────────────────────────
+//  TikTok Workspaces — types & cloud operations
+// ──────────────────────────────────────────────
+
+export interface TikTokWorkspace {
+  id:               string;
+  userId:           string | null;
+  createdAt:        string;
+  updatedAt:        string;
+  workspaceName:    string;
+  accountName:      string;
+  username:         string;
+  platform:         string;
+  niche:            string;
+  audience:         string;
+  goal:             string;
+  postingFrequency: string;
+  status:           "active" | "paused" | "archived";
+  notes:            string;
+}
+
+export interface WorkspaceStats {
+  workspaces:   number;
+  contentPacks: number;
+  vaultEntries: number;
+  calendarPosts: number;
+}
+
+function workspaceToRow(w: TikTokWorkspace, userId: string | null): Record<string, unknown> {
+  return {
+    id:                w.id,
+    user_id:           userId,
+    workspace_name:    w.workspaceName,
+    account_name:      w.accountName,
+    username:          w.username,
+    platform:          w.platform,
+    niche:             w.niche,
+    audience:          w.audience,
+    goal:              w.goal,
+    posting_frequency: w.postingFrequency,
+    status:            w.status,
+    notes:             w.notes,
+    updated_at:        new Date().toISOString(),
+  };
+}
+
+function rowToWorkspace(row: Record<string, unknown>): TikTokWorkspace {
+  return {
+    id:               String(row.id),
+    userId:           row.user_id ? String(row.user_id) : null,
+    createdAt:        String(row.created_at  ?? new Date().toISOString()),
+    updatedAt:        String(row.updated_at  ?? new Date().toISOString()),
+    workspaceName:    String(row.workspace_name    ?? ""),
+    accountName:      String(row.account_name      ?? ""),
+    username:         String(row.username           ?? ""),
+    platform:         String(row.platform           ?? "TikTok"),
+    niche:            String(row.niche              ?? ""),
+    audience:         String(row.audience           ?? ""),
+    goal:             String(row.goal               ?? ""),
+    postingFrequency: String(row.posting_frequency  ?? ""),
+    status:           (row.status as TikTokWorkspace["status"]) ?? "active",
+    notes:            String(row.notes              ?? ""),
+  };
+}
+
+export async function fetchWorkspacesFromCloud(): Promise<TikTokWorkspace[]> {
+  if (!supabase) return [];
+  try {
+    const userId = await getAuthUserId();
+    if (!userId) return [];
+    const { data, error } = await supabase
+      .from("tiktok_workspaces")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(rowToWorkspace);
+  } catch (err) {
+    console.error("[TLIS] fetchWorkspacesFromCloud:", err);
+    return [];
+  }
+}
+
+export async function upsertWorkspaceToCloud(workspace: TikTokWorkspace): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const userId = await getAuthUserId();
+    if (!userId) return false;
+    const { error } = await supabase
+      .from("tiktok_workspaces")
+      .upsert(workspaceToRow(workspace, userId), { onConflict: "id" });
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("[TLIS] upsertWorkspaceToCloud:", err);
+    return false;
+  }
+}
+
+export async function deleteWorkspaceFromCloud(id: string): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase
+      .from("tiktok_workspaces")
+      .delete()
+      .eq("id", id);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("[TLIS] deleteWorkspaceFromCloud:", err);
+    return false;
+  }
+}
+
+export async function fetchWorkspaceStatsFromCloud(): Promise<WorkspaceStats> {
+  const zero: WorkspaceStats = { workspaces: 0, contentPacks: 0, vaultEntries: 0, calendarPosts: 0 };
+  if (!supabase) return zero;
+  try {
+    const userId = await getAuthUserId();
+    const devId  = getDeviceId();
+    const sb     = supabase;
+
+    const cnt = async (table: string, isAuth: boolean): Promise<number> => {
+      let q = sb.from(table).select("*", { count: "exact", head: true });
+      if (!isAuth) q = q.eq("device_id", devId);
+      const { count } = await q;
+      return count ?? 0;
+    };
+
+    const [workspaces, contentPacks, vaultEntries, calendarPosts] = await Promise.all([
+      userId ? cnt("tiktok_workspaces", true) : Promise.resolve(0),
+      cnt("content_packs",  !!userId),
+      cnt("vault_entries",  !!userId),
+      cnt("calendar_posts", !!userId),
+    ]);
+
+    return { workspaces, contentPacks, vaultEntries, calendarPosts };
+  } catch (err) {
+    console.error("[TLIS] fetchWorkspaceStatsFromCloud:", err);
+    return zero;
+  }
+}
