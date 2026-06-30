@@ -4,13 +4,14 @@ import { GoogleGenAI } from "@google/genai";
 const router: IRouter = Router();
 
 // ── Model cascade: try in order, skip on 403/404, retry on 429 ──────────
-// gemini-2.5-flash  — current recommended model, requires billing or allowlisted project
-// gemini-2.0-flash  — previous gen (free-tier friendly, may be deprecated on paid projects)
-// gemini-1.5-flash  — stable fallback available on most project types
+// gemini-2.5-flash      — latest recommended; best quality
+// gemini-2.0-flash      — previous gen; generally free-tier available
+// gemini-2.0-flash-lite — lightweight; higher RPM bucket on free tier, good final fallback
+// gemini-1.5-flash      — REMOVED: deprecated and no longer served on v1beta
 const MODEL_CASCADE = [
   "gemini-2.5-flash",
   "gemini-2.0-flash",
-  "gemini-1.5-flash",
+  "gemini-2.0-flash-lite",
 ];
 
 function getClient(): GoogleGenAI {
@@ -159,9 +160,13 @@ function isRateLimit(err: any): boolean {
 }
 
 function isCreditsDepleted(err: any): boolean {
+  const msg = String(err?.message ?? "");
   return (
-    err?.status === 429 &&
-    String(err?.message).includes("prepayment credits are depleted")
+    err?.status === 429 && (
+      msg.includes("prepayment credits are depleted") ||
+      msg.includes("monthly spending cap") ||
+      msg.includes("spend")
+    )
   );
 }
 
@@ -208,6 +213,12 @@ async function generateWithCascade(
         lastErr = err;
         log.warn({ model, attempt, status: err?.status }, "Gemini attempt failed");
 
+        if (isCreditsDepleted(err)) {
+          // Spending cap / billing cap hit — all models share the same project, stop immediately
+          log.error({ model }, "Spending cap exceeded, aborting cascade");
+          throw err;
+        }
+
         if (isPermDenied(err)) {
           // This model is blocked for this key — skip to next model immediately
           log.warn({ model }, "Model permission denied, trying next in cascade");
@@ -217,7 +228,7 @@ async function generateWithCascade(
         if (isMissingKey(err)) throw err; // No point retrying
 
         if (isRateLimit(err) && attempt < 3) {
-          const delay = 1500 * attempt; // 1.5s, 3s
+          const delay = 5000 * attempt; // 5s, 10s — free-tier RPM windows need longer waits
           log.warn({ model, attempt, delay }, "Rate limited, backing off");
           await new Promise((r) => setTimeout(r, delay));
           continue;
@@ -268,11 +279,12 @@ async function streamWithCascade(
         lastErr = err;
         log.warn({ model, attempt, status: err?.status }, "Gemini stream attempt failed");
 
+        if (isCreditsDepleted(err)) { throw err; } // spending cap — stop all models
         if (isPermDenied(err)) { break; }
         if (isMissingKey(err)) throw err;
 
         if (isRateLimit(err) && attempt < 3) {
-          await new Promise((r) => setTimeout(r, 1500 * attempt));
+          await new Promise((r) => setTimeout(r, 5000 * attempt)); // 5s, 10s
           continue;
         }
         if ((err?.status >= 500 || err?.status === 503) && attempt < 3) {
@@ -293,10 +305,10 @@ function errorMessage(err: any): { status: number; message: string; code: string
     return { status: 500, code: "NO_KEY", message: "Gemini API key not configured or invalid. Check your GEMINI_API_KEY secret." };
   }
   if (isCreditsDepleted(err)) {
-    return { status: 429, code: "CREDITS_DEPLETED", message: "Prepaid billing credits are depleted on this API key's project. Add credits at ai.studio/projects or switch to a free-tier key from a new project." };
+    return { status: 429, code: "CREDITS_DEPLETED", message: "Your Google AI Studio project has exceeded its monthly spending cap. Go to https://ai.studio/spend to raise or remove the cap, or replace GEMINI_API_KEY with a key from a project that has remaining quota." };
   }
   if (isRateLimit(err)) {
-    return { status: 429, code: "QUOTA_EXHAUSTED", message: "Daily quota exhausted on all models. The free tier resets at midnight Pacific time. You can get a fresh API key at aistudio.google.com/apikey or enable billing to lift the limit." };
+    return { status: 429, code: "QUOTA_EXHAUSTED", message: "Daily free-tier quota exhausted on all models. The quota resets at midnight Pacific time. You can get a fresh API key from a new project at aistudio.google.com/apikey and update GEMINI_API_KEY in Secrets." };
   }
   if (isPermDenied(err)) {
     return { status: 403, code: "PERMISSION_DENIED", message: "All available models are blocked for this API key. Get a free key at aistudio.google.com/apikey and update GEMINI_API_KEY in Secrets." };
