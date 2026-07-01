@@ -1150,3 +1150,129 @@ export async function deleteAccountFromCloud(id: string): Promise<boolean> {
     return false;
   }
 }
+
+// ── Activity Feed ─────────────────────────────────────────────────────────
+
+export type ActivityEventType =
+  | "workspace" | "account" | "vault" | "calendar" | "content" | "ai";
+
+export interface ActivityEvent {
+  id:        string;
+  action:    string;
+  detail:    string;
+  type:      ActivityEventType;
+  createdAt: string;
+}
+
+/** Combine recent rows from 5 tables into a unified activity feed, newest first. */
+export async function fetchRecentActivityFromCloud(limit = 10): Promise<ActivityEvent[]> {
+  if (!supabase) return [];
+  try {
+    const userId = await getAuthUserId();
+    if (!userId) return [];
+
+    const LIMIT = 5;
+    const uid = (q: ReturnType<typeof supabase.from>) =>
+      (q as any).eq("user_id", userId);
+
+    const [ws, acc, vault, cal, cp] = await Promise.allSettled([
+      uid(supabase.from("tiktok_workspaces"))
+        .select("id, workspace_name, username, created_at, updated_at")
+        .order("created_at", { ascending: false })
+        .limit(LIMIT),
+      uid(supabase.from("tiktok_accounts"))
+        .select("id, account_name, username, created_at, updated_at")
+        .order("created_at", { ascending: false })
+        .limit(LIMIT),
+      uid(supabase.from("vault_entries"))
+        .select("id, title, type, created_at")
+        .order("created_at", { ascending: false })
+        .limit(LIMIT),
+      uid(supabase.from("calendar_posts"))
+        .select("id, title, status, created_at")
+        .order("created_at", { ascending: false })
+        .limit(LIMIT),
+      uid(supabase.from("content_packs"))
+        .select("id, title, created_at")
+        .order("created_at", { ascending: false })
+        .limit(LIMIT),
+    ]);
+
+    const events: ActivityEvent[] = [];
+
+    if (ws.status === "fulfilled" && ws.value.data) {
+      for (const r of ws.value.data as Record<string, unknown>[]) {
+        const createdAt = String(r.created_at ?? "");
+        const updatedAt = String(r.updated_at ?? "");
+        const isNew = createdAt === updatedAt || !updatedAt;
+        events.push({
+          id:        `ws-${String(r.id)}`,
+          action:    isNew ? "Workspace Created" : "Workspace Updated",
+          detail:    `"${String(r.workspace_name ?? "Workspace")}" · @${String(r.username ?? "")}`,
+          type:      "workspace",
+          createdAt: updatedAt || createdAt,
+        });
+      }
+    }
+
+    if (acc.status === "fulfilled" && acc.value.data) {
+      for (const r of acc.value.data as Record<string, unknown>[]) {
+        const createdAt = String(r.created_at ?? "");
+        const updatedAt = String(r.updated_at ?? "");
+        const isNew = createdAt === updatedAt || !updatedAt;
+        events.push({
+          id:        `acc-${String(r.id)}`,
+          action:    isNew ? "TikTok Account Added" : "TikTok Account Updated",
+          detail:    `${String(r.account_name ?? "")} · @${String(r.username ?? "")}`,
+          type:      "account",
+          createdAt: updatedAt || createdAt,
+        });
+      }
+    }
+
+    if (vault.status === "fulfilled" && vault.value.data) {
+      for (const r of vault.value.data as Record<string, unknown>[]) {
+        events.push({
+          id:        `vlt-${String(r.id)}`,
+          action:    "Vault Entry Saved",
+          detail:    String(r.title ?? `${String(r.type ?? "Entry")} saved to vault`),
+          type:      "vault",
+          createdAt: String(r.created_at ?? ""),
+        });
+      }
+    }
+
+    if (cal.status === "fulfilled" && cal.value.data) {
+      for (const r of cal.value.data as Record<string, unknown>[]) {
+        events.push({
+          id:        `cal-${String(r.id)}`,
+          action:    "Calendar Post Created",
+          detail:    `"${String(r.title ?? "Post")}" · ${String(r.status ?? "draft")}`,
+          type:      "calendar",
+          createdAt: String(r.created_at ?? ""),
+        });
+      }
+    }
+
+    if (cp.status === "fulfilled" && cp.value.data) {
+      for (const r of cp.value.data as Record<string, unknown>[]) {
+        events.push({
+          id:        `cp-${String(r.id)}`,
+          action:    "Content Pack Generated",
+          detail:    String(r.title ?? "Content pack created"),
+          type:      "content",
+          createdAt: String(r.created_at ?? ""),
+        });
+      }
+    }
+
+    // Sort newest-first and take top N
+    return events
+      .filter(e => e.createdAt)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+  } catch (err) {
+    console.error("[TLIS] fetchRecentActivityFromCloud:", err);
+    return [];
+  }
+}
