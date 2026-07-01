@@ -10,6 +10,7 @@ import { WorkspaceProvider } from "@/lib/workspace-context";
 
 // Eager imports (lightweight / entry pages)
 import Dashboard          from "@/pages/dashboard";
+import ExecutiveBrief     from "@/pages/executive-brief";
 import AuthPage           from "@/pages/auth";
 
 // Lazy imports (heavier pages)
@@ -61,6 +62,7 @@ function AppRoutes() {
         <Layout>
           <Suspense fallback={<PageLoader />}>
             <Switch>
+              <Route path="/brief"         component={ExecutiveBrief}     />
               <Route path="/"             component={Dashboard}          />
               <Route path="/niche"        component={Niche}              />
               <Route path="/hooks"        component={Hooks}              />

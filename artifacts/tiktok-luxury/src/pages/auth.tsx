@@ -81,7 +81,7 @@ export default function AuthPage() {
 
   // Redirect if already authenticated (but not during a recovery session)
   useEffect(() => {
-    if (!authLoading && user && tab !== "newpass") navigate("/");
+    if (!authLoading && user && tab !== "newpass") navigate("/brief");
   }, [user, authLoading, navigate, tab]);
 
   // Detect Supabase email-link callbacks in the URL hash.
@@ -105,7 +105,7 @@ export default function AuthPage() {
       // Email confirmed — supabase detectSessionInUrl already logs them in
       history.replaceState(null, "", window.location.pathname + window.location.search);
       setSuccess("Email confirmed! You are now signed in.");
-      setTimeout(() => navigate("/"), 1500);
+      setTimeout(() => navigate("/brief"), 1500);
     }
   }, [navigate]);
 
@@ -139,7 +139,7 @@ export default function AuthPage() {
     const err = await signIn(email, password);
     setSubmitting(false);
     if (err) { setError(err); return; }
-    navigate("/");
+    navigate("/brief");
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -174,7 +174,7 @@ export default function AuthPage() {
     setSubmitting(false);
     if (err) { setError(err); return; }
     setSuccess("Password updated. Redirecting…");
-    setTimeout(() => navigate("/"), 1500);
+    setTimeout(() => navigate("/brief"), 1500);
   };
 
   if (authLoading) {
