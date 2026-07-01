@@ -123,14 +123,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row overflow-hidden selection:bg-primary/30">
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="flex items-center gap-2">
-          <div className="font-serif font-bold text-xl tracking-widest text-primary">TLIS</div>
-          <div className="h-4 w-[1px] bg-primary/30"></div>
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
-            <div className="live-dot" />
-            <span className="text-[10px] uppercase tracking-wider text-primary font-medium">System Online</span>
+        <Link href="/" onClick={() => setSidebarOpen(false)}>
+          <div className="flex items-center gap-2 cursor-pointer">
+            <div className="font-serif font-bold text-xl tracking-widest text-primary hover:opacity-80 transition-opacity select-none">TLIS</div>
+            <div className="h-4 w-[1px] bg-primary/30"></div>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
+              <div className="live-dot" />
+              <span className="text-[10px] uppercase tracking-wider text-primary font-medium">System Online</span>
+            </div>
           </div>
-        </div>
+        </Link>
         <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
           {sidebarOpen ? <X className="h-5 w-5 text-primary" /> : <Menu className="h-5 w-5 text-primary" />}
         </Button>
@@ -143,7 +145,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       )}>
         <div className="p-6 hidden md:block">
           <div className="flex items-center gap-3 mb-8">
-            <div className="font-serif font-bold text-3xl tracking-widest luxury-gradient-text">TLIS</div>
+            <Link href="/">
+              <div className="font-serif font-bold text-3xl tracking-widest luxury-gradient-text cursor-pointer hover:opacity-80 transition-opacity select-none">
+                TLIS
+              </div>
+            </Link>
           </div>
           <div className="flex items-center justify-between px-3 py-2 rounded-md bg-black/40 border border-primary/20 shadow-inner">
             <span className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">Status</span>
