@@ -4,7 +4,7 @@ import {
   Sparkles, Activity, CalendarDays, BarChart3, Database,
   Package, UserCircle, Briefcase, UserCheck2,
   LogIn, LogOut, Menu, X, Search, Settings,
-  User, Key, CreditCard, HelpCircle, ChevronUp, Crown,
+  User, Key, CreditCard, HelpCircle, ChevronUp, Crown, Radio,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ import {
 
 const navItems = [
   { href: "/brief",        label: "Executive Brief",        icon: Crown           },
+  { href: "/research",     label: "Research Command",       icon: Radio           },
   { href: "/",             label: "Dashboard",              icon: LayoutDashboard },
   { href: "/niche",        label: "Niche Intelligence",     icon: Target          },
   { href: "/hooks",        label: "Viral Hooks",            icon: Zap             },
