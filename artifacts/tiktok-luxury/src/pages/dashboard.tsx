@@ -1,11 +1,8 @@
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, BarChart, Bar,
-} from "recharts";
-import {
-  ArrowRight, Clock, Activity, Zap, Briefcase, UserCheck2,
-  Package, Database, CalendarDays, CheckCircle2, AlertCircle,
-  Loader2, Wifi, Plus, FolderOpen, Inbox,
+  TrendingUp, BarChart2, ArrowRight, Clock, Activity, Zap,
+  Briefcase, UserCheck2, Package, Database, CalendarDays,
+  CheckCircle2, AlertCircle, Loader2, Wifi, Plus, FolderOpen,
+  Inbox, Circle,
 } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { useLocation, Link } from "wouter";
@@ -23,42 +20,18 @@ import {
 } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// ── Static chart data (aspirational trajectory display) ───────────────────
-
-const growthData = [
-  { month: "Jan", followers: 180000 },
-  { month: "Feb", followers: 320000 },
-  { month: "Mar", followers: 510000 },
-  { month: "Apr", followers: 780000 },
-  { month: "May", followers: 1100000 },
-  { month: "Jun", followers: 1480000 },
-  { month: "Jul", followers: 1820000 },
-  { month: "Aug", followers: 2100000 },
-  { month: "Sep", followers: 2450192 },
-];
-
-const engagementData = [
-  { day: "Mon", rate: 12.4 },
-  { day: "Tue", rate: 15.8 },
-  { day: "Wed", rate: 11.2 },
-  { day: "Thu", rate: 18.6 },
-  { day: "Fri", rate: 22.1 },
-  { day: "Sat", rate: 19.4 },
-  { day: "Sun", rate: 14.8 },
-];
-
 // ── Utilities ─────────────────────────────────────────────────────────────
 
 function timeAgo(iso: string): string {
   if (!iso) return "–";
-  const diff = Date.now() - new Date(iso).getTime();
-  const secs  = Math.floor(diff / 1000);
+  const diff  = Date.now() - new Date(iso).getTime();
+  const secs  = Math.floor(diff / 1_000);
   const mins  = Math.floor(secs  / 60);
   const hours = Math.floor(mins  / 60);
   const days  = Math.floor(hours / 24);
-  if (secs  <  60) return "just now";
-  if (mins  <  60) return `${mins} minute${mins  === 1 ? "" : "s"} ago`;
-  if (hours <  24) return `${hours} hour${hours  === 1 ? "" : "s"} ago`;
+  if (secs  <   60) return "just now";
+  if (mins  <   60) return `${mins} minute${mins   === 1 ? "" : "s"} ago`;
+  if (hours <   24) return `${hours} hour${hours   === 1 ? "" : "s"} ago`;
   if (days  ===  1) return "Yesterday";
   if (days  <    7) return `${days} days ago`;
   return new Date(iso).toLocaleDateString();
@@ -82,25 +55,218 @@ const EVENT_DOT: Record<ActivityEventType, string> = {
   ai:        "bg-muted-foreground",
 };
 
-// ── Custom chart tooltip ──────────────────────────────────────────────────
+// ── Onboarding Panel ──────────────────────────────────────────────────────
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-card border border-card-border rounded-lg p-3 text-xs">
-        <p className="text-muted-foreground uppercase tracking-wider mb-1">{label}</p>
-        {payload.map((p: any) => (
-          <p key={p.dataKey} className="text-primary font-mono">
-            {typeof p.value === "number" && p.value > 10000
-              ? (p.value / 1_000_000).toFixed(1) + "M"
-              : p.value}
+interface OnboardingStep {
+  label: string;
+  href:  string;
+  done:  boolean;
+}
+
+function OnboardingPanel({ steps }: { steps: OnboardingStep[] }) {
+  const completed = steps.filter(s => s.done).length;
+  const pct       = Math.round((completed / steps.length) * 100);
+
+  return (
+    <div className="luxury-card p-6 border-primary/30 bg-gradient-to-br from-primary/8 to-transparent">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+        {/* Left — title + steps */}
+        <div className="flex-1">
+          <p className="text-[10px] uppercase tracking-widest text-primary/70 mb-1">Getting Started</p>
+          <h2 className="text-xl font-bold font-serif luxury-gradient-text tracking-tight mb-0.5">
+            Welcome to TLIS
+          </h2>
+          <p className="text-xs text-muted-foreground mb-5">
+            Let's prepare your intelligence workspace.
           </p>
-        ))}
+
+          <div className="space-y-3">
+            {steps.map((step, i) => (
+              <Link href={step.href} key={i}>
+                <div className={`flex items-center gap-3 cursor-pointer group transition-opacity ${step.done ? "opacity-60" : "opacity-100"}`}>
+                  {step.done ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-primary/40 flex-shrink-0 group-hover:text-primary transition-colors" />
+                  )}
+                  <span className={`text-sm transition-colors ${step.done ? "line-through text-muted-foreground" : "text-foreground group-hover:text-primary"}`}>
+                    {step.label}
+                  </span>
+                  {!step.done && (
+                    <ArrowRight className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary transition-colors ml-auto" />
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Right — progress ring */}
+        <div className="flex flex-col items-center gap-2 md:min-w-[96px]">
+          <div className="relative h-20 w-20">
+            <svg className="h-20 w-20 -rotate-90" viewBox="0 0 80 80">
+              <circle cx="40" cy="40" r="32" fill="none" stroke="hsl(44 54% 54% / 0.12)" strokeWidth="6" />
+              <circle
+                cx="40" cy="40" r="32" fill="none"
+                stroke="hsl(44 54% 54%)" strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 32}`}
+                strokeDashoffset={`${2 * Math.PI * 32 * (1 - pct / 100)}`}
+                className="transition-all duration-700"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-lg font-bold font-serif luxury-gradient-text leading-none">{completed}</span>
+              <span className="text-[10px] text-muted-foreground">of {steps.length}</span>
+            </div>
+          </div>
+          <p className="text-[11px] text-muted-foreground text-center font-mono">
+            {completed}/{steps.length} Complete
+          </p>
+        </div>
       </div>
-    );
-  }
-  return null;
-};
+
+      {/* Progress bar */}
+      <div className="mt-5 pt-4 border-t border-border">
+        <div className="flex justify-between text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">
+          <span>Setup Progress</span>
+          <span className="text-primary font-mono">{pct}%</span>
+        </div>
+        <div className="h-1 bg-muted rounded-full overflow-hidden">
+          <div
+            className="h-full bg-primary rounded-full transition-all duration-700"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Quick Start Grid ───────────────────────────────────────────────────────
+
+type QuickStartStep = "workspace" | "account" | "content" | null;
+
+interface QuickStartCard {
+  label:   string;
+  sub:     string;
+  href:    string;
+  icon:    React.ElementType;
+  step:    QuickStartStep;
+}
+
+const QUICK_START_CARDS: QuickStartCard[] = [
+  { label: "Create Workspace",   sub: "Set up your intelligence hub",    href: "/workspace",    icon: Briefcase,    step: "workspace" },
+  { label: "Add TikTok Account", sub: "Connect your TikTok profile",     href: "/accounts",     icon: UserCheck2,   step: "account"   },
+  { label: "Generate Content",   sub: "Create your first content pack",  href: "/content-pack", icon: Package,      step: "content"   },
+  { label: "Open Calendar",      sub: "Schedule and plan your posts",    href: "/calendar",     icon: CalendarDays, step: null        },
+];
+
+function QuickStartGrid({
+  nextStep,
+  navigate,
+}: {
+  nextStep: QuickStartStep;
+  navigate: (path: string) => void;
+}) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Quick Start</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {QUICK_START_CARDS.map((card, i) => {
+          const isNext    = card.step === nextStep;
+          const isDone    = card.step !== null && card.step !== nextStep &&
+                            QUICK_START_CARDS.findIndex(c => c.step === card.step) <
+                            QUICK_START_CARDS.findIndex(c => c.step === nextStep);
+          return (
+            <button
+              key={i}
+              onClick={() => navigate(card.href)}
+              className={`luxury-card p-4 text-left transition-all duration-200 group flex flex-col gap-3
+                ${isNext
+                  ? "border-primary/50 bg-primary/8 hover:bg-primary/12 shadow-[0_0_20px_hsl(44_54%_54%/0.08)]"
+                  : "hover:border-primary/30 hover:bg-primary/5"
+                }
+              `}
+            >
+              <div className="flex items-center justify-between">
+                <div className={`p-1.5 rounded-md ${isNext ? "bg-primary/20" : "bg-muted/40"}`}>
+                  <card.icon className={`h-4 w-4 ${isNext ? "text-primary" : "text-muted-foreground group-hover:text-primary transition-colors"}`} />
+                </div>
+                {isDone && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />}
+                {isNext && <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}
+              </div>
+              <div>
+                <p className={`text-xs font-semibold ${isNext ? "text-primary" : "text-foreground"}`}>
+                  {card.label}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{card.sub}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Chart Empty States ─────────────────────────────────────────────────────
+
+function GrowthEmptyState({ navigate }: { navigate: (path: string) => void }) {
+  return (
+    <div className="luxury-card p-6 lg:col-span-2">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Growth Trajectory</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Follower growth over time</p>
+        </div>
+      </div>
+      <div className="h-52 flex flex-col items-center justify-center gap-4 text-center">
+        <TrendingUp className="h-10 w-10 text-muted-foreground/15" />
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground">No Growth Data Yet</p>
+          <p className="text-xs text-muted-foreground/60 mt-1 max-w-[260px] mx-auto">
+            Growth analytics will appear after your workspace begins generating activity.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => navigate("/content-pack")}
+            className="px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 transition-all text-xs text-primary font-medium"
+          >
+            Create Content
+          </button>
+          <button
+            onClick={() => navigate("/workspace")}
+            className="px-3 py-1.5 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-xs text-muted-foreground hover:text-primary font-medium"
+          >
+            Open Workspace
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EngagementEmptyState() {
+  return (
+    <div className="luxury-card p-6">
+      <div className="mb-6">
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Engagement Rate</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">Weekly engagement by day</p>
+      </div>
+      <div className="h-52 flex flex-col items-center justify-center gap-4 text-center">
+        <BarChart2 className="h-10 w-10 text-muted-foreground/15" />
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground">No Engagement Data Yet</p>
+          <p className="text-xs text-muted-foreground/60 mt-1 max-w-[180px] mx-auto">
+            Generate content and publish posts to begin tracking engagement.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Usage summary widget ──────────────────────────────────────────────────
 
@@ -120,12 +286,12 @@ function UsageSummaryWidget() {
     usage.session.generations > 0 ||
     usage.allTime.cost > 0;
 
-  const dailyPct   = Math.min((usage.daily.generations / usage.limits.dailyGenerations) * 100, 100);
-  const nearLimit  = dailyPct >= 80;
-  const overLimit  = dailyPct >= 100;
-  const barColor   = overLimit ? "bg-destructive" : nearLimit ? "bg-chart-2" : "bg-primary";
-  const textColor  = overLimit ? "text-destructive" : nearLimit ? "text-chart-2" : "text-primary";
-  const borderMod  = overLimit ? "border-destructive/40" : nearLimit ? "border-chart-2/40" : "";
+  const dailyPct  = Math.min((usage.daily.generations / usage.limits.dailyGenerations) * 100, 100);
+  const nearLimit = dailyPct >= 80;
+  const overLimit = dailyPct >= 100;
+  const barColor  = overLimit ? "bg-destructive"   : nearLimit ? "bg-chart-2"   : "bg-primary";
+  const textColor = overLimit ? "text-destructive"  : nearLimit ? "text-chart-2" : "text-primary";
+  const borderMod = overLimit ? "border-destructive/40" : nearLimit ? "border-chart-2/40" : "";
 
   return (
     <div className={`luxury-card p-5 ${borderMod}`}>
@@ -145,7 +311,7 @@ function UsageSummaryWidget() {
         <div className="flex flex-col items-center justify-center py-4 gap-2 text-center">
           <Zap className="h-6 w-6 text-muted-foreground/30" />
           <p className="text-xs text-muted-foreground">No AI activity yet</p>
-          <Link href="/generator">
+          <Link href="/content-pack">
             <span className="text-[11px] text-primary hover:underline cursor-pointer">Generate content →</span>
           </Link>
         </div>
@@ -211,20 +377,16 @@ function SystemStatusWidget() {
     );
 
     fetch("/api/healthz", { signal: AbortSignal.timeout(3_000) })
-      .then(() =>
-        setItems(prev => prev.map(i =>
-          i.label === "AI Engine" ? { ...i, status: "ok", detail: "Online" } : i,
-        )),
-      )
-      .catch(() =>
-        setItems(prev => prev.map(i =>
-          i.label === "AI Engine" ? { ...i, status: "warn", detail: "Gemini Ready" } : i,
-        )),
-      );
+      .then(() => setItems(prev => prev.map(i =>
+        i.label === "AI Engine" ? { ...i, status: "ok", detail: "Online" } : i,
+      )))
+      .catch(() => setItems(prev => prev.map(i =>
+        i.label === "AI Engine" ? { ...i, status: "warn", detail: "Gemini Ready" } : i,
+      )));
   }, [user]);
 
   const iconFor = (s: StatusItem["status"]) => {
-    if (s === "loading") return <Loader2    className="h-3 w-3 animate-spin text-muted-foreground" />;
+    if (s === "loading") return <Loader2     className="h-3 w-3 animate-spin text-muted-foreground" />;
     if (s === "ok")      return <CheckCircle2 className="h-3 w-3 text-emerald-400" />;
     if (s === "warn")    return <AlertCircle  className="h-3 w-3 text-amber-400"   />;
     return                      <AlertCircle  className="h-3 w-3 text-destructive"  />;
@@ -253,9 +415,9 @@ function SystemStatusWidget() {
   );
 }
 
-// ── Intelligence Feed (live) ──────────────────────────────────────────────
+// ── Activity Feed ─────────────────────────────────────────────────────────
 
-function IntelligenceFeed({
+function ActivityFeed({
   events,
   loading,
   authenticated,
@@ -267,17 +429,12 @@ function IntelligenceFeed({
   return (
     <div className="luxury-card p-6 lg:col-span-2">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">
-          Activity Feed
-        </h2>
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Activity Feed</h2>
         {events.length > 0 && (
-          <span className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-wider">
-            Live
-          </span>
+          <span className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-wider">Live</span>
         )}
       </div>
 
-      {/* Loading skeleton */}
       {loading && (
         <div className="space-y-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -293,38 +450,30 @@ function IntelligenceFeed({
         </div>
       )}
 
-      {/* Not signed in */}
       {!loading && !authenticated && (
         <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
           <Inbox className="h-10 w-10 text-muted-foreground/20" />
           <p className="text-sm text-muted-foreground">Sign in to see your activity</p>
           <Link href="/login">
-            <button className="px-4 py-2 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 transition-all text-xs text-primary font-medium">
+            <button className="px-4 py-2 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 transition-all text-xs text-primary font-medium min-h-[44px]">
               Sign In
             </button>
           </Link>
         </div>
       )}
 
-      {/* Empty state */}
       {!loading && authenticated && events.length === 0 && (
         <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
           <Inbox className="h-10 w-10 text-muted-foreground/20" />
           <div>
-            <p className="text-sm font-medium text-muted-foreground">No activity yet</p>
+            <p className="text-sm font-semibold text-muted-foreground">No Recent Activity</p>
             <p className="text-xs text-muted-foreground/60 mt-1">
-              Create a workspace or generate content to see events here
+              Your activity history will appear here as you use TLIS.
             </p>
           </div>
-          <Link href="/workspace">
-            <button className="px-4 py-2 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 transition-all text-xs text-primary font-medium">
-              Create Workspace
-            </button>
-          </Link>
         </div>
       )}
 
-      {/* Real events */}
       {!loading && events.length > 0 && (
         <div className="space-y-4">
           {events.map(item => (
@@ -332,9 +481,7 @@ function IntelligenceFeed({
               key={item.id}
               className="flex items-start gap-4 pb-4 border-b border-border last:border-0 last:pb-0"
             >
-              <div
-                className={`h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0 ${EVENT_DOT[item.type]}`}
-              />
+              <div className={`h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0 ${EVENT_DOT[item.type]}`} />
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-medium ${EVENT_COLOR[item.type]}`}>{item.action}</p>
                 <p className="text-xs text-muted-foreground mt-0.5 truncate">{item.detail}</p>
@@ -351,7 +498,7 @@ function IntelligenceFeed({
   );
 }
 
-// ── Quick actions ─────────────────────────────────────────────────────────
+// ── Right Column Quick Actions ─────────────────────────────────────────────
 
 const QUICK_ACTIONS = [
   { label: "Generate Content",   sub: "Full content pack",      href: "/content-pack", icon: Package     },
@@ -365,19 +512,15 @@ const QUICK_ACTIONS = [
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
-  const { user }     = useAuth();
+  const { user }           = useAuth();
   const { activeWorkspace } = useActiveWorkspace();
 
-  // Stats
-  const [stats, setStats]             = useState<(WorkspaceStats & { accounts: number }) | null>(null);
-  const [statsLoading, setStatsLoading] = useState(true);
-
-  // Activity feed
-  const [activity, setActivity]         = useState<ActivityEvent[]>([]);
+  const [stats, setStats]                     = useState<(WorkspaceStats & { accounts: number }) | null>(null);
+  const [statsLoading, setStatsLoading]       = useState(true);
+  const [activity, setActivity]               = useState<ActivityEvent[]>([]);
   const [activityLoading, setActivityLoading] = useState(true);
 
   const loadAll = useCallback(async () => {
-    // Stats
     try {
       const [ws, accounts] = await Promise.all([
         fetchWorkspaceStatsFromCloud(),
@@ -390,7 +533,6 @@ export default function Dashboard() {
       setStatsLoading(false);
     }
 
-    // Activity feed
     try {
       const events = await fetchRecentActivityFromCloud(10);
       setActivity(events);
@@ -401,19 +543,38 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Initial load + refresh on window focus
   useEffect(() => {
     loadAll();
-    const onFocus = () => loadAll();
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
+    window.addEventListener("focus", loadAll);
+    return () => window.removeEventListener("focus", loadAll);
   }, [loadAll]);
+
+  // ── Derived state ──────────────────────────────────────────────────────
 
   const displayName = user?.email
     ? user.email.split("@")[0]!.replace(/[._]/g, " ").replace(/\b\w/g, l => l.toUpperCase())
     : "Creator";
 
-  const hasWorkspaces = !statsLoading && (stats?.workspaces ?? 0) > 0;
+  const hasWorkspaces = !statsLoading && (stats?.workspaces   ?? 0) > 0;
+
+  // Onboarding steps — drives both the panel + quick start smart highlight
+  const onboardingSteps: OnboardingStep[] = [
+    { label: "Create Workspace",            href: "/workspace",    done: (stats?.workspaces   ?? 0) > 0 },
+    { label: "Add TikTok Account",          href: "/accounts",     done: (stats?.accounts     ?? 0) > 0 },
+    { label: "Generate First Content Pack", href: "/content-pack", done: (stats?.contentPacks ?? 0) > 0 },
+    { label: "Save First Vault Entry",      href: "/vault",        done: (stats?.vaultEntries ?? 0) > 0 },
+  ];
+  const allOnboardingDone  = onboardingSteps.every(s => s.done);
+  const showOnboarding     = !!user && !statsLoading && !allOnboardingDone;
+
+  // Smart highlight: the next incomplete step
+  const nextStep: QuickStartStep =
+    !statsLoading
+      ? (stats?.workspaces   ?? 0) === 0 ? "workspace"
+      : (stats?.accounts     ?? 0) === 0 ? "account"
+      : (stats?.contentPacks ?? 0) === 0 ? "content"
+      : null
+      : null;
 
   const statCards = [
     { label: "Workspaces",      value: stats?.workspaces    ?? 0, icon: Briefcase,    href: "/workspace"    },
@@ -437,11 +598,9 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground mt-1 font-mono">{user?.email}</p>
           </div>
 
-          {/* Workspace section — smart button */}
           {statsLoading ? (
             <Skeleton className="h-10 w-40 rounded-lg" />
           ) : activeWorkspace ? (
-            /* Has an active/pinned workspace → show its info */
             <div className="flex flex-col items-start md:items-end gap-1">
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Active Workspace</p>
               <div className="flex items-center gap-2">
@@ -453,7 +612,6 @@ export default function Dashboard() {
               </span>
             </div>
           ) : hasWorkspaces ? (
-            /* Has workspaces but none is pinned → "Open Workspace" */
             <Link href="/workspace">
               <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 transition-all text-sm text-primary font-medium min-h-[44px]">
                 <FolderOpen className="h-4 w-4" />
@@ -461,7 +619,6 @@ export default function Dashboard() {
               </button>
             </Link>
           ) : (
-            /* No workspaces at all → "Create Workspace" */
             <Link href="/workspace">
               <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 transition-all text-sm text-primary font-medium min-h-[44px]">
                 <Plus className="h-4 w-4" />
@@ -471,6 +628,12 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* ── Onboarding Panel (shown until all 4 steps done) ── */}
+      {showOnboarding && <OnboardingPanel steps={onboardingSteps} />}
+
+      {/* ── Quick Start Grid (shown until all 4 steps done) ── */}
+      {showOnboarding && <QuickStartGrid nextStep={nextStep} navigate={navigate} />}
 
       {/* ── Live Stats Row ── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -495,66 +658,22 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* ── Charts Row ── */}
+      {/* ── Analytics Row (empty states — no real analytics data yet) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="luxury-card p-6 lg:col-span-2">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Growth Trajectory</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Platform benchmark — 9 months</p>
-            </div>
-            <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded border border-primary/20">+1,360%</span>
-          </div>
-          <div className="h-52">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={growthData}>
-                <defs>
-                  <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="hsl(44 54% 54%)" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="hsl(44 54% 54%)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="month" tick={{ fill: "hsl(44 15% 60%)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis hide />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="followers" stroke="hsl(44 54% 54%)" strokeWidth={2} fill="url(#goldGrad)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="luxury-card p-6">
-          <div className="mb-6">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Engagement Rate</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Platform average by day</p>
-          </div>
-          <div className="h-52">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={engagementData} barCategoryGap="30%">
-                <XAxis dataKey="day" tick={{ fill: "hsl(44 15% 60%)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis hide />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="rate" fill="hsl(44 54% 54%)" radius={[4, 4, 0, 0]} fillOpacity={0.8} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        <GrowthEmptyState navigate={navigate} />
+        <EngagementEmptyState />
       </div>
 
       {/* ── Bottom Row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Live activity feed */}
-        <IntelligenceFeed
+        <ActivityFeed
           events={activity}
           loading={activityLoading}
           authenticated={!!user}
         />
 
-        {/* Right column */}
         <div className="flex flex-col gap-4">
-
-          {/* Quick Actions */}
           <div className="luxury-card p-5">
             <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground mb-4">Quick Actions</h2>
             <div className="space-y-2">
