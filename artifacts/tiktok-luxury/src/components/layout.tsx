@@ -14,6 +14,7 @@ import {
   Package,
   UserCircle,
   Briefcase,
+  UserCheck2,
   LogIn,
   LogOut,
   Menu,
@@ -40,6 +41,7 @@ const navItems = [
   { href: "/usage",       label: "Usage Tracker",          icon: Activity        },
   { href: "/content-pack", label: "Content Pack Generator", icon: Package        },
   { href: "/workspace",   label: "TikTok Workspace",       icon: Briefcase       },
+  { href: "/accounts",    label: "TikTok Accounts",        icon: UserCheck2      },
   { href: "/profile",     label: "User Profile",           icon: UserCircle      },
 ];
 

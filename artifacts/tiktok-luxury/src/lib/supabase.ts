@@ -1043,3 +1043,110 @@ export async function updateWorkflowStageToCloud(
     return false;
   }
 }
+
+// ── TikTok Accounts — Module 14 ──────────────────────────────────────────────
+
+export interface TikTokAccount {
+  id:          string;
+  userId:      string | null;
+  workspaceId: string | null;
+  accountName: string;
+  username:    string;
+  email:       string;
+  phone:       string;
+  country:     string;
+  timezone:    string;
+  language:    string;
+  status:      "active" | "inactive" | "suspended" | "pending";
+  notes:       string;
+  hasPassword: boolean;
+  createdAt:   string;
+  updatedAt:   string;
+}
+
+function accountToRow(a: TikTokAccount, userId: string | null): Record<string, unknown> {
+  return {
+    id:           a.id,
+    user_id:      userId,
+    workspace_id: a.workspaceId ?? null,
+    account_name: a.accountName,
+    username:     a.username,
+    email:        a.email,
+    phone:        a.phone,
+    country:      a.country,
+    timezone:     a.timezone,
+    language:     a.language,
+    status:       a.status,
+    notes:        a.notes,
+    has_password: a.hasPassword,
+    updated_at:   new Date().toISOString(),
+  };
+}
+
+function rowToAccount(row: Record<string, unknown>): TikTokAccount {
+  return {
+    id:          String(row["id"]),
+    userId:      row["user_id"]      ? String(row["user_id"])      : null,
+    workspaceId: row["workspace_id"] ? String(row["workspace_id"]) : null,
+    accountName: String(row["account_name"] ?? ""),
+    username:    String(row["username"]      ?? ""),
+    email:       String(row["email"]         ?? ""),
+    phone:       String(row["phone"]         ?? ""),
+    country:     String(row["country"]       ?? ""),
+    timezone:    String(row["timezone"]      ?? ""),
+    language:    String(row["language"]      ?? ""),
+    status:      (row["status"] as TikTokAccount["status"]) ?? "active",
+    notes:       String(row["notes"]         ?? ""),
+    hasPassword: Boolean(row["has_password"]),
+    createdAt:   String(row["created_at"]    ?? new Date().toISOString()),
+    updatedAt:   String(row["updated_at"]    ?? new Date().toISOString()),
+  };
+}
+
+export async function fetchAccountsFromCloud(): Promise<TikTokAccount[]> {
+  if (!supabase) return [];
+  try {
+    const userId = await getAuthUserId();
+    if (!userId) return [];
+    const { data, error } = await supabase
+      .from("tiktok_accounts")
+      .select("*")
+      .order("updated_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(rowToAccount);
+  } catch (err) {
+    console.error("[TLIS] fetchAccountsFromCloud:", err);
+    return [];
+  }
+}
+
+export async function upsertAccountToCloud(account: TikTokAccount): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const userId = await getAuthUserId();
+    if (!userId) return false;
+    const { error } = await supabase
+      .from("tiktok_accounts")
+      .upsert(accountToRow(account, userId), { onConflict: "id" });
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("[TLIS] upsertAccountToCloud:", err);
+    return false;
+  }
+}
+
+export async function deleteAccountFromCloud(id: string): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase
+      .from("tiktok_accounts")
+      .delete()
+      .eq("id", id);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("[TLIS] deleteAccountFromCloud:", err);
+    return false;
+  }
+}
