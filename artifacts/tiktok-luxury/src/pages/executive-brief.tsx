@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
 import { useState, useCallback } from "react";
 import { aiService, type BriefResult } from "@/lib/ai-provider";
+import { useTrendSummary } from "@/lib/trends-provider";
 
 // ── Greeting ──────────────────────────────────────────────────────────────
 
@@ -229,6 +230,8 @@ export default function ExecutiveBrief() {
   const [briefLoading, setBriefLoading]     = useState(false);
   const [briefError, setBriefError]         = useState<string | null>(null);
 
+  const { data: trendSummary, loading: trendLoading } = useTrendSummary();
+
   const generateBrief = useCallback(async () => {
     setBriefLoading(true);
     setBriefError(null);
@@ -301,6 +304,57 @@ export default function ExecutiveBrief() {
             <p className="text-sm text-foreground">{MISSION.dailyRecommendation}</p>
           </div>
         </div>
+        {/* ── Trend Intelligence ── */}
+        {(trendSummary || trendLoading) && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="h-3 w-3 text-chart-2" />
+              <p className="text-[10px] uppercase tracking-widest text-chart-2/70">Live Trend Intelligence</p>
+              {trendLoading && <RefreshCw className="h-3 w-3 text-muted-foreground/40 animate-spin ml-auto" />}
+              {trendSummary && (
+                <span className="ml-auto text-[9px] font-mono text-muted-foreground/40 uppercase tracking-wider">
+                  Google Trends · {trendSummary.source}
+                </span>
+              )}
+            </div>
+            {trendSummary && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="min-w-0">
+                  <p className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">Top Trending</p>
+                  <p className="text-xs font-semibold text-foreground truncate" title={trendSummary.topTrendingTopic}>
+                    {trendSummary.topTrendingTopic}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">Trend Score</p>
+                  <p className="text-xs font-bold font-mono luxury-gradient-text">
+                    {trendSummary.trendScore}
+                    <span className="text-muted-foreground/50 text-[9px] font-normal">/100</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">Direction</p>
+                  <p className={`text-xs font-semibold font-mono ${
+                    trendSummary.growthDirection === "up"   ? "text-emerald-400" :
+                    trendSummary.growthDirection === "down" ? "text-red-400"     : "text-muted-foreground"
+                  }`}>
+                    {trendSummary.growthDirection === "up"
+                      ? "↑ Rising"
+                      : trendSummary.growthDirection === "down"
+                      ? "↓ Falling"
+                      : "→ Stable"}
+                  </p>
+                </div>
+                <div className="min-w-0 col-span-2 sm:col-span-1">
+                  <p className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">Opportunity</p>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed line-clamp-2">
+                    {trendSummary.opportunitySummary}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── 2. Executive Summary ── */}

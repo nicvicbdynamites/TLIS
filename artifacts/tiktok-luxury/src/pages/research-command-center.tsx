@@ -11,6 +11,7 @@ import {
 import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { aiService } from "@/lib/ai-provider";
+import { useTrendSummary } from "@/lib/trends-provider";
 
 // ── Placeholder data ──────────────────────────────────────────────────────
 
@@ -169,14 +170,14 @@ const FUTURE_INTEGRATIONS = [
 // ── Sub-components ────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-  const ready = status === "Ready";
+  const isActive = status === "Ready" || status === "Live" || status === "Cached";
   return (
     <span className={`inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest px-2 py-0.5 rounded border ${
-      ready
+      isActive
         ? "bg-emerald-400/10 text-emerald-400 border-emerald-400/25"
         : "bg-muted/20 text-muted-foreground border-border"
     }`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${ready ? "bg-emerald-400" : "bg-muted-foreground/40"}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-400" + (status === "Live" ? " animate-pulse" : "") : "bg-muted-foreground/40"}`} />
       {status}
     </span>
   );
@@ -234,6 +235,8 @@ export default function ResearchCommandCenter() {
   const [activeAction, setActiveAction]   = useState<string | null>(null);
   const [aiOutput, setAiOutput]           = useState<string | null>(null);
   const [aiLoading, setAiLoading]         = useState(false);
+
+  const { data: trendData, loading: trendLoading } = useTrendSummary();
 
   const filteredKeywords = savedKeywords.filter(k =>
     k.word.toLowerCase().includes(keywordSearch.toLowerCase()),
@@ -334,9 +337,11 @@ export default function ResearchCommandCenter() {
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
           <div className="p-4 rounded-lg border border-primary/20 bg-black/20">
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5">Trending Niche</p>
-            <p className="text-sm font-semibold font-serif text-foreground leading-snug">{RESEARCH_SUMMARY.trendingNiche}</p>
+            <p className="text-sm font-semibold font-serif text-foreground leading-snug">
+              {trendLoading ? RESEARCH_SUMMARY.trendingNiche : (trendData?.topTrendingTopic ?? RESEARCH_SUMMARY.trendingNiche)}
+            </p>
             <div className="mt-2">
-              <ConfidenceBar value={94} />
+              <ConfidenceBar value={trendData?.trendScore ?? 94} />
             </div>
           </div>
           <div className="p-4 rounded-lg border border-chart-2/20 bg-black/20">
@@ -379,7 +384,15 @@ export default function ResearchCommandCenter() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {TREND_SOURCES.map(source => {
-            const ready = source.status === "Ready";
+            const isGT        = source.name === "Google Trends" && !!trendData;
+            const liveConf    = isGT ? trendData!.trendScore : source.confidence;
+            const liveStatus  = isGT
+              ? (trendData!.source === "live" ? "Live" : trendData!.source === "cached" ? "Cached" : "Ready")
+              : source.status;
+            const liveUpdated = isGT
+              ? new Date(trendData!.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+              : source.lastUpdated;
+            const ready = liveStatus !== "Connected Soon";
             return (
               <div
                 key={source.name}
@@ -389,22 +402,29 @@ export default function ResearchCommandCenter() {
                   <div className="p-2 rounded-lg bg-primary/10">
                     <source.icon className="h-4 w-4 text-primary" />
                   </div>
-                  <StatusBadge status={source.status} />
+                  <StatusBadge status={trendLoading && isGT ? "Ready" : liveStatus} />
                 </div>
                 <p className="text-sm font-semibold text-foreground mb-3">{source.name}</p>
                 {ready ? (
                   <>
                     <div className="flex justify-between text-[10px] mb-1">
                       <span className="text-muted-foreground">Confidence</span>
-                      <span className="font-mono text-primary">{source.confidence}%</span>
+                      <span className="font-mono text-primary">{liveConf}%</span>
                     </div>
-                    <ConfidenceBar value={source.confidence} />
+                    <ConfidenceBar value={liveConf} />
                     <div className="flex items-center justify-between mt-3">
-                      <span className="text-[10px] font-mono text-muted-foreground/60">{source.lastUpdated}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground/60">{liveUpdated}</span>
                       <button className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors font-semibold">
                         Open <ExternalLink className="h-3 w-3" />
                       </button>
                     </div>
+                    {isGT && trendData && (
+                      <div className="mt-2 pt-2 border-t border-border/40">
+                        <p className="text-[9px] text-muted-foreground/50 font-mono truncate">
+                          Top: {trendData.topTrendingTopic}
+                        </p>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <p className="text-[10px] text-muted-foreground/50 mt-2">Integration coming soon</p>

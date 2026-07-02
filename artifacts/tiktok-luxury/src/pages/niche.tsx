@@ -1,6 +1,7 @@
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
-import { TrendingUp, TrendingDown, Target, Zap, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Zap, Sparkles, Activity } from "lucide-react";
 import { Link } from "wouter";
+import { useTrendSummary } from "@/lib/trends-provider";
 
 const niches = [
   { name: "Quiet Luxury Lifestyle", score: 94, demand: "Explosive", competition: "Low", growth: "+312%", status: "hot" },
@@ -52,6 +53,16 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function Niche() {
+  const { data: liveTrends, loading: liveTrendsLoading } = useTrendSummary();
+
+  const liveScore = liveTrends?.trendScore;
+  const stats = [
+    { label: "Niches Tracked",       value: "847",                                                               icon: Target     },
+    { label: "Hot Opportunities",     value: "23",                                                                icon: Zap        },
+    { label: "Trend Score (Live)",    value: liveTrendsLoading ? "…" : liveScore != null ? String(liveScore) : "86.2", icon: Activity   },
+    { label: "Declining Niches",      value: "12",                                                                icon: TrendingDown},
+  ];
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 space-y-8">
       <div>
@@ -61,21 +72,69 @@ export default function Niche() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Niches Tracked", value: "847", icon: Target },
-          { label: "Hot Opportunities", value: "23", icon: Zap },
-          { label: "Avg Opportunity Score", value: "86.2", icon: TrendingUp },
-          { label: "Declining Niches", value: "12", icon: TrendingDown },
-        ].map((s, i) => (
+        {stats.map((s, i) => (
           <div key={i} className="luxury-card p-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs uppercase tracking-widest text-muted-foreground">{s.label}</p>
               <s.icon className="h-4 w-4 text-primary opacity-50" />
             </div>
             <p className="text-2xl font-serif font-bold text-foreground">{s.value}</p>
+            {i === 2 && liveTrends && (
+              <p className={`text-[10px] font-mono mt-1 ${
+                liveTrends.growthDirection === "up"   ? "text-emerald-400" :
+                liveTrends.growthDirection === "down" ? "text-red-400"     : "text-muted-foreground"
+              }`}>
+                {liveTrends.growthDirection === "up" ? "↑ Rising" : liveTrends.growthDirection === "down" ? "↓ Falling" : "→ Stable"}
+              </p>
+            )}
           </div>
         ))}
       </div>
+
+      {/* Live Market Signals */}
+      {liveTrends && liveTrends.trendingSearches.length > 0 && (
+        <div className="luxury-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Live Market Signals</h2>
+            <span className={`ml-2 text-[9px] font-mono uppercase px-2 py-0.5 rounded border ${
+              liveTrends.source === "live"
+                ? "text-emerald-400 border-emerald-400/25 bg-emerald-400/10"
+                : "text-muted-foreground border-border bg-muted/20"
+            }`}>
+              <span className={`inline-block h-1.5 w-1.5 rounded-full mr-1 align-middle ${liveTrends.source === "live" ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground/40"}`} />
+              Google Trends · {liveTrends.source}
+            </span>
+            <span className="ml-auto text-[10px] font-mono text-muted-foreground/40">
+              {new Date(liveTrends.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Trending Searches</p>
+              <div className="flex flex-wrap gap-2">
+                {liveTrends.trendingSearches.map((term, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border border-primary/20 bg-primary/5 text-foreground/80">
+                    <TrendingUp className="h-3 w-3 text-primary opacity-60" />
+                    {term}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Related Queries</p>
+              <div className="flex flex-wrap gap-2">
+                {liveTrends.relatedQueries.map((q, i) => (
+                  <span key={i} className="inline-flex items-center text-xs px-2.5 py-1 rounded-full border border-border/50 bg-muted/20 text-muted-foreground">
+                    {q}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground/60 mt-3 leading-relaxed">{liveTrends.opportunitySummary}</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="luxury-card p-6 lg:col-span-2">

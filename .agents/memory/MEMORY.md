@@ -1,2 +1,2 @@
-- [TLIS Workspace Workflow Engine](tlis-module13.md) — Module 13 wires all modules via Active Workspace; SQL migration still needed in Supabase dashboard
+- [TLIS Research Provider Architecture](tlis-module13.md) — How Google Trends (and future providers) are wired: service + routes + frontend hook + Gemini enrichment pattern
 - [TLIS Supabase auth pattern](tlis-supabase-auth.md) — getAuthUserId()/getDeviceId() used for RLS; vaultEntryToRow/calendarPostToRow are module-private helpers

@@ -19,6 +19,7 @@ import {
   errorMessage,
   type ContentIdeaParams,
 } from "../services/gemini.js";
+import { getLuxurySummary, formatTrendContext } from "../services/google-trends.js";
 
 const router: IRouter = Router();
 
@@ -61,7 +62,16 @@ router.post("/integrations/gemini/research", async (req: Request, res: Response)
     res.status(400).json({ error: "query is required" }); return;
   }
   try {
-    const result = await generateResearch(query.trim(), niche?.trim(), req.log);
+    // Silently enrich with live trend data — non-critical, never blocks the request
+    let trendContext: string | undefined;
+    try {
+      const summary = await getLuxurySummary(req.log);
+      if (summary.source !== "fallback") trendContext = formatTrendContext(summary);
+    } catch {
+      // Trend enrichment is optional — Gemini still runs without it
+    }
+
+    const result = await generateResearch(query.trim(), niche?.trim(), req.log, trendContext);
     res.json(result);
   } catch (err: any) {
     req.log.error({ err }, "integrations/gemini/research failed");

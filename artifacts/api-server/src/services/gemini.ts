@@ -303,12 +303,17 @@ export async function generateResearch(
   query: string,
   niche: string = "Quiet Luxury Lifestyle",
   log: Log,
+  trendContext?: string,
 ): Promise<ResearchResult> {
+  const trendSection = trendContext
+    ? `\n${trendContext}\nUse the above trend data to make your analysis current and specific.\n`
+    : "";
+
   const prompt = `You are an elite luxury content strategist and market researcher for TikTok creators.
 
 Research the following for a luxury lifestyle creator:
 Query: "${query}"
-Creator niche: ${niche}
+Creator niche: ${niche}${trendSection}
 
 Return ONLY a valid JSON object with exactly these keys. No markdown fences, no extra keys, no explanation.
 
