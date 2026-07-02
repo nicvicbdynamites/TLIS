@@ -1,24 +1,11 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { GoogleGenAI } from "@google/genai";
+import {
+  generateWithCascade,
+  streamWithCascade,
+  errorMessage,
+} from "../services/gemini.js";
 
 const router: IRouter = Router();
-
-// ── Model cascade: try in order, skip on 403/404, retry on 429 ──────────
-// gemini-2.5-flash      — latest recommended; best quality
-// gemini-2.0-flash      — previous gen; generally free-tier available
-// gemini-2.0-flash-lite — lightweight; higher RPM bucket on free tier, good final fallback
-// gemini-1.5-flash      — REMOVED: deprecated and no longer served on v1beta
-const MODEL_CASCADE = [
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
-  "gemini-2.0-flash-lite",
-];
-
-function getClient(): GoogleGenAI {
-  const key = process.env["GEMINI_API_KEY"];
-  if (!key) throw new Error("GEMINI_API_KEY_MISSING");
-  return new GoogleGenAI({ apiKey: key });
-}
 
 type GenerationType = "hooks" | "captions" | "prompts" | "ideas" | "content-pack";
 
@@ -142,178 +129,11 @@ function parseOutputs(raw: string): string[] {
   } catch {
     // ignore
   }
-  // fallback: split on double newlines or numbered lines
   return cleaned
     .split(/\n{2,}|\n(?=\d+\.)/)
     .map((s) => s.replace(/^\d+\.\s*/, "").trim())
     .filter(Boolean)
     .slice(0, 3);
-}
-
-// ── Error classifiers ─────────────────────────────────────────────────────
-function isRateLimit(err: any): boolean {
-  return (
-    err?.status === 429 ||
-    String(err?.message).includes("quota") ||
-    String(err?.message).includes("RESOURCE_EXHAUSTED")
-  );
-}
-
-function isCreditsDepleted(err: any): boolean {
-  const msg = String(err?.message ?? "");
-  return (
-    err?.status === 429 && (
-      msg.includes("prepayment credits are depleted") ||
-      msg.includes("monthly spending cap") ||
-      msg.includes("spend")
-    )
-  );
-}
-
-function isPermDenied(err: any): boolean {
-  return (
-    err?.status === 403 ||
-    err?.status === 404 ||
-    String(err?.message).includes("PERMISSION_DENIED") ||
-    String(err?.message).includes("denied access") ||
-    String(err?.message).includes("NOT_FOUND")
-  );
-}
-
-function isMissingKey(err: any): boolean {
-  return (
-    err?.message === "GEMINI_API_KEY_MISSING" ||
-    String(err?.message).includes("API_KEY_INVALID") ||
-    (err?.status === 400 && String(err?.message).includes("valid API key"))
-  );
-}
-
-// ── Core generation with model cascade + retry ───────────────────────────
-async function generateWithCascade(
-  prompt: string,
-  log: Request["log"],
-): Promise<{ text: string; model: string }> {
-  const ai = getClient();
-  let lastErr: unknown;
-
-  for (const model of MODEL_CASCADE) {
-    // Up to 3 retries per model (for rate limits with backoff)
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        log.info({ model, attempt }, "Gemini generate attempt");
-        const response = await ai.models.generateContent({
-          model,
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          config: { maxOutputTokens: 8192, temperature: 0.9 },
-        });
-        const text = response.text ?? "[]";
-        log.info({ model, attempt }, "Gemini generate success");
-        return { text, model };
-      } catch (err: any) {
-        lastErr = err;
-        log.warn({ model, attempt, status: err?.status }, "Gemini attempt failed");
-
-        if (isCreditsDepleted(err)) {
-          // Spending cap / billing cap hit — all models share the same project, stop immediately
-          log.error({ model }, "Spending cap exceeded, aborting cascade");
-          throw err;
-        }
-
-        if (isPermDenied(err)) {
-          // This model is blocked for this key — skip to next model immediately
-          log.warn({ model }, "Model permission denied, trying next in cascade");
-          break;
-        }
-
-        if (isMissingKey(err)) throw err; // No point retrying
-
-        if (isRateLimit(err) && attempt < 3) {
-          const delay = 5000 * attempt; // 5s, 10s — free-tier RPM windows need longer waits
-          log.warn({ model, attempt, delay }, "Rate limited, backing off");
-          await new Promise((r) => setTimeout(r, delay));
-          continue;
-        }
-
-        // Transient server error
-        if ((err?.status >= 500 || err?.status === 503) && attempt < 3) {
-          await new Promise((r) => setTimeout(r, 800 * attempt));
-          continue;
-        }
-
-        // Any other error on last attempt — try next model
-        break;
-      }
-    }
-  }
-
-  throw lastErr;
-}
-
-// ── Stream generation with cascade ───────────────────────────────────────
-async function streamWithCascade(
-  prompt: string,
-  onChunk: (text: string) => void,
-  log: Request["log"],
-): Promise<{ model: string }> {
-  const ai = getClient();
-  let lastErr: unknown;
-
-  for (const model of MODEL_CASCADE) {
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        log.info({ model, attempt }, "Gemini stream attempt");
-        const stream = await ai.models.generateContentStream({
-          model,
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          config: { maxOutputTokens: 8192, temperature: 0.9 },
-        });
-
-        for await (const chunk of stream) {
-          const t = chunk.text;
-          if (t) onChunk(t);
-        }
-
-        log.info({ model, attempt }, "Gemini stream success");
-        return { model };
-      } catch (err: any) {
-        lastErr = err;
-        log.warn({ model, attempt, status: err?.status }, "Gemini stream attempt failed");
-
-        if (isCreditsDepleted(err)) { throw err; } // spending cap — stop all models
-        if (isPermDenied(err)) { break; }
-        if (isMissingKey(err)) throw err;
-
-        if (isRateLimit(err) && attempt < 3) {
-          await new Promise((r) => setTimeout(r, 5000 * attempt)); // 5s, 10s
-          continue;
-        }
-        if ((err?.status >= 500 || err?.status === 503) && attempt < 3) {
-          await new Promise((r) => setTimeout(r, 800 * attempt));
-          continue;
-        }
-        break;
-      }
-    }
-  }
-
-  throw lastErr;
-}
-
-// ── Error response helpers ────────────────────────────────────────────────
-function errorMessage(err: any): { status: number; message: string; code: string } {
-  if (isMissingKey(err)) {
-    return { status: 500, code: "NO_KEY", message: "Gemini API key not configured or invalid. Check your GEMINI_API_KEY secret." };
-  }
-  if (isCreditsDepleted(err)) {
-    return { status: 429, code: "CREDITS_DEPLETED", message: "Your Google AI Studio project has exceeded its monthly spending cap. Go to https://ai.studio/spend to raise or remove the cap, or replace GEMINI_API_KEY with a key from a project that has remaining quota." };
-  }
-  if (isRateLimit(err)) {
-    return { status: 429, code: "QUOTA_EXHAUSTED", message: "Daily free-tier quota exhausted on all models. The quota resets at midnight Pacific time. You can get a fresh API key from a new project at aistudio.google.com/apikey and update GEMINI_API_KEY in Secrets." };
-  }
-  if (isPermDenied(err)) {
-    return { status: 403, code: "PERMISSION_DENIED", message: "All available models are blocked for this API key. Get a free key at aistudio.google.com/apikey and update GEMINI_API_KEY in Secrets." };
-  }
-  return { status: 500, code: "ERROR", message: "Generation failed. Please try again." };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -346,13 +166,6 @@ router.post("/generate", async (req: Request, res: Response) => {
 
 // ────────────────────────────────────────────────────────────────────────────
 //  POST /api/generate/stream  — SSE streaming response
-//
-//  SSE protocol:
-//    data: {"index":N,"chunk":"..."}        streaming chunk for output #N
-//    data: {"index":N,"output":"...","done":true}  output #N complete
-//    data: {"retrying":true,"attempt":N}    server retrying on rate limit
-//    data: {"error":"...","code":"..."}     fatal error
-//    data: {"complete":true,"count":N,"model":"..."} all done
 // ────────────────────────────────────────────────────────────────────────────
 router.post("/generate/stream", async (req: Request, res: Response) => {
   const { type, niche, style, tone, platform, audience } = req.body as {
@@ -368,7 +181,6 @@ router.post("/generate/stream", async (req: Request, res: Response) => {
     res.status(400).json({ error: "Invalid generation type" }); return;
   }
 
-  // SSE headers
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -385,20 +197,15 @@ router.post("/generate/stream", async (req: Request, res: Response) => {
       prompt,
       (chunk) => {
         fullText += chunk;
-        // Stream raw chunks as index-0 while building up
         send({ index: 0, chunk });
       },
       req.log,
     );
 
-    // Parse the complete response into up to 3 outputs
     const outputs = parseOutputs(fullText);
-
-    // Emit each parsed output as a complete item
     for (let i = 0; i < outputs.length; i++) {
       send({ index: i, output: outputs[i], done: true });
     }
-
     send({ complete: true, count: outputs.length, model });
     res.end();
   } catch (err: any) {
@@ -410,7 +217,7 @@ router.post("/generate/stream", async (req: Request, res: Response) => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-//  POST /api/generate/content-pack  — returns one structured ContentPack
+//  POST /api/generate/content-pack
 // ────────────────────────────────────────────────────────────────────────────
 router.post("/generate/content-pack", async (req: Request, res: Response) => {
   const { niche, style, tone, platform, audience } = req.body as {

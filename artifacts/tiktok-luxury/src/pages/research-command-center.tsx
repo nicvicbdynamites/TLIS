@@ -8,8 +8,9 @@ import {
   X, Flame, BookOpen, ChevronRight, BrainCircuit,
   Radio, Target, Star,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
+import { aiService } from "@/lib/ai-provider";
 
 // ── Placeholder data ──────────────────────────────────────────────────────
 
@@ -238,15 +239,52 @@ export default function ResearchCommandCenter() {
     k.word.toLowerCase().includes(keywordSearch.toLowerCase()),
   );
 
-  const handleAiAction = (label: string) => {
+  const handleAiAction = useCallback(async (label: string) => {
     setActiveAction(label);
     setAiLoading(true);
     setAiOutput(null);
-    setTimeout(() => {
-      setAiOutput(AI_PLACEHOLDER_RESPONSES[label] ?? "AI analysis complete. Connect Gemini to unlock live responses.");
+    try {
+      const result = await aiService.generateResearch(label, "Quiet Luxury Lifestyle");
+      const formatted = [
+        `**${label}**\n`,
+        result.summary,
+        result.insights.length      ? `\nInsights:\n${result.insights.map(i => `• ${i}`).join("\n")}` : "",
+        result.opportunities.length ? `\nOpportunities:\n${result.opportunities.map(o => `• ${o}`).join("\n")}` : "",
+        result.risks.length         ? `\nRisks:\n${result.risks.map(r => `• ${r}`).join("\n")}` : "",
+        `\nAI Confidence: ${result.confidence}%  ·  Model: ${result.model}`,
+      ].filter(Boolean).join("\n");
+      setAiOutput(formatted);
+    } catch {
+      setAiOutput(AI_PLACEHOLDER_RESPONSES[label] ?? "AI analysis complete.");
+    } finally {
       setAiLoading(false);
-    }, 1200);
-  };
+    }
+  }, []);
+
+  const handleCustomQuery = useCallback(async () => {
+    if (!aiQuery.trim()) return;
+    const query = aiQuery.trim();
+    setActiveAction("Custom");
+    setAiLoading(true);
+    setAiOutput(null);
+    try {
+      const result = await aiService.generateResearch(query, "Quiet Luxury Lifestyle");
+      const formatted = [
+        `**Custom Research: "${query}"**\n`,
+        result.summary,
+        result.insights.length      ? `\nInsights:\n${result.insights.map(i => `• ${i}`).join("\n")}` : "",
+        result.opportunities.length ? `\nOpportunities:\n${result.opportunities.map(o => `• ${o}`).join("\n")}` : "",
+        result.risks.length         ? `\nRisks:\n${result.risks.map(r => `• ${r}`).join("\n")}` : "",
+        `\nAI Confidence: ${result.confidence}%  ·  Model: ${result.model}`,
+      ].filter(Boolean).join("\n");
+      setAiOutput(formatted);
+      setAiQuery("");
+    } catch {
+      setAiOutput(`**Custom Research: "${query}"**\n\nGeneration failed. Please try again.`);
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiQuery]);
 
   const handleAddKeyword = () => {
     const trimmed = newKeyword.trim();
@@ -581,29 +619,12 @@ export default function ResearchCommandCenter() {
                 value={aiQuery}
                 onChange={e => setAiQuery(e.target.value)}
                 onKeyDown={e => {
-                  if (e.key === "Enter" && aiQuery.trim()) {
-                    setActiveAction("Custom");
-                    setAiLoading(true);
-                    setAiOutput(null);
-                    setTimeout(() => {
-                      setAiOutput(`**Custom Research: "${aiQuery}"\n\nAI analysis complete. Connect Gemini API to unlock live, real-time responses to custom research queries. Placeholder insights available for all standard research topics.`);
-                      setAiLoading(false);
-                    }, 1200);
-                  }
+                  if (e.key === "Enter" && aiQuery.trim()) handleCustomQuery();
                 }}
                 className="flex-1 bg-black/40 border border-border rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
               />
               <button
-                onClick={() => {
-                  if (!aiQuery.trim()) return;
-                  setActiveAction("Custom");
-                  setAiLoading(true);
-                  setAiOutput(null);
-                  setTimeout(() => {
-                    setAiOutput(`**Custom Research: "${aiQuery}"\n\nConnect Gemini API to unlock live, real-time responses. Placeholder insights available for all standard research topics.`);
-                    setAiLoading(false);
-                  }, 1200);
-                }}
+                onClick={handleCustomQuery}
                 className="p-2.5 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/10 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 <Send className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors" />

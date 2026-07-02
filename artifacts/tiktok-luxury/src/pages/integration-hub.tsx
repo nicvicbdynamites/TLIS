@@ -7,6 +7,7 @@ import {
   Radio, TrendingUp, Search, Download, RotateCcw,
 } from "lucide-react";
 import { useState, useCallback } from "react";
+import { aiService, type ConnectionTestResult } from "@/lib/ai-provider";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -217,12 +218,30 @@ function JobIcon({ status }: { status: JobStatus }) {
 // ── Main Page ─────────────────────────────────────────────────────────────
 
 export default function IntegrationHub() {
-  const [activeJobTab, setActiveJobTab] = useState<JobStatus>("running");
-  const [testingProvider, setTestingProvider] = useState<string | null>(null);
+  const [activeJobTab, setActiveJobTab]                            = useState<JobStatus>("running");
+  const [testingProvider, setTestingProvider]                      = useState<string | null>(null);
+  const [testResults, setTestResults]                              = useState<Record<string, ConnectionTestResult>>({});
 
-  const handleTest = useCallback((name: string) => {
+  const handleTest = useCallback(async (name: string) => {
     setTestingProvider(name);
-    setTimeout(() => setTestingProvider(null), 2000);
+    try {
+      const result = await aiService.testConnection();
+      setTestResults(prev => ({ ...prev, [name]: result }));
+    } catch (err: any) {
+      setTestResults(prev => ({
+        ...prev,
+        [name]: {
+          success:   false,
+          model:     "—",
+          latencyMs: 0,
+          timestamp: new Date().toISOString(),
+          status:    "Error",
+          error:     String(err?.message ?? "Connection failed"),
+        },
+      }));
+    } finally {
+      setTestingProvider(null);
+    }
   }, []);
 
   return (
@@ -363,6 +382,40 @@ export default function IntegrationHub() {
                   ? <><RefreshCw className="h-3.5 w-3.5 animate-spin" /> Testing…</>
                   : <><Zap className="h-3.5 w-3.5" /> Test Connection</>}
               </button>
+
+              {/* Live Test Result */}
+              {testResults[provider.name] && (() => {
+                const r = testResults[provider.name]!;
+                return (
+                  <div className={`mt-3 p-3 rounded-lg border text-xs ${r.success ? "border-emerald-400/20 bg-emerald-400/3" : "border-red-400/20 bg-red-400/3"}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      {r.success
+                        ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                        : <XCircle      className="h-3.5 w-3.5 text-red-400" />}
+                      <span className={`text-[10px] font-mono uppercase tracking-widest font-semibold ${r.success ? "text-emerald-400" : "text-red-400"}`}>
+                        {r.status}
+                      </span>
+                      <span className="ml-auto text-[9px] font-mono text-muted-foreground/50">
+                        {new Date(r.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                      </span>
+                    </div>
+                    {r.success ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Model</p>
+                          <p className="font-mono text-foreground truncate">{r.model}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Latency</p>
+                          <p className="font-mono text-emerald-400">{r.latencyMs}ms</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-red-400/80 leading-relaxed">{r.error}</p>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>

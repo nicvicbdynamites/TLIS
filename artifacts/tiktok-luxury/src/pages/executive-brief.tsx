@@ -7,7 +7,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { aiService, type BriefResult } from "@/lib/ai-provider";
 
 // ── Greeting ──────────────────────────────────────────────────────────────
 
@@ -224,6 +225,22 @@ export default function ExecutiveBrief() {
   const [, navigate] = useLocation();
   const [completedTasks, setCompletedTasks] = useState<number[]>([]);
   const [editingRec, setEditingRec]         = useState<number | null>(null);
+  const [aiBrief, setAiBrief]               = useState<BriefResult | null>(null);
+  const [briefLoading, setBriefLoading]     = useState(false);
+  const [briefError, setBriefError]         = useState<string | null>(null);
+
+  const generateBrief = useCallback(async () => {
+    setBriefLoading(true);
+    setBriefError(null);
+    try {
+      const result = await aiService.generateExecutiveBrief("Quiet Luxury Lifestyle");
+      setAiBrief(result);
+    } catch (err: any) {
+      setBriefError(String(err?.message ?? "Generation failed. Please try again."));
+    } finally {
+      setBriefLoading(false);
+    }
+  }, []);
 
   const displayName = user?.email
     ? user.email.split("@")[0]!.replace(/[._]/g, " ").replace(/\b\w/g, l => l.toUpperCase())
@@ -291,18 +308,29 @@ export default function ExecutiveBrief() {
         <div className="flex items-center gap-2 mb-5">
           <BrainCircuit className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Executive Summary</h2>
-          <span className="ml-auto text-[10px] font-mono text-muted-foreground/50 uppercase">AI Generated · {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+          <button
+            onClick={generateBrief}
+            disabled={briefLoading}
+            className="ml-auto flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
+          >
+            {briefLoading
+              ? <><RefreshCw className="h-3 w-3 animate-spin" /> Generating…</>
+              : <><BrainCircuit className="h-3 w-3" /> {aiBrief ? "Regenerate" : "Generate AI Brief"}</>}
+          </button>
         </div>
+        {briefError && (
+          <p className="mb-4 text-xs text-red-400 bg-red-400/8 border border-red-400/20 rounded-lg px-3 py-2">{briefError}</p>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Opportunity */}
           <div className="space-y-1.5">
             <p className="text-[10px] uppercase tracking-widest text-primary/70">Today's Opportunity</p>
-            <p className="text-sm text-foreground leading-relaxed">{EXECUTIVE_SUMMARY.opportunity}</p>
+            <p className="text-sm text-foreground leading-relaxed">{aiBrief?.opportunity ?? EXECUTIVE_SUMMARY.opportunity}</p>
           </div>
           {/* Risks */}
           <div className="space-y-2">
             <p className="text-[10px] uppercase tracking-widest text-red-400/70">Risks</p>
-            {EXECUTIVE_SUMMARY.risks.map((risk, i) => (
+            {(aiBrief?.risks ?? EXECUTIVE_SUMMARY.risks).map((risk, i) => (
               <div key={i} className="flex items-start gap-2">
                 <AlertTriangle className="h-3.5 w-3.5 text-red-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">{risk}</p>
@@ -312,7 +340,7 @@ export default function ExecutiveBrief() {
           {/* AI Recommendation */}
           <div className="space-y-1.5">
             <p className="text-[10px] uppercase tracking-widest text-emerald-400/70">AI Recommendation</p>
-            <p className="text-sm text-foreground leading-relaxed">{EXECUTIVE_SUMMARY.recommendation}</p>
+            <p className="text-sm text-foreground leading-relaxed">{aiBrief?.recommendation ?? EXECUTIVE_SUMMARY.recommendation}</p>
           </div>
           {/* Expected Performance */}
           <div className="space-y-1.5">
@@ -452,35 +480,45 @@ export default function ExecutiveBrief() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {CONTENT_RECS.map((rec, i) => {
-            const isEditing = editingRec === i;
+            const isEditing   = editingRec === i;
+            const aiContent   = aiBrief?.contentRecs[i]?.content;
+            const displayText = aiContent ?? rec.content;
+            const isAi        = Boolean(aiContent);
             return (
               <div
                 key={i}
-                className="p-4 rounded-lg border border-border hover:border-primary/25 transition-all bg-black/20 group"
+                className={`p-4 rounded-lg border transition-all bg-black/20 group ${isAi ? "border-primary/30 bg-primary/3" : "border-border hover:border-primary/25"}`}
               >
                 <div className="flex items-center justify-between mb-2.5">
                   <div className="flex items-center gap-2">
                     <rec.icon className={`h-3.5 w-3.5 ${rec.color}`} />
                     <p className={`text-[10px] uppercase tracking-widest font-semibold ${rec.color}`}>{rec.type}</p>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => navigate("/generator")}
-                      className="p-1.5 rounded border border-border hover:border-primary/40 hover:bg-primary/10 transition-all"
-                      title="Generate new"
-                    >
-                      <RefreshCw className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
-                    </button>
-                    <button
-                      onClick={() => setEditingRec(isEditing ? null : i)}
-                      className="p-1.5 rounded border border-border hover:border-primary/40 hover:bg-primary/10 transition-all"
-                      title="Edit"
-                    >
-                      <Pencil className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
-                    </button>
+                  <div className="flex items-center gap-1">
+                    {isAi && (
+                      <span className="text-[8px] font-mono uppercase tracking-widest text-primary/60 border border-primary/20 px-1.5 py-0.5 rounded">
+                        AI
+                      </span>
+                    )}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => navigate("/generator")}
+                        className="p-1.5 rounded border border-border hover:border-primary/40 hover:bg-primary/10 transition-all"
+                        title="Generate new"
+                      >
+                        <RefreshCw className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
+                      </button>
+                      <button
+                        onClick={() => setEditingRec(isEditing ? null : i)}
+                        className="p-1.5 rounded border border-border hover:border-primary/40 hover:bg-primary/10 transition-all"
+                        title="Edit"
+                      >
+                        <Pencil className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4">{rec.content}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4">{displayText}</p>
               </div>
             );
           })}
