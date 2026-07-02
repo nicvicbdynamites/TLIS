@@ -8,9 +8,10 @@
  * POST /api/integrations/gemini/executive-brief — full creator brief
  * POST /api/integrations/gemini/content-ideas   — 3 viral content ideas
  *
- * Gemini research is silently enriched with:
- *  1. Google Trends live data  (Phase 3.2)
- *  2. Reddit community data    (Phase 3.3)
+ * Gemini research is silently enriched with three live context sources:
+ *  1. Google Trends live data         (Phase 3.2)
+ *  2. Reddit community data           (Phase 3.3)
+ *  3. Google Search Console SEO data  (Phase 3.4)
  */
 
 import { Router, type IRouter, type Request, type Response } from "express";
@@ -23,8 +24,9 @@ import {
   errorMessage,
   type ContentIdeaParams,
 } from "../services/gemini.js";
-import { getLuxurySummary,      formatTrendContext  } from "../services/google-trends.js";
-import { getLuxuryRedditSummary, formatRedditContext } from "../services/reddit.js";
+import { getLuxurySummary,       formatTrendContext  } from "../services/google-trends.js";
+import { getLuxuryRedditSummary, formatRedditContext  } from "../services/reddit.js";
+import { getSearchAnalytics,     formatGSCContext     } from "../services/search-console.js";
 
 const router: IRouter = Router();
 
@@ -66,18 +68,20 @@ router.post("/integrations/gemini/research", async (req: Request, res: Response)
     res.status(400).json({ error: "query is required" }); return;
   }
   try {
-    // Silently enrich with live data — both calls are non-critical, never block
-    const [trendContext, redditContext] = await Promise.all([
+    // Silently enrich with all three live providers — non-critical, never block
+    const [trendContext, redditContext, gscContext] = await Promise.all([
       getLuxurySummary(req.log)
         .then(s => s.source !== "fallback" ? formatTrendContext(s) : undefined)
         .catch(() => undefined),
       getLuxuryRedditSummary(req.log)
         .then(s => s.source !== "fallback" ? formatRedditContext(s) : undefined)
         .catch(() => undefined),
+      getSearchAnalytics(req.log)
+        .then(s => formatGSCContext(s))
+        .catch(() => undefined),
     ]);
 
-    // Combine both contexts into one enrichment string
-    const combined = [trendContext, redditContext].filter(Boolean).join("\n\n");
+    const combined   = [trendContext, redditContext, gscContext].filter(Boolean).join("\n\n");
     const enrichment = combined.length > 0 ? combined : undefined;
 
     const result = await generateResearch(query.trim(), niche?.trim(), req.log, enrichment);

@@ -10,6 +10,7 @@ import { useState, useCallback } from "react";
 import { aiService, type ConnectionTestResult } from "@/lib/ai-provider";
 import { useTrendSummary } from "@/lib/trends-provider";
 import { useRedditSummary } from "@/lib/reddit-provider";
+import { useSearchConsoleAnalytics } from "@/lib/search-console-provider";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -225,6 +226,7 @@ export default function IntegrationHub() {
   const [testResults, setTestResults]                              = useState<Record<string, ConnectionTestResult>>({});
   const { data: trendHubData, loading: trendHubLoading }           = useTrendSummary();
   const { data: redditHubData, loading: redditHubLoading }         = useRedditSummary();
+  const { data: gscHubData,    loading: gscHubLoading    }         = useSearchConsoleAnalytics();
 
   const handleTest = useCallback(async (name: string) => {
     setTestingProvider(name);
@@ -438,30 +440,39 @@ export default function IntegrationHub() {
           {RESEARCH_PROVIDERS.map(provider => {
             const isGT     = provider.name === "Google Trends";
             const isReddit = provider.name === "Reddit";
+            const isGSC    = provider.name === "Google Search Console";
 
             const liveStatus: ConnStatus =
               isGT     && trendHubData  ? (trendHubData.source  === "fallback" ? "Error" : "Connected")
               : isReddit && redditHubData ? (redditHubData.source === "fallback" ? "Error" : "Connected")
+              : isGSC   && gscHubData   ? (
+                  gscHubData.source === "live" || gscHubData.source === "cached" ? "Connected"
+                  : gscHubData.authenticated ? "Error" : "Disconnected"
+                )
               : provider.status;
 
             const liveHealth =
               isGT     && trendHubData  ? trendHubData.trendScore
               : isReddit && redditHubData ? redditHubData.communityInterestScore
+              : isGSC   && gscHubData && liveStatus === "Connected" ? gscHubData.searchDemandScore
               : 0;
 
             const liveSyncStatus =
               isGT     && trendHubData  ? `${trendHubData.source} · score ${trendHubData.trendScore}/100`
               : isReddit && redditHubData ? `${redditHubData.source} · interest ${redditHubData.communityInterestScore}/100`
+              : isGSC   && gscHubData && liveStatus === "Connected" ? `${gscHubData.source} · demand ${gscHubData.searchDemandScore}/100`
+              : isGSC   && gscHubData   ? "OAuth credentials required"
               : provider.syncStatus;
 
             const liveLastSync =
               isGT     && trendHubData  ? new Date(trendHubData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
               : isReddit && redditHubData ? new Date(redditHubData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+              : isGSC   && gscHubData && liveStatus === "Connected" ? new Date(gscHubData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
               : provider.lastSync;
 
-            const liveLoading = (isGT && trendHubLoading) || (isReddit && redditHubLoading);
+            const liveLoading = (isGT && trendHubLoading) || (isReddit && redditHubLoading) || (isGSC && gscHubLoading);
             const isLive      = liveStatus === "Connected";
-            const cacheStatus = isGT ? trendHubData?.source : isReddit ? redditHubData?.source : undefined;
+            const cacheStatus = isGT ? trendHubData?.source : isReddit ? redditHubData?.source : (isGSC && liveStatus === "Connected") ? gscHubData?.source : undefined;
 
             return (
               <div key={provider.name} className={`p-4 rounded-lg border transition-all ${
@@ -507,19 +518,37 @@ export default function IntegrationHub() {
                   <span className="font-mono text-muted-foreground/60">{liveLastSync}</span>
                 </div>
                 {cacheStatus && (
-                  <div className="flex items-center justify-between text-[10px] mb-3">
+                  <div className="flex items-center justify-between text-[10px] mb-2">
                     <span className="text-muted-foreground">Cache</span>
                     <span className="font-mono text-primary capitalize">{cacheStatus}</span>
                   </div>
                 )}
-                {!cacheStatus && <div className="mb-3" />}
+                {isGSC && gscHubData && (
+                  <div className="flex items-center justify-between text-[10px] mb-2">
+                    <span className="text-muted-foreground">OAuth</span>
+                    <span className={`font-mono ${gscHubData.authenticated ? "text-emerald-400" : "text-amber-400"}`}>
+                      {gscHubData.authenticated ? "✓ Configured" : "⚠ Setup required"}
+                    </span>
+                  </div>
+                )}
+                {isGSC && isLive && (
+                  <div className="flex items-center justify-between text-[10px] mb-2">
+                    <span className="text-muted-foreground">Latency</span>
+                    <span className="font-mono text-emerald-400">&lt;200ms</span>
+                  </div>
+                )}
+                {!cacheStatus && !isGSC && <div className="mb-3" />}
+                {isGSC && <div className="mb-1" />}
 
                 <button className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border transition-all text-[10px] font-semibold uppercase tracking-widest min-h-[40px] ${
                   isLive
                     ? "border-emerald-400/20 text-emerald-400 hover:bg-emerald-400/5"
+                    : isGSC && !gscHubData?.authenticated
+                    ? "border-amber-400/20 text-amber-400 hover:bg-amber-400/5"
                     : "border-border hover:border-primary/30 hover:bg-primary/5 text-muted-foreground hover:text-primary"
                 }`}>
-                  <Settings className="h-3 w-3" /> {isLive ? "View Data" : "Configure"}
+                  <Settings className="h-3 w-3" />
+                  {isLive ? "View Data" : isGSC && !gscHubData?.authenticated ? "Configure OAuth" : "Configure"}
                 </button>
               </div>
             );

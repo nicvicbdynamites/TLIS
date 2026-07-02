@@ -13,6 +13,7 @@ import { useLocation } from "wouter";
 import { aiService } from "@/lib/ai-provider";
 import { useTrendSummary } from "@/lib/trends-provider";
 import { useRedditSummary, type RedditSummary } from "@/lib/reddit-provider";
+import { useSearchConsoleAnalytics } from "@/lib/search-console-provider";
 
 // ── Placeholder data ──────────────────────────────────────────────────────
 
@@ -25,14 +26,15 @@ const RESEARCH_SUMMARY = {
 };
 
 const TREND_SOURCES = [
-  { name: "Google Trends",       status: "Ready",          lastUpdated: "5 min ago",  confidence: 96, icon: Globe        },
-  { name: "TikTok Trends",       status: "Ready",          lastUpdated: "12 min ago", confidence: 94, icon: TrendingUp   },
-  { name: "Reddit Insights",     status: "Ready",          lastUpdated: "2h ago",     confidence: 82, icon: MessageSquare},
-  { name: "YouTube Trends",      status: "Ready",          lastUpdated: "1h ago",     confidence: 82, icon: Play         },
-  { name: "Pinterest Trends",    status: "Connected Soon", lastUpdated: "—",          confidence: 0,  icon: Grid2X2      },
-  { name: "Instagram Trends",    status: "Connected Soon", lastUpdated: "—",          confidence: 0,  icon: Camera       },
-  { name: "Luxury News",         status: "Ready",          lastUpdated: "30 min ago", confidence: 88, icon: Newspaper    },
-  { name: "Fashion Intelligence",status: "Ready",          lastUpdated: "1h ago",     confidence: 85, icon: Gem          },
+  { name: "Google Trends",        status: "Ready",          lastUpdated: "5 min ago",  confidence: 96, icon: Globe        },
+  { name: "TikTok Trends",        status: "Ready",          lastUpdated: "12 min ago", confidence: 94, icon: TrendingUp   },
+  { name: "Reddit Insights",      status: "Ready",          lastUpdated: "2h ago",     confidence: 82, icon: MessageSquare},
+  { name: "Search Console",       status: "Ready",          lastUpdated: "15 min ago", confidence: 89, icon: Search       },
+  { name: "YouTube Trends",       status: "Ready",          lastUpdated: "1h ago",     confidence: 82, icon: Play         },
+  { name: "Pinterest Trends",     status: "Connected Soon", lastUpdated: "—",          confidence: 0,  icon: Grid2X2      },
+  { name: "Instagram Trends",     status: "Connected Soon", lastUpdated: "—",          confidence: 0,  icon: Camera       },
+  { name: "Luxury News",          status: "Ready",          lastUpdated: "30 min ago", confidence: 88, icon: Newspaper    },
+  { name: "Fashion Intelligence", status: "Ready",          lastUpdated: "1h ago",     confidence: 85, icon: Gem          },
 ];
 
 const OPPORTUNITY_SECTIONS = [
@@ -239,6 +241,7 @@ export default function ResearchCommandCenter() {
 
   const { data: trendData, loading: trendLoading }   = useTrendSummary();
   const { data: redditData, loading: redditLoading } = useRedditSummary();
+  const { data: gscData,   loading: gscLoading }     = useSearchConsoleAnalytics();
 
   const filteredKeywords = savedKeywords.filter(k =>
     k.word.toLowerCase().includes(keywordSearch.toLowerCase()),
@@ -592,6 +595,165 @@ export default function ResearchCommandCenter() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* ── SECTION 2.7: Search Intelligence ── */}
+      <div className="luxury-card p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <Search className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Search Intelligence</h2>
+          {(gscData || gscLoading) && (
+            <span className={`ml-2 text-[9px] font-mono uppercase px-2 py-0.5 rounded border ${
+              gscData?.source === "live"
+                ? "text-emerald-400 border-emerald-400/25 bg-emerald-400/10"
+                : "text-muted-foreground border-border bg-muted/20"
+            }`}>
+              <span className={`inline-block h-1.5 w-1.5 rounded-full mr-1 align-middle ${gscData?.source === "live" ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground/40"}`} />
+              Search Console · {gscLoading ? "Loading" : (gscData?.source ?? "fallback")}
+            </span>
+          )}
+          {gscLoading && <RefreshCw className="h-3 w-3 text-muted-foreground/40 animate-spin" />}
+          {gscData && (
+            <span className="ml-auto text-[10px] font-mono text-muted-foreground/50">
+              {gscData.searchDemandScore}/100 demand · {new Date(gscData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+            </span>
+          )}
+        </div>
+
+        {/* Overview row */}
+        {gscData && (
+          <div className="mb-5 p-4 rounded-lg border border-border bg-black/10">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Clicks</p>
+                <p className="text-xl font-bold font-serif luxury-gradient-text">{gscData.overview.clicks.toLocaleString()}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Impressions</p>
+                <p className="text-xl font-bold font-serif text-chart-2">{gscData.overview.impressions.toLocaleString()}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">CTR</p>
+                <p className="text-xl font-bold font-serif text-emerald-400">{(gscData.overview.ctr * 100).toFixed(1)}%</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Avg Position</p>
+                <p className="text-xl font-bold font-serif text-amber-400">{gscData.overview.position.toFixed(1)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {/* Top Queries */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-border">
+              <BarChart2 className="h-3.5 w-3.5 text-primary" />
+              <p className="text-[10px] uppercase tracking-widest font-semibold text-primary">Top Queries</p>
+            </div>
+            {(gscData?.topQueries ?? []).slice(0, 5).map((q, i) => (
+              <div key={i}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <p className="text-xs text-foreground truncate pr-2 max-w-[160px]">{q.query}</p>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-[10px] font-mono text-primary">{q.clicks.toLocaleString()}</span>
+                    <span className="text-[9px] text-muted-foreground/50">pos {q.position.toFixed(1)}</span>
+                  </div>
+                </div>
+                <div className="h-1 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary/50 rounded-full"
+                    style={{ width: `${Math.round((q.clicks / ((gscData?.topQueries[0]?.clicks) || 1)) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+            {!gscData && <p className="text-xs text-muted-foreground/50 italic">Loading search data…</p>}
+            {/* Search Intent Tags */}
+            {gscData?.searchIntent && gscData.searchIntent.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-border/50">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Search Intent</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {gscData.searchIntent.map((intent, i) => (
+                    <span key={i} className="text-[9px] px-2 py-0.5 rounded-full border border-chart-2/25 bg-chart-2/8 text-chart-2 capitalize">
+                      {intent}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Rising Queries + Low Competition */}
+          <div className="space-y-5">
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-emerald-400">Rising Queries</p>
+              </div>
+              {(gscData?.risingQueries ?? []).slice(0, 3).map((q, i) => (
+                <div key={i} className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-foreground truncate pr-2 max-w-[150px]">{q.query}</p>
+                  <span className="text-[10px] font-mono text-emerald-400 flex-shrink-0">
+                    {(q.ctr * 100).toFixed(1)}% CTR
+                  </span>
+                </div>
+              ))}
+              {!gscData && <p className="text-xs text-muted-foreground/50 italic">Loading…</p>}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                <Target className="h-3.5 w-3.5 text-chart-2" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-chart-2">Low Competition</p>
+              </div>
+              {(gscData?.lowCompetition ?? []).slice(0, 3).map((q, i) => (
+                <div key={i} className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-foreground truncate pr-2 max-w-[150px]">{q.query}</p>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className="text-[9px] font-mono text-muted-foreground">pos</span>
+                    <span className="text-[10px] font-mono text-chart-2">{q.position.toFixed(1)}</span>
+                  </div>
+                </div>
+              ))}
+              {!gscData && <p className="text-xs text-muted-foreground/50 italic">Loading…</p>}
+            </div>
+          </div>
+
+          {/* High CTR + Geographic */}
+          <div className="space-y-5">
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                <Star className="h-3.5 w-3.5 text-amber-400" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-amber-400">High CTR Pages</p>
+              </div>
+              {(gscData?.highCTR ?? []).slice(0, 3).map((q, i) => (
+                <div key={i} className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-foreground truncate pr-2 max-w-[150px]">{q.query}</p>
+                  <span className="text-[10px] font-mono text-amber-400 flex-shrink-0">
+                    {(q.ctr * 100).toFixed(1)}%
+                  </span>
+                </div>
+              ))}
+              {!gscData && <p className="text-xs text-muted-foreground/50 italic">Loading…</p>}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                <Globe className="h-3.5 w-3.5 text-chart-5" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-chart-5">Geographic Insights</p>
+              </div>
+              {(gscData?.countries ?? []).slice(0, 4).map((c, i) => (
+                <div key={i} className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-foreground">{c.country}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-primary">{c.clicks.toLocaleString()}</span>
+                    <span className="text-[9px] text-muted-foreground/50">clicks</span>
+                  </div>
+                </div>
+              ))}
+              {!gscData && <p className="text-xs text-muted-foreground/50 italic">Loading…</p>}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── SECTION 3: Opportunity Discovery ── */}

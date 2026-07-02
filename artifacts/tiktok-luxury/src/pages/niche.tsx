@@ -1,8 +1,9 @@
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
-import { TrendingUp, TrendingDown, Target, Zap, Sparkles, Activity, MessageCircle, Users, Hash, AlertCircle, ThumbsUp } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Zap, Sparkles, Activity, MessageCircle, Users, Hash, AlertCircle, ThumbsUp, Search, Globe2, MapPin, Smartphone, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 import { useTrendSummary } from "@/lib/trends-provider";
 import { useRedditSummary } from "@/lib/reddit-provider";
+import { useSearchConsoleAnalytics } from "@/lib/search-console-provider";
 
 const niches = [
   { name: "Quiet Luxury Lifestyle", score: 94, demand: "Explosive", competition: "Low", growth: "+312%", status: "hot" },
@@ -56,15 +57,18 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function Niche() {
   const { data: liveTrends, loading: liveTrendsLoading } = useTrendSummary();
   const { data: redditData, loading: redditLoading }     = useRedditSummary();
+  const { data: gscData,   loading: gscLoading }         = useSearchConsoleAnalytics();
 
-  const liveScore     = liveTrends?.trendScore;
-  const communityScore = redditData?.communityInterestScore;
+  const liveScore        = liveTrends?.trendScore;
+  const communityScore   = redditData?.communityInterestScore;
+  const searchDemandScore = gscData?.searchDemandScore;
   const stats = [
-    { label: "Niches Tracked",         value: "847",                                                                    icon: Target      },
-    { label: "Hot Opportunities",      value: "23",                                                                     icon: Zap         },
-    { label: "Trend Score (Live)",     value: liveTrendsLoading ? "…" : liveScore != null ? String(liveScore) : "86.2", icon: Activity    },
-    { label: "Community Score (Live)", value: redditLoading ? "…" : communityScore != null ? String(communityScore) : "82", icon: MessageCircle },
-    { label: "Declining Niches",       value: "12",                                                                     icon: TrendingDown },
+    { label: "Niches Tracked",          value: "847",                                                                          icon: Target       },
+    { label: "Hot Opportunities",       value: "23",                                                                           icon: Zap          },
+    { label: "Trend Score (Live)",      value: liveTrendsLoading ? "…" : liveScore != null ? String(liveScore) : "86.2",       icon: Activity     },
+    { label: "Community Score (Live)",  value: redditLoading ? "…" : communityScore != null ? String(communityScore) : "82",   icon: MessageCircle},
+    { label: "Declining Niches",        value: "12",                                                                           icon: TrendingDown },
+    { label: "Search Demand Score",     value: gscLoading ? "…" : searchDemandScore != null ? String(searchDemandScore) : "84", icon: Search      },
   ];
 
   return (
@@ -75,7 +79,7 @@ export default function Niche() {
         <p className="text-muted-foreground text-sm">AI-identified market gaps with untapped luxury creator potential.</p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {stats.map((s, i) => (
           <div key={i} className="luxury-card p-5">
             <div className="flex items-center justify-between mb-3">
@@ -98,6 +102,15 @@ export default function Niche() {
                 : "text-muted-foreground"
               }`}>
                 {redditData.sentiment.label}
+              </p>
+            )}
+            {i === 5 && gscData && (
+              <p className={`text-[10px] font-mono mt-1 ${
+                gscData.searchDemandScore >= 80 ? "text-emerald-400"
+                : gscData.searchDemandScore >= 60 ? "text-primary"
+                : "text-muted-foreground"
+              }`}>
+                {gscData.source === "live" ? "↑ Live data" : gscData.source === "cached" ? "→ Cached" : "Fallback"}
               </p>
             )}
           </div>
@@ -232,6 +245,130 @@ export default function Niche() {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Search Intelligence ── */}
+      {(gscData || gscLoading) && (
+        <div className="luxury-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Search className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Search Intelligence</h2>
+            {gscLoading && <RefreshCw className="h-3 w-3 text-muted-foreground/40 animate-spin ml-1" />}
+            {gscData && (
+              <span className={`ml-2 text-[9px] font-mono uppercase px-2 py-0.5 rounded border ${
+                gscData.source === "live"
+                  ? "text-emerald-400 border-emerald-400/25 bg-emerald-400/10"
+                  : "text-muted-foreground border-border bg-muted/20"
+              }`}>
+                <span className={`inline-block h-1.5 w-1.5 rounded-full mr-1 align-middle ${gscData.source === "live" ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground/40"}`} />
+                Search Console · {gscData.source}
+              </span>
+            )}
+            {gscData && (
+              <span className="ml-auto text-[10px] font-mono text-muted-foreground/40">
+                Demand {gscData.searchDemandScore}/100
+              </span>
+            )}
+          </div>
+
+          {gscData && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {/* Top Queries */}
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Top Search Queries</p>
+                <div className="space-y-2">
+                  {gscData.topQueries.slice(0, 5).map((q, i) => (
+                    <div key={i}>
+                      <div className="flex justify-between text-[10px] mb-0.5">
+                        <span className="text-foreground/80 truncate pr-2 max-w-[140px]">{q.query}</span>
+                        <span className="font-mono text-primary flex-shrink-0">{q.clicks.toLocaleString()} clicks</span>
+                      </div>
+                      <div className="h-1 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary/60 rounded-full"
+                          style={{ width: `${Math.round((q.clicks / (gscData.topQueries[0]?.clicks || 1)) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {gscData.searchIntent.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Search Intent</p>
+                    <div className="flex flex-wrap gap-1">
+                      {gscData.searchIntent.map((intent, i) => (
+                        <span key={i} className="text-[9px] px-2 py-0.5 rounded-full border border-chart-2/25 bg-chart-2/8 text-chart-2 capitalize">
+                          {intent}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Device Breakdown */}
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Device Breakdown</p>
+                <div className="space-y-3">
+                  {gscData.devices.map((d, i) => {
+                    const pct = Math.round((d.clicks / (gscData.overview.clicks || 1)) * 100);
+                    return (
+                      <div key={i}>
+                        <div className="flex justify-between text-[10px] mb-1">
+                          <span className="text-foreground/80 capitalize flex items-center gap-1.5">
+                            {d.device === "DESKTOP" ? <Sparkles className="h-3 w-3 text-primary/60" /> :
+                             d.device === "MOBILE"  ? <Smartphone className="h-3 w-3 text-chart-2/60" /> :
+                             <Globe2 className="h-3 w-3 text-muted-foreground/60" />}
+                            {d.device.charAt(0) + d.device.slice(1).toLowerCase()}
+                          </span>
+                          <span className="font-mono text-foreground/60">{pct}%</span>
+                        </div>
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all duration-700 ${
+                            d.device === "DESKTOP" ? "bg-primary/60" :
+                            d.device === "MOBILE"  ? "bg-chart-2/70" :
+                            "bg-muted-foreground/40"
+                          }`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Geographic Insights */}
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Geographic Insights</p>
+                <div className="space-y-2">
+                  {gscData.countries.slice(0, 5).map((c, i) => (
+                    <div key={i} className="flex items-center justify-between text-[10px]">
+                      <span className="text-foreground/80 flex items-center gap-1.5">
+                        <MapPin className="h-3 w-3 text-muted-foreground/50" />
+                        {c.country}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-primary">{c.clicks.toLocaleString()}</span>
+                        <span className="text-muted-foreground/50">clicks</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {gscData.lowCompetition.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Low Competition</p>
+                    {gscData.lowCompetition.slice(0, 2).map((q, i) => (
+                      <div key={i} className="flex items-center gap-2 mb-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+                        <span className="text-[10px] text-foreground/80 truncate">{q.query}</span>
+                        <span className="text-[9px] font-mono text-emerald-400 flex-shrink-0">pos {q.position.toFixed(1)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

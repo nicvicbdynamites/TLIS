@@ -3,7 +3,7 @@ import {
   Clock, ArrowRight, RefreshCw, Pencil, Flame, Eye, Share2,
   Bookmark, MessageCircle, Hash, Music2, Lightbulb, Megaphone,
   Image, CheckCircle2, Circle, ChevronRight, BrainCircuit,
-  BarChart3, Gauge, Star, Zap, Shield, Radio,
+  BarChart3, Gauge, Star, Zap, Shield, Radio, Search, MousePointer,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
@@ -11,6 +11,7 @@ import { useState, useCallback } from "react";
 import { aiService, type BriefResult } from "@/lib/ai-provider";
 import { useTrendSummary } from "@/lib/trends-provider";
 import { useRedditSummary } from "@/lib/reddit-provider";
+import { useSearchConsoleAnalytics } from "@/lib/search-console-provider";
 
 // ── Greeting ──────────────────────────────────────────────────────────────
 
@@ -233,6 +234,7 @@ export default function ExecutiveBrief() {
 
   const { data: trendSummary, loading: trendLoading } = useTrendSummary();
   const { data: redditSummary }                       = useRedditSummary();
+  const { data: gscData, loading: gscLoading }        = useSearchConsoleAnalytics();
 
   const generateBrief = useCallback(async () => {
     setBriefLoading(true);
@@ -398,6 +400,67 @@ export default function ExecutiveBrief() {
           </div>
         )}
       </div>
+
+      {/* ── 1.5. Search Performance ── */}
+      {(gscData || gscLoading) && (
+        <div className="luxury-card p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Search className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Search Performance</h2>
+            {gscLoading && <RefreshCw className="h-3 w-3 text-muted-foreground/40 animate-spin" />}
+            {gscData && (
+              <span className="ml-auto text-[9px] font-mono text-muted-foreground/40 uppercase tracking-wider">
+                Search Console · {gscData.source}
+              </span>
+            )}
+          </div>
+          {gscData && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 rounded-lg border border-primary/15 bg-primary/5 text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Clicks</p>
+                <p className="text-2xl font-bold font-serif luxury-gradient-text">
+                  {gscData.overview.clicks.toLocaleString()}
+                </p>
+                <p className="text-[10px] text-muted-foreground/50 font-mono mt-1">28-day total</p>
+              </div>
+              <div className="p-4 rounded-lg border border-chart-2/15 bg-chart-2/5 text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Impressions</p>
+                <p className="text-2xl font-bold font-serif text-chart-2">
+                  {gscData.overview.impressions.toLocaleString()}
+                </p>
+                <p className="text-[10px] text-muted-foreground/50 font-mono mt-1">28-day total</p>
+              </div>
+              <div className="p-4 rounded-lg border border-emerald-400/15 bg-emerald-400/5 text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">CTR</p>
+                <p className="text-2xl font-bold font-serif text-emerald-400">
+                  {(gscData.overview.ctr * 100).toFixed(1)}%
+                </p>
+                <p className="text-[10px] text-muted-foreground/50 font-mono mt-1">click-through rate</p>
+              </div>
+              <div className="p-4 rounded-lg border border-amber-400/15 bg-amber-400/5 text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Avg Position</p>
+                <p className="text-2xl font-bold font-serif text-amber-400">
+                  {gscData.overview.position.toFixed(1)}
+                </p>
+                <p className="text-[10px] text-muted-foreground/50 font-mono mt-1">search ranking</p>
+              </div>
+            </div>
+          )}
+          {gscData && gscData.topQueries.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Top Search Queries</p>
+              <div className="flex flex-wrap gap-1.5">
+                {gscData.topQueries.slice(0, 6).map((q, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border border-primary/20 bg-primary/5 text-foreground/80">
+                    <MousePointer className="h-2.5 w-2.5 text-primary opacity-60" />
+                    {q.query}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── 2. Executive Summary ── */}
       <div className="luxury-card p-6">
