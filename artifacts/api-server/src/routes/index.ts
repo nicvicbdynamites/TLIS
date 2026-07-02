@@ -7,6 +7,7 @@ import redditRouter        from "./reddit.js";
 import searchConsoleRouter from "./search-console.js";
 import ahrefsRouter        from "./ahrefs.js";
 import intelligenceRouter  from "./intelligence.js";
+import integrationCoreRouter from "./integration-core.js";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(redditRouter);
 router.use(searchConsoleRouter);
 router.use(ahrefsRouter);
 router.use(intelligenceRouter);
+router.use(integrationCoreRouter);
 
 export default router;

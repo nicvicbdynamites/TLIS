@@ -41,21 +41,17 @@ class ProviderManager {
   private readonly registry = new Map<string, IProvider>();
   private readonly rateLimitUntil = new Map<string, number>(); // ts until cool-down ends
   private lastHealthRun?: string;
-  private healthCheckInterval?: ReturnType<typeof setInterval>;
 
   constructor() {
     // Register all providers in priority order
     [geminiProvider, openAIProvider, claudeProvider, deepSeekProvider, grokProvider, mistralProvider]
       .forEach(p => this.register(p));
 
-    // Warm-up: run a first health check after 5 s (non-blocking)
+    // Warm-up: run a first health check after 5 s (non-blocking) so the
+    // dashboard has data before the scheduler's first "ai-health" run.
+    // Recurring checks are driven solely by that scheduler task (every 10m) —
+    // do NOT add a second setInterval here, it would run health checks twice.
     setTimeout(() => this.runHealthChecks().catch(() => {}), 5_000);
-
-    // Periodic health checks every 10 minutes
-    this.healthCheckInterval = setInterval(
-      () => this.runHealthChecks().catch(() => {}),
-      10 * 60_000,
-    );
   }
 
   register(provider: IProvider): void {

@@ -1,2 +1,3 @@
 - [TLIS Research Provider Architecture](tlis-module13.md) — How Google Trends (and future providers) are wired: service + routes + frontend hook + Gemini enrichment pattern
 - [TLIS Supabase auth pattern](tlis-supabase-auth.md) — getAuthUserId()/getDeviceId() used for RLS; vaultEntryToRow/calendarPostToRow are module-private helpers
+- [TLIS Integration Core architecture](tlis-integration-core.md) — centralized provider registry pattern + scheduler warm-up staleness pitfall on restart

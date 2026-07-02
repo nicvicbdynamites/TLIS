@@ -28,6 +28,8 @@ const SECRET_MAP: Array<{ key: string; envVar: string; provider: string }> = [
   { key: "google_search",  envVar: "GOOGLE_CREDENTIALS",        provider: "Google Search Console"   },
   { key: "tiktok",         envVar: "TIKTOK_API_KEY",            provider: "TikTok"                  },
   { key: "instagram",      envVar: "INSTAGRAM_API_KEY",         provider: "Instagram"               },
+  { key: "youtube",        envVar: "YOUTUBE_API_KEY",           provider: "YouTube"                 },
+  { key: "pinterest",      envVar: "PINTEREST_API_KEY",         provider: "Pinterest"               },
 ];
 
 class SecretsManager {
