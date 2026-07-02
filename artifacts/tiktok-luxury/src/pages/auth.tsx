@@ -27,7 +27,7 @@ function InputField({
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           autoComplete={autoComplete}
-          className="w-full bg-black/60 border border-border rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all pr-10"
+          className="w-full bg-black/60 border border-border rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition pr-10"
         />
         {isPassword && (
           <button
@@ -53,7 +53,7 @@ function SubmitButton({
       type="submit"
       disabled={loading}
       className={cn(
-        "w-full flex items-center justify-center gap-2.5 py-3 rounded-xl border font-semibold text-sm tracking-widest uppercase transition-all duration-300",
+        "w-full flex items-center justify-center gap-2.5 py-3 rounded-xl border font-semibold text-sm tracking-widest uppercase transition duration-300",
         loading
           ? "bg-primary/5 border-primary/20 text-primary/40 cursor-not-allowed"
           : "bg-primary/10 hover:bg-primary/20 border-primary/30 hover:border-primary/60 text-primary"
@@ -215,7 +215,7 @@ export default function AuthPage() {
                   key={t.id}
                   onClick={() => setTab(t.id)}
                   className={cn(
-                    "flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-md text-xs font-semibold transition-all duration-200 tracking-wide",
+                    "flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-md text-xs font-semibold transition duration-200 tracking-wide",
                     tab === t.id
                       ? "bg-primary/15 text-primary border border-primary/30"
                       : "text-muted-foreground hover:text-foreground"

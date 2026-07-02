@@ -53,7 +53,7 @@ export default function Hooks() {
           <p className="text-muted-foreground text-sm">Battle-tested opening lines engineered for maximum retention and virality.</p>
         </div>
         <Link href="/generator?tab=hooks">
-          <span className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all duration-200 cursor-pointer flex-shrink-0">
+          <span className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition duration-200 cursor-pointer flex-shrink-0">
             <Sparkles className="h-4 w-4" />
             Generate AI Hooks
           </span>
@@ -67,7 +67,7 @@ export default function Hooks() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search hooks..."
-            className="w-full bg-card border border-card-border rounded-lg pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
+            className="w-full bg-card border border-card-border rounded-lg pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition"
           />
         </div>
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
@@ -76,7 +76,7 @@ export default function Hooks() {
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition duration-200 ${
                 activeCategory === cat
                   ? "bg-primary/10 border-primary/40 text-primary"
                   : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
@@ -129,7 +129,7 @@ export default function Hooks() {
                 </button>
                 <button
                   onClick={() => handleCopy(hook.id, hook.text)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary transition-all duration-200"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary transition duration-200"
                 >
                   <Copy className="h-3 w-3" />
                   {copied === hook.id ? "Copied!" : "Copy"}

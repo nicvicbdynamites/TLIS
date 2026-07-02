@@ -70,7 +70,7 @@ export function SyncStatusBar({ status, lastSynced, isConnected, error }: Props)
   const isSpinning = status === "checking" || status === "syncing";
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-300 ${
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition duration-300 ${
       status === "synced"
         ? "border-chart-2/20 bg-chart-2/5"
         : status === "error"

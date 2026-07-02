@@ -109,7 +109,7 @@ export default function Prompts() {
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition duration-200 ${
               activeCategory === cat
                 ? "bg-primary/10 border-primary/40 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
@@ -161,13 +161,13 @@ export default function Prompts() {
             <div className="flex items-center gap-2 pt-2 border-t border-border">
               <button
                 onClick={() => setEditing(editing === p.id ? null : p.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border border-border hover:border-primary/40 hover:text-primary text-muted-foreground transition-all duration-200"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border border-border hover:border-primary/40 hover:text-primary text-muted-foreground transition duration-200"
               >
                 {editing === p.id ? <><Check className="h-3 w-3" /> Done</> : <><Edit3 className="h-3 w-3" /> Edit</>}
               </button>
               <button
                 onClick={() => handleCopy(p.id, getText(p))}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary transition-all duration-200 ml-auto"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary transition duration-200 ml-auto"
               >
                 <Copy className="h-3 w-3" />
                 {copied === p.id ? "Copied!" : "Copy Prompt"}

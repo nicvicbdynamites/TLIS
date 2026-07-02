@@ -17,7 +17,7 @@ import {
   Circle, Hash, Layers, Plug, Play,
   Eye, Command, Gauge, ExternalLink,
 } from "lucide-react";
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import { Link } from "wouter";
 import { useAuth }             from "@/lib/auth";
 import { useActiveWorkspace }  from "@/lib/workspace-context";
@@ -61,29 +61,44 @@ function timeAgo(iso: string): string {
 }
 
 // ── Animated Counter ───────────────────────────────────────────────────────
+//
+// Isolated into its own memoized leaf component so the ~60fps state updates
+// during the count-up animation only re-render this tiny node, not the
+// entire (1000+ line) Executive Command Center tree.
 
 function useCounter(target: number, delayMs = 0): number {
   const [val, setVal] = useState(0);
   useEffect(() => {
     if (target === 0) { setVal(0); return; }
+    let intervalId: ReturnType<typeof setInterval> | undefined;
     const t0 = setTimeout(() => {
       const dur = 1200;
       const fps = 60;
       const total = Math.round((dur / 1000) * fps);
       let frame = 0;
-      const id = setInterval(() => {
+      intervalId = setInterval(() => {
         frame++;
         const p = frame / total;
         const e = 1 - Math.pow(1 - p, 3);
         setVal(Math.round(e * target));
-        if (frame >= total) { setVal(target); clearInterval(id); }
+        if (frame >= total) {
+          setVal(target);
+          if (intervalId) clearInterval(intervalId);
+        }
       }, 1000 / fps);
-      return () => clearInterval(id);
     }, delayMs);
-    return () => clearTimeout(t0);
+    return () => {
+      clearTimeout(t0);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [target, delayMs]);
   return val;
 }
+
+const AnimatedNumber = memo(function AnimatedNumber({ target, delay = 0 }: { target: number; delay?: number }) {
+  const val = useCounter(target, delay);
+  return <>{val}</>;
+});
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -350,24 +365,17 @@ export default function ExecutiveCommandCenter() {
   }, [trendData, redditData, ahrefsData, gscData, wsStats]);
 
   // ── Animated KPI counters ─────────────────────────────────────────────────
-  const cHealth      = useCounter(systemHealth,                    100);
-  const cConfidence  = useCounter(brief?.confidence ?? 94,         200);
-  const cAPIs        = useCounter(connectedCount,                  300);
-  const cWorkspaces  = useCounter(wsStats?.workspaces ?? 0,        400);
-  const cAccounts    = useCounter(accounts.length,                 500);
-  const cOpps        = useCounter(ahrefsData?.easyWins?.length ?? 5, 600);
-  const cGrowth      = useCounter(trendData?.trendScore ?? 87,     700);
-  const cOverall     = useCounter(scores.overall,                  800);
-
-  const kpis = [
-    { label: "System Health",         value: cHealth,     unit: "%",  color: "emerald", icon: Shield      },
-    { label: "AI Confidence",         value: cConfidence, unit: "%",  color: "primary", icon: BrainCircuit},
-    { label: "Connected APIs",        value: cAPIs,       unit: "",   color: "chart2",  icon: Plug        },
-    { label: "Running Tasks",         value: 2,           unit: "",   color: "amber",   icon: Activity    },
-    { label: "Active Workspaces",     value: cWorkspaces, unit: "",   color: "primary", icon: Briefcase   },
-    { label: "TikTok Accounts",       value: cAccounts,   unit: "",   color: "chart2",  icon: Users       },
-    { label: "Today's Opportunities", value: cOpps,       unit: "",   color: "emerald", icon: Target      },
-    { label: "Growth Score",          value: cGrowth,     unit: "/100", color: "primary", icon: TrendingUp },
+  // Targets are passed down to memoized <AnimatedNumber/> leaves so the
+  // count-up animation no longer re-renders this whole page 60x/sec.
+  const kpis: Array<{ label: string; target?: number; value?: number; delay?: number; unit: string; color: string; icon: typeof Shield }> = [
+    { label: "System Health",         target: systemHealth,                      delay: 100, unit: "%",  color: "emerald", icon: Shield      },
+    { label: "AI Confidence",         target: brief?.confidence ?? 94,           delay: 200, unit: "%",  color: "primary", icon: BrainCircuit},
+    { label: "Connected APIs",        target: connectedCount,                    delay: 300, unit: "",   color: "chart2",  icon: Plug        },
+    { label: "Running Tasks",         value: 2,                                              unit: "",   color: "amber",   icon: Activity    },
+    { label: "Active Workspaces",     target: wsStats?.workspaces ?? 0,          delay: 400, unit: "",   color: "primary", icon: Briefcase   },
+    { label: "TikTok Accounts",       target: accounts.length,                   delay: 500, unit: "",   color: "chart2",  icon: Users       },
+    { label: "Today's Opportunities", target: ahrefsData?.easyWins?.length ?? 5, delay: 600, unit: "",   color: "emerald", icon: Target      },
+    { label: "Growth Score",          target: trendData?.trendScore ?? 87,       delay: 700, unit: "/100", color: "primary", icon: TrendingUp },
   ];
 
   const kpiColors: Record<string, { text: string; border: string; bg: string }> = {
@@ -467,7 +475,7 @@ export default function ExecutiveCommandCenter() {
             </div>
           )}
           <div className="text-[10px] px-3 py-1.5 rounded-lg border border-border bg-muted/10 text-muted-foreground font-mono">
-            Overall Score <span className="text-primary font-bold ml-1">{cOverall}/100</span>
+            Overall Score <span className="text-primary font-bold ml-1"><AnimatedNumber target={scores.overall} delay={800} />/100</span>
           </div>
         </div>
       </div>
@@ -492,7 +500,7 @@ export default function ExecutiveCommandCenter() {
           <button
             onClick={handleCommand}
             disabled={cmdLoading || !cmdInput.trim()}
-            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary text-xs font-semibold transition-all disabled:opacity-40"
+            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary text-xs font-semibold transition disabled:opacity-40"
           >
             {cmdLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
             <span className="hidden sm:block">Execute</span>
@@ -505,7 +513,7 @@ export default function ExecutiveCommandCenter() {
               <button
                 key={i}
                 onClick={() => { setCmdInput(s); setCmdSuggestionIdx(i); }}
-                className={`text-[10px] px-2.5 py-1 rounded-full border transition-all ${
+                className={`text-[10px] px-2.5 py-1 rounded-full border transition ${
                   cmdSuggestionIdx === i
                     ? "border-primary/40 bg-primary/10 text-primary"
                     : "border-border bg-muted/10 text-muted-foreground hover:border-primary/25 hover:text-foreground"
@@ -547,7 +555,8 @@ export default function ExecutiveCommandCenter() {
                   <kpi.icon className={`h-3.5 w-3.5 ${c.text} opacity-60`} />
                 </div>
                 <p className={`text-2xl font-bold font-serif ${c.text} leading-none`}>
-                  {kpi.value}<span className="text-sm font-normal opacity-60">{kpi.unit}</span>
+                  {kpi.target !== undefined ? <AnimatedNumber target={kpi.target} delay={kpi.delay} /> : kpi.value}
+                  <span className="text-sm font-normal opacity-60">{kpi.unit}</span>
                 </p>
               </div>
             );
@@ -671,15 +680,15 @@ export default function ExecutiveCommandCenter() {
               return (
                 <div
                   key={i}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/25 transition-all cursor-pointer group"
+                  className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/25 transition cursor-pointer group"
                   onClick={() => setMissionOver(p => ({ ...p, [i]: !done }))}
                 >
-                  <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                  <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition ${
                     done ? "border-emerald-400 bg-emerald-400/20" : "border-muted-foreground/30 group-hover:border-primary/40"
                   }`}>
                     {done && <CheckCircle2 className="h-3 w-3 text-emerald-400" />}
                   </div>
-                  <span className={`text-sm transition-all ${done ? "text-muted-foreground/50 line-through" : "text-foreground"}`}>
+                  <span className={`text-sm transition ${done ? "text-muted-foreground/50 line-through" : "text-foreground"}`}>
                     {item.label}
                   </span>
                   <Link href={item.href} onClick={e => e.stopPropagation()}>
@@ -717,7 +726,7 @@ export default function ExecutiveCommandCenter() {
             </div>
           </div>
           <Link href="/research">
-            <button className="w-full py-2.5 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/40 transition-all text-xs font-semibold text-primary uppercase tracking-widest flex items-center justify-center gap-2">
+            <button className="w-full py-2.5 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/40 transition text-xs font-semibold text-primary uppercase tracking-widest flex items-center justify-center gap-2">
               <Sparkles className="h-3.5 w-3.5" />
               Generate Campaign
             </button>
@@ -737,7 +746,7 @@ export default function ExecutiveCommandCenter() {
             const c = kpiColors[rec.color] ?? kpiColors.primary;
             return (
               <Link key={i} href={rec.href}>
-                <div className={`group p-4 rounded-xl border ${c.border} ${c.bg} hover:scale-[1.02] transition-all duration-200 cursor-pointer text-center flex flex-col items-center gap-2`}>
+                <div className={`group p-4 rounded-xl border ${c.border} ${c.bg} hover:scale-[1.02] transition duration-200 cursor-pointer text-center flex flex-col items-center gap-2`}>
                   <div className={`h-9 w-9 rounded-full border ${c.border} flex items-center justify-center`}>
                     <rec.icon className={`h-4 w-4 ${c.text}`} />
                   </div>
@@ -907,7 +916,7 @@ export default function ExecutiveCommandCenter() {
             const c = kpiColors[q.color] ?? kpiColors.primary;
             return (
               <Link key={i} href={q.href}>
-                <div className={`group flex flex-col items-center gap-2 p-4 rounded-xl border ${c.border} ${c.bg} hover:scale-[1.04] hover:shadow-lg transition-all duration-200 cursor-pointer text-center`}>
+                <div className={`group flex flex-col items-center gap-2 p-4 rounded-xl border ${c.border} ${c.bg} hover:scale-[1.04] hover:shadow-lg transition duration-200 cursor-pointer text-center`}>
                   <div className={`h-10 w-10 rounded-full border ${c.border} flex items-center justify-center`}>
                     <q.icon className={`h-5 w-5 ${c.text}`} />
                   </div>
@@ -977,12 +986,12 @@ export default function ExecutiveCommandCenter() {
                 </defs>
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-lg font-bold font-serif luxury-gradient-text">{cOverall}</span>
+                <span className="text-lg font-bold font-serif luxury-gradient-text"><AnimatedNumber target={scores.overall} delay={800} /></span>
               </div>
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Overall Intelligence Score</p>
-              <p className="text-2xl font-bold font-serif luxury-gradient-text">{cOverall}/100</p>
+              <p className="text-2xl font-bold font-serif luxury-gradient-text"><AnimatedNumber target={scores.overall} delay={800} />/100</p>
               <p className="text-[10px] text-muted-foreground/50 font-mono mt-1">
                 {scores.overall >= 80 ? "Elite performance" : scores.overall >= 60 ? "Strong performance" : "Growing platform"}
               </p>

@@ -68,7 +68,7 @@ function SelectField({ label, options, value, onChange }: {
         <select
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="w-full appearance-none bg-card border border-card-border rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all cursor-pointer pr-9"
+          className="w-full appearance-none bg-card border border-card-border rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition cursor-pointer pr-9"
         >
           {options.map(o => <option key={o} value={o} className="bg-card">{o}</option>)}
         </select>
@@ -156,7 +156,7 @@ function OutputCard({
           <button
             onClick={onVault}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition-all duration-200",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition duration-200",
               savedToVault
                 ? "bg-primary/15 border-primary/40 text-primary"
                 : "bg-muted/20 hover:bg-primary/10 border-border hover:border-primary/30 text-muted-foreground hover:text-primary"
@@ -169,7 +169,7 @@ function OutputCard({
           <button
             onClick={onCalendar}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition-all duration-200",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition duration-200",
               savedToCalendar
                 ? "bg-chart-2/10 border-chart-2/30 text-chart-2"
                 : "bg-muted/20 hover:bg-primary/10 border-border hover:border-primary/30 text-muted-foreground hover:text-primary"
@@ -181,7 +181,7 @@ function OutputCard({
           {/* Copy */}
           <button
             onClick={onCopy}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary transition-all duration-200"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary transition duration-200"
           >
             <Copy className="h-3 w-3" />
             {copied ? "Copied!" : "Copy"}
@@ -516,7 +516,7 @@ export default function Generator() {
                 onClick={() => !loading && handleGenerate(tab.id)}
                 disabled={loading}
                 className={cn(
-                  "flex flex-col items-start gap-2 p-4 rounded-xl border transition-all duration-200 text-left group disabled:opacity-50 disabled:cursor-not-allowed",
+                  "flex flex-col items-start gap-2 p-4 rounded-xl border transition duration-200 text-left group disabled:opacity-50 disabled:cursor-not-allowed",
                   activeTab === tab.id && (generated || isStreaming || error)
                     ? "bg-primary/10 border-primary/40"
                     : "bg-card border-card-border hover:border-primary/30 hover:bg-primary/5"
@@ -552,7 +552,7 @@ export default function Generator() {
                 {generated && !loading && !error && (
                   <button
                     onClick={handleRefresh}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border border-border hover:border-primary/40 hover:text-primary text-muted-foreground transition-all duration-200"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border border-border hover:border-primary/40 hover:text-primary text-muted-foreground transition duration-200"
                   >
                     <RefreshCw className="h-3 w-3" />
                     Regenerate
@@ -638,12 +638,12 @@ export default function Generator() {
                       </div>
                       <div className="flex gap-3">
                         <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all">
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition">
                           <ExternalLink className="h-3 w-3" />
                           Get new API key
                         </a>
                         <a href="https://ai.studio/projects" target="_blank" rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition-all">
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition">
                           <ExternalLink className="h-3 w-3" />
                           Manage billing
                         </a>
@@ -680,14 +680,14 @@ export default function Generator() {
                           href="https://aistudio.google.com/apikey"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all"
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition"
                         >
                           <ExternalLink className="h-3 w-3" />
                           Get new API key
                         </a>
                         <button
                           onClick={() => { setError(null); setErrorCode(null); }}
-                          className="px-4 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition-all"
+                          className="px-4 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition"
                         >
                           Dismiss
                         </button>
@@ -709,7 +709,7 @@ export default function Generator() {
                         {retryCount < 3 && (
                           <button
                             onClick={handleRetry}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all"
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition"
                           >
                             <RefreshCw className="h-3 w-3" />
                             Retry
@@ -717,7 +717,7 @@ export default function Generator() {
                         )}
                         <button
                           onClick={() => { setError(null); setErrorCode(null); }}
-                          className="px-4 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition-all"
+                          className="px-4 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition"
                         >
                           Dismiss
                         </button>
@@ -742,7 +742,7 @@ export default function Generator() {
                       <button
                         key={tab.id}
                         onClick={() => handleGenerate(tab.id)}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 text-xs text-muted-foreground hover:text-primary transition-all duration-200"
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 text-xs text-muted-foreground hover:text-primary transition duration-200"
                       >
                         <tab.icon className="h-3 w-3 flex-shrink-0" />
                         <span className="truncate">{tab.label}</span>

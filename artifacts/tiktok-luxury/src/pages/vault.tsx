@@ -126,7 +126,7 @@ function EntryCard({
     <div
       onClick={onSelect}
       className={cn(
-        "luxury-card relative overflow-hidden cursor-pointer transition-all duration-200 group",
+        "luxury-card relative overflow-hidden cursor-pointer transition duration-200 group",
         "hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5",
         isSelected && "border-primary/50 bg-primary/5 shadow-primary/10 shadow-lg"
       )}
@@ -310,21 +310,21 @@ function DetailPanel({
             <div className="flex gap-2">
               <button
                 onClick={onCopy}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-semibold uppercase tracking-wider hover:bg-primary/20 transition-all"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-semibold uppercase tracking-wider hover:bg-primary/20 transition"
               >
                 {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                 {copied ? "Copied" : "Copy"}
               </button>
               <button
                 onClick={exportMarkdown}
-                className="px-3 py-2.5 rounded-lg border border-border text-muted-foreground hover:border-primary/30 hover:text-primary transition-all text-xs"
+                className="px-3 py-2.5 rounded-lg border border-border text-muted-foreground hover:border-primary/30 hover:text-primary transition text-xs"
                 title="Copy as Markdown"
               >
                 <BookOpen className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={exportJSON}
-                className="px-3 py-2.5 rounded-lg border border-border text-muted-foreground hover:border-primary/30 hover:text-primary transition-all text-xs"
+                className="px-3 py-2.5 rounded-lg border border-border text-muted-foreground hover:border-primary/30 hover:text-primary transition text-xs"
                 title="Download JSON"
               >
                 <Download className="h-3.5 w-3.5" />
@@ -515,14 +515,14 @@ function DetailPanel({
             <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2 rounded-lg border border-border text-muted-foreground text-xs hover:text-foreground transition-colors">
               Cancel
             </button>
-            <button onClick={onDelete} className="flex-1 py-2 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs font-medium hover:bg-destructive/20 transition-all">
+            <button onClick={onDelete} className="flex-1 py-2 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs font-medium hover:bg-destructive/20 transition">
               Confirm Delete
             </button>
           </div>
         ) : (
           <button
             onClick={() => setConfirmDelete(true)}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-muted-foreground hover:text-destructive hover:border-destructive/30 border border-transparent transition-all"
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-muted-foreground hover:text-destructive hover:border-destructive/30 border border-transparent transition"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Delete Entry
@@ -649,7 +649,7 @@ function NewEntryModal({
         </div>
         <div className="p-5 border-t border-border flex gap-3">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-border text-muted-foreground text-sm hover:text-foreground transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={!form.content.trim()} className="flex-1 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-sm font-semibold hover:bg-primary/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+          <button onClick={handleSave} disabled={!form.content.trim()} className="flex-1 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-sm font-semibold hover:bg-primary/20 transition disabled:opacity-40 disabled:cursor-not-allowed">
             Save to Vault
           </button>
         </div>
@@ -693,7 +693,7 @@ function NewCollectionModal({ onSave, onClose }: { onSave: (data: Omit<VaultColl
                 <button
                   key={c}
                   onClick={() => setColor(c)}
-                  className={cn("h-7 w-7 rounded-full transition-all", COLLECTION_COLOR_STYLES[c].dot, color === c ? "ring-2 ring-offset-2 ring-offset-card ring-primary scale-110" : "opacity-60 hover:opacity-100")}
+                  className={cn("h-7 w-7 rounded-full transition", COLLECTION_COLOR_STYLES[c].dot, color === c ? "ring-2 ring-offset-2 ring-offset-card ring-primary scale-110" : "opacity-60 hover:opacity-100")}
                 />
               ))}
             </div>
@@ -701,7 +701,7 @@ function NewCollectionModal({ onSave, onClose }: { onSave: (data: Omit<VaultColl
         </div>
         <div className="p-5 border-t border-border flex gap-3">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-border text-muted-foreground text-sm hover:text-foreground transition-colors">Cancel</button>
-          <button onClick={() => name.trim() && onSave({ name: name.trim(), description, color, icon: "folder" })} disabled={!name.trim()} className="flex-1 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-sm font-semibold hover:bg-primary/20 transition-all disabled:opacity-40">
+          <button onClick={() => name.trim() && onSave({ name: name.trim(), description, color, icon: "folder" })} disabled={!name.trim()} className="flex-1 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-sm font-semibold hover:bg-primary/20 transition disabled:opacity-40">
             Create
           </button>
         </div>
@@ -865,14 +865,14 @@ export default function VaultPage() {
           )}
           <button
             onClick={() => setShowNewCollection(true)}
-            className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-muted-foreground hover:border-primary/30 hover:text-primary text-xs transition-all"
+            className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-muted-foreground hover:border-primary/30 hover:text-primary text-xs transition"
           >
             <FolderOpen className="h-3.5 w-3.5" />
             Collection
           </button>
           <button
             onClick={() => setShowNewEntry(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-semibold uppercase tracking-wider hover:bg-primary/20 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-semibold uppercase tracking-wider hover:bg-primary/20 transition"
           >
             <Plus className="h-3.5 w-3.5" />
             New Entry
@@ -900,7 +900,7 @@ export default function VaultPage() {
             key={id}
             onClick={() => setFilter("collectionId", id)}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all flex-shrink-0",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition flex-shrink-0",
               filters.collectionId === id
                 ? "bg-primary/15 border-primary/40 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/20 hover:text-foreground"
@@ -923,7 +923,7 @@ export default function VaultPage() {
               <button
                 onClick={() => setFilter("collectionId", col.id)}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition",
                   filters.collectionId === col.id
                     ? `${styles.bg} ${styles.border} ${styles.text}`
                     : "border-border text-muted-foreground hover:border-primary/20 hover:text-foreground"
@@ -946,7 +946,7 @@ export default function VaultPage() {
         {/* New collection */}
         <button
           onClick={() => setShowNewCollection(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-muted-foreground border border-dashed border-border hover:border-primary/30 hover:text-primary transition-all whitespace-nowrap flex-shrink-0"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-muted-foreground border border-dashed border-border hover:border-primary/30 hover:text-primary transition whitespace-nowrap flex-shrink-0"
         >
           <Plus className="h-3 w-3" />
           Collection
@@ -962,7 +962,7 @@ export default function VaultPage() {
             value={filters.search}
             onChange={e => setFilter("search", e.target.value)}
             placeholder="Search content, tags, keywords, prompts..."
-            className="w-full bg-card border border-card-border rounded-xl pl-10 pr-10 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+            className="w-full bg-card border border-card-border rounded-xl pl-10 pr-10 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition"
           />
           {filters.search && (
             <button onClick={() => setFilter("search", "")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -976,7 +976,7 @@ export default function VaultPage() {
           <button
             onClick={() => setShowFilters(f => !f)}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs transition-all",
+              "flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs transition",
               showFilters || activeFilterCount > 0
                 ? "bg-primary/10 border-primary/30 text-primary"
                 : "border-card-border text-muted-foreground hover:border-primary/20 hover:text-foreground"
@@ -1095,7 +1095,7 @@ export default function VaultPage() {
               </p>
               <div className="flex gap-3">
                 <Link href="/generator">
-                  <button className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-sm font-semibold hover:bg-primary/20 transition-all">
+                  <button className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-sm font-semibold hover:bg-primary/20 transition">
                     <Sparkles className="h-4 w-4" />
                     Generate Content
                     <ArrowRight className="h-3.5 w-3.5" />
@@ -1103,7 +1103,7 @@ export default function VaultPage() {
                 </Link>
                 <button
                   onClick={() => setShowNewEntry(true)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border text-muted-foreground text-sm hover:border-primary/30 hover:text-primary transition-all"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border text-muted-foreground text-sm hover:border-primary/30 hover:text-primary transition"
                 >
                   <Plus className="h-4 w-4" />
                   Add Manually

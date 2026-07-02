@@ -373,7 +373,7 @@ export default function AnalyticsPage() {
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className={`px-4 py-2 text-xs font-mono font-semibold transition-all ${
+                className={`px-4 py-2 text-xs font-mono font-semibold transition ${
                   period === p ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -387,7 +387,7 @@ export default function AnalyticsPage() {
               <button
                 key={p}
                 onClick={() => setPlatformFilter(p)}
-                className={`px-3 py-2 text-xs font-mono font-semibold transition-all ${
+                className={`px-3 py-2 text-xs font-mono font-semibold transition ${
                   platformFilter === p ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -398,7 +398,7 @@ export default function AnalyticsPage() {
           {/* Export */}
           <button
             onClick={handleExport}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm border transition-all font-medium ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm border transition font-medium ${
               exported
                 ? "bg-chart-2/10 border-chart-2/30 text-chart-2"
                 : "bg-primary/10 border-primary/40 text-primary hover:bg-primary/20"
@@ -774,7 +774,7 @@ export default function AnalyticsPage() {
               </div>
             ))}
           </div>
-          <button className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs border border-dashed border-primary/30 text-primary/60 hover:border-primary/50 hover:text-primary transition-all">
+          <button className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs border border-dashed border-primary/30 text-primary/60 hover:border-primary/50 hover:text-primary transition">
             <ChevronRight className="h-3 w-3" />
             Connect First Integration
           </button>

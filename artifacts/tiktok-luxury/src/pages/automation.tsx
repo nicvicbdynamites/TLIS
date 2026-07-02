@@ -144,7 +144,7 @@ export default function Automation() {
           return (
             <div
               key={plan.id}
-              className={`luxury-card overflow-hidden transition-all duration-300 ${!isEnabled ? "opacity-60" : ""}`}
+              className={`luxury-card overflow-hidden transition duration-300 ${!isEnabled ? "opacity-60" : ""}`}
               style={{ animationDelay: `${i * 80}ms` }}
             >
               <div
@@ -175,7 +175,7 @@ export default function Automation() {
                     e.stopPropagation();
                     setEnabled(prev => ({ ...prev, [plan.id]: !prev[plan.id] }));
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition-all duration-200 flex-shrink-0 ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition duration-200 flex-shrink-0 ${
                     isEnabled
                       ? "bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
                       : "border-border text-muted-foreground hover:border-primary/30"

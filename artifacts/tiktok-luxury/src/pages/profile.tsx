@@ -196,7 +196,7 @@ export default function ProfilePage() {
             onClick={handleSignOut}
             disabled={signingOut}
             className={cn(
-              "w-full flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-semibold tracking-wide transition-all duration-200",
+              "w-full flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-semibold tracking-wide transition duration-200",
               signingOut
                 ? "opacity-50 cursor-not-allowed border-border text-muted-foreground"
                 : "border-destructive/30 bg-destructive/5 hover:bg-destructive/10 text-destructive"
@@ -300,7 +300,7 @@ export default function ProfilePage() {
               onClick={handleMigrate}
               disabled={migrating || migrateStatus === "success"}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all duration-200",
+                "flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition duration-200",
                 migrateStatus === "success"
                   ? "opacity-50 cursor-not-allowed border-border text-muted-foreground"
                   : migrating

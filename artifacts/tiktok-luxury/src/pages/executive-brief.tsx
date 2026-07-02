@@ -597,7 +597,7 @@ export default function ExecutiveBrief() {
               return (
                 <div
                   key={item.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 ${done ? "border-border/40 bg-muted/10 opacity-60" : "border-border hover:border-primary/30 hover:bg-primary/3"}`}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition duration-200 ${done ? "border-border/40 bg-muted/10 opacity-60" : "border-border hover:border-primary/30 hover:bg-primary/3"}`}
                 >
                   <button onClick={() => toggleTask(item.id)} className="flex-shrink-0">
                     {done
@@ -618,7 +618,7 @@ export default function ExecutiveBrief() {
                     <PriorityBadge priority={item.priority} />
                     <button
                       onClick={() => navigate(item.href)}
-                      className="p-1.5 rounded-md border border-border hover:border-primary/40 hover:bg-primary/10 transition-all"
+                      className="p-1.5 rounded-md border border-border hover:border-primary/40 hover:bg-primary/10 transition"
                     >
                       <ChevronRight className="h-3.5 w-3.5 text-muted-foreground hover:text-primary transition-colors" />
                     </button>
@@ -631,7 +631,7 @@ export default function ExecutiveBrief() {
           <div className="mt-4 pt-4 border-t border-border">
             <div className="h-1 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-primary rounded-full transition-all duration-500"
+                className="h-full bg-primary rounded-full transition duration-500"
                 style={{ width: `${(completedCount / PRIORITY_QUEUE.length) * 100}%` }}
               />
             </div>
@@ -673,7 +673,7 @@ export default function ExecutiveBrief() {
 
           <button
             onClick={() => navigate("/content-pack")}
-            className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all text-xs font-semibold uppercase tracking-widest min-h-[44px]"
+            className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition text-xs font-semibold uppercase tracking-widest min-h-[44px]"
           >
             <Sparkles className="h-3.5 w-3.5" />
             Generate Campaign
@@ -714,7 +714,7 @@ export default function ExecutiveBrief() {
             return (
               <div
                 key={i}
-                className={`p-4 rounded-lg border transition-all bg-black/20 group ${isAi ? "border-primary/30 bg-primary/3" : "border-border hover:border-primary/25"}`}
+                className={`p-4 rounded-lg border transition bg-black/20 group ${isAi ? "border-primary/30 bg-primary/3" : "border-border hover:border-primary/25"}`}
               >
                 <div className="flex items-center justify-between mb-2.5">
                   <div className="flex items-center gap-2">
@@ -730,14 +730,14 @@ export default function ExecutiveBrief() {
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => navigate("/generator")}
-                        className="p-1.5 rounded border border-border hover:border-primary/40 hover:bg-primary/10 transition-all"
+                        className="p-1.5 rounded border border-border hover:border-primary/40 hover:bg-primary/10 transition"
                         title="Generate new"
                       >
                         <RefreshCw className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
                       </button>
                       <button
                         onClick={() => setEditingRec(isEditing ? null : i)}
-                        className="p-1.5 rounded border border-border hover:border-primary/40 hover:bg-primary/10 transition-all"
+                        className="p-1.5 rounded border border-border hover:border-primary/40 hover:bg-primary/10 transition"
                         title="Edit"
                       >
                         <Pencil className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
@@ -784,7 +784,7 @@ export default function ExecutiveBrief() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {PERFORMANCE_FORECAST.map((item, i) => (
-              <div key={i} className="p-4 rounded-lg border border-border bg-black/20 hover:border-primary/25 transition-all">
+              <div key={i} className="p-4 rounded-lg border border-border bg-black/20 hover:border-primary/25 transition">
                 <div className="flex items-center justify-between mb-3">
                   <div className="p-1.5 rounded-md bg-primary/10">
                     <item.icon className="h-3.5 w-3.5 text-primary" />
@@ -830,7 +830,7 @@ export default function ExecutiveBrief() {
             {AI_DECISIONS.map((decision, i) => (
               <div
                 key={i}
-                className="flex items-center gap-4 p-3.5 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/3 transition-all group"
+                className="flex items-center gap-4 p-3.5 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/3 transition group"
               >
                 <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
                   <decision.icon className="h-3.5 w-3.5 text-primary" />

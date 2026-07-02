@@ -185,11 +185,11 @@ function Toggle({ active, onChange }: { active: boolean; onChange: () => void })
   return (
     <button
       onClick={onChange}
-      className={`relative w-11 h-6 rounded-full border transition-all duration-300 flex-shrink-0 ${active ? "bg-primary/20 border-primary/50" : "bg-muted/20 border-border"}`}
+      className={`relative w-11 h-6 rounded-full border transition duration-300 flex-shrink-0 ${active ? "bg-primary/20 border-primary/50" : "bg-muted/20 border-border"}`}
       aria-pressed={active}
     >
       <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full transition-all duration-300 ${active ? "left-[22px] bg-primary" : "left-0.5 bg-muted-foreground/30"}`}
+        className={`absolute top-0.5 h-5 w-5 rounded-full transition duration-300 ${active ? "left-[22px] bg-primary" : "left-0.5 bg-muted-foreground/30"}`}
       />
     </button>
   );
@@ -270,7 +270,7 @@ export default function IntelligencePipeline() {
           <button
             onClick={handleSync}
             disabled={syncLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 transition-all text-xs text-muted-foreground hover:text-primary disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 transition text-xs text-muted-foreground hover:text-primary disabled:opacity-50"
           >
             <RotateCcw className={`h-3.5 w-3.5 ${syncLoading ? "animate-spin text-primary" : ""}`} />
             Sync
@@ -300,7 +300,7 @@ export default function IntelligencePipeline() {
                 <div key={n.name}>
                   <button
                     onClick={() => setSelectedNode(i)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all duration-200 ${
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition duration-200 ${
                       isSelected
                         ? "border-primary/50 bg-primary/10"
                         : "border-transparent hover:border-border hover:bg-muted/10"
@@ -375,7 +375,7 @@ export default function IntelligencePipeline() {
 
             <button
               onClick={() => navigate(node.href)}
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-primary/30 bg-primary/8 hover:bg-primary/15 hover:border-primary/50 transition-all text-xs font-semibold text-primary uppercase tracking-widest min-h-[44px]"
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-primary/30 bg-primary/8 hover:bg-primary/15 hover:border-primary/50 transition text-xs font-semibold text-primary uppercase tracking-widest min-h-[44px]"
             >
               Open Module <ChevronRight className="h-3.5 w-3.5" />
             </button>
@@ -392,7 +392,7 @@ export default function IntelligencePipeline() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {DATA_SOURCES.map(src => (
-            <div key={src.name} className="p-4 rounded-lg border border-border hover:border-primary/25 hover:bg-primary/3 transition-all group">
+            <div key={src.name} className="p-4 rounded-lg border border-border hover:border-primary/25 hover:bg-primary/3 transition group">
               <div className="flex items-start justify-between mb-3">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <src.icon className="h-4 w-4 text-primary" />
@@ -442,7 +442,7 @@ export default function IntelligencePipeline() {
             <button
               key={tab}
               onClick={() => setActiveQueueTab(tab)}
-              className={`px-4 py-1.5 rounded-md text-xs font-semibold uppercase tracking-widest transition-all ${
+              className={`px-4 py-1.5 rounded-md text-xs font-semibold uppercase tracking-widest transition ${
                 activeQueueTab === tab
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -456,7 +456,7 @@ export default function IntelligencePipeline() {
         {/* Tab content */}
         <div className="space-y-2">
           {activeQueueTab === "pending" && PENDING_JOBS.map((job, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/20 transition-all">
+            <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/20 transition">
               <RefreshCw className="h-3.5 w-3.5 text-primary animate-spin flex-shrink-0" />
               <p className="text-sm text-foreground flex-1">{job.job}</p>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -556,7 +556,7 @@ export default function IntelligencePipeline() {
           {PIPELINE_LOGS.map((log, i) => (
             <div
               key={i}
-              className={`grid grid-cols-1 md:grid-cols-[80px_1fr_1fr_80px_1fr] gap-2 md:gap-3 items-center p-3 rounded-lg border transition-all ${
+              className={`grid grid-cols-1 md:grid-cols-[80px_1fr_1fr_80px_1fr] gap-2 md:gap-3 items-center p-3 rounded-lg border transition ${
                 log.status === "Failed"
                   ? "border-red-400/20 bg-red-400/3"
                   : "border-border hover:border-primary/20 hover:bg-primary/2"
@@ -590,7 +590,7 @@ export default function IntelligencePipeline() {
           {triggers.map((trigger, i) => (
             <div
               key={trigger.label}
-              className={`p-4 rounded-lg border transition-all ${trigger.active ? "border-primary/25 bg-primary/5" : "border-border bg-black/10 opacity-60"}`}
+              className={`p-4 rounded-lg border transition ${trigger.active ? "border-primary/25 bg-primary/5" : "border-border bg-black/10 opacity-60"}`}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className={`p-2 rounded-lg ${trigger.active ? "bg-primary/15" : "bg-muted/20"}`}>
@@ -649,7 +649,7 @@ export default function IntelligencePipeline() {
             <select
               value={refreshInterval}
               onChange={e => setRefreshInterval(e.target.value)}
-              className="bg-black/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all w-full sm:w-auto"
+              className="bg-black/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition w-full sm:w-auto"
             >
               {REFRESH_OPTIONS.map(opt => (
                 <option key={opt} value={opt}>{opt}</option>
@@ -675,7 +675,7 @@ export default function IntelligencePipeline() {
             <button
               onClick={handleSync}
               disabled={syncLoading}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-primary/30 bg-primary/8 hover:bg-primary/15 hover:border-primary/50 transition-all text-sm font-semibold text-primary disabled:opacity-50 min-h-[44px] w-full sm:w-auto"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-primary/30 bg-primary/8 hover:bg-primary/15 hover:border-primary/50 transition text-sm font-semibold text-primary disabled:opacity-50 min-h-[44px] w-full sm:w-auto"
             >
               <RotateCcw className={`h-4 w-4 ${syncLoading ? "animate-spin" : ""}`} />
               {syncLoading ? "Syncing…" : "Sync Now"}
@@ -689,7 +689,7 @@ export default function IntelligencePipeline() {
               <p className="text-xs text-muted-foreground mt-0.5">Download all pipeline activity logs</p>
             </div>
             <button
-              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-sm font-semibold text-foreground min-h-[44px] w-full sm:w-auto"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition text-sm font-semibold text-foreground min-h-[44px] w-full sm:w-auto"
             >
               <Download className="h-4 w-4 text-muted-foreground" />
               Export Logs

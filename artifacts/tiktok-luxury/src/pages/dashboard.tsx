@@ -182,7 +182,7 @@ function QuickStartGrid({
             <button
               key={i}
               onClick={() => navigate(card.href)}
-              className={`luxury-card p-4 text-left transition-all duration-200 group flex flex-col gap-3
+              className={`luxury-card p-4 text-left transition duration-200 group flex flex-col gap-3
                 ${isNext
                   ? "border-primary/50 bg-primary/8 hover:bg-primary/12 shadow-[0_0_20px_hsl(44_54%_54%/0.08)]"
                   : "hover:border-primary/30 hover:bg-primary/5"
@@ -232,13 +232,13 @@ function GrowthEmptyState({ navigate }: { navigate: (path: string) => void }) {
         <div className="flex gap-2">
           <button
             onClick={() => navigate("/content-pack")}
-            className="px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 transition-all text-xs text-primary font-medium"
+            className="px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 transition text-xs text-primary font-medium"
           >
             Create Content
           </button>
           <button
             onClick={() => navigate("/workspace")}
-            className="px-3 py-1.5 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-xs text-muted-foreground hover:text-primary font-medium"
+            className="px-3 py-1.5 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition text-xs text-muted-foreground hover:text-primary font-medium"
           >
             Open Workspace
           </button>
@@ -455,7 +455,7 @@ function ActivityFeed({
           <Inbox className="h-10 w-10 text-muted-foreground/20" />
           <p className="text-sm text-muted-foreground">Sign in to see your activity</p>
           <Link href="/login">
-            <button className="px-4 py-2 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 transition-all text-xs text-primary font-medium min-h-[44px]">
+            <button className="px-4 py-2 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 transition text-xs text-primary font-medium min-h-[44px]">
               Sign In
             </button>
           </Link>
@@ -613,14 +613,14 @@ export default function Dashboard() {
             </div>
           ) : hasWorkspaces ? (
             <Link href="/workspace">
-              <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 transition-all text-sm text-primary font-medium min-h-[44px]">
+              <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 transition text-sm text-primary font-medium min-h-[44px]">
                 <FolderOpen className="h-4 w-4" />
                 Open Workspace
               </button>
             </Link>
           ) : (
             <Link href="/workspace">
-              <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 transition-all text-sm text-primary font-medium min-h-[44px]">
+              <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 transition text-sm text-primary font-medium min-h-[44px]">
                 <Plus className="h-4 w-4" />
                 Create Workspace
               </button>
@@ -642,7 +642,7 @@ export default function Dashboard() {
             key={card.label}
             onClick={() => navigate(card.href)}
             style={{ animationDelay: `${i * 60}ms` }}
-            className="luxury-card p-4 text-left hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 group"
+            className="luxury-card p-4 text-left hover:border-primary/40 hover:bg-primary/5 transition duration-200 group"
           >
             <div className="flex items-center justify-between mb-3">
               <card.icon className="h-4 w-4 text-primary/60 group-hover:text-primary transition-colors" />
@@ -681,7 +681,7 @@ export default function Dashboard() {
                 <button
                   key={i}
                   onClick={() => navigate(action.href)}
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 text-left group min-h-[44px]"
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 transition duration-200 text-left group min-h-[44px]"
                 >
                   <div className="flex items-center gap-2.5">
                     <action.icon className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />

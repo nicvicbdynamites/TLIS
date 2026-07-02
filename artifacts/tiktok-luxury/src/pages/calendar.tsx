@@ -158,13 +158,13 @@ function NewPostModal({
           </div>
         </div>
         <div className="p-5 border-t border-border flex gap-3">
-          <button onClick={onClose} className="flex-1 px-4 py-2 rounded-lg text-sm border border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition-all">
+          <button onClick={onClose} className="flex-1 px-4 py-2 rounded-lg text-sm border border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition">
             Cancel
           </button>
           <button
             onClick={() => valid && onSave(form)}
             disabled={!valid}
-            className="flex-1 px-4 py-2 rounded-lg text-sm bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed font-medium"
+            className="flex-1 px-4 py-2 rounded-lg text-sm bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20 transition disabled:opacity-40 disabled:cursor-not-allowed font-medium"
           >
             Save Card
           </button>
@@ -196,7 +196,7 @@ function PostCard({
     <div
       draggable
       onDragStart={e => onDragStart(e, post.id)}
-      className={`rounded-lg border p-2.5 cursor-grab active:cursor-grabbing transition-all duration-200 group select-none ${cfg.border} ${cfg.bg} ${isDragging ? "opacity-40 scale-95" : "hover:border-primary/40"}`}
+      className={`rounded-lg border p-2.5 cursor-grab active:cursor-grabbing transition duration-200 group select-none ${cfg.border} ${cfg.bg} ${isDragging ? "opacity-40 scale-95" : "hover:border-primary/40"}`}
     >
       <div className="flex items-start justify-between gap-1.5 mb-1.5">
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -244,7 +244,7 @@ function PostCard({
                 <button
                   key={s}
                   onClick={e => { e.stopPropagation(); onStatusChange(post.id, s); }}
-                  className={`text-[10px] px-1.5 py-0.5 rounded border transition-all hover:opacity-80 ${STATUS_CONFIG[s].color} ${STATUS_CONFIG[s].bg} ${STATUS_CONFIG[s].border}`}
+                  className={`text-[10px] px-1.5 py-0.5 rounded border transition hover:opacity-80 ${STATUS_CONFIG[s].color} ${STATUS_CONFIG[s].bg} ${STATUS_CONFIG[s].border}`}
                 >
                   → {STATUS_CONFIG[s].label}
                 </button>
@@ -429,14 +429,14 @@ export default function CalendarPage() {
           {weekOffset !== 0 && (
             <button
               onClick={() => setWeekOffset(0)}
-              className="px-3 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/40 hover:text-primary transition-all"
+              className="px-3 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/40 hover:text-primary transition"
             >
               Today
             </button>
           )}
           <button
             onClick={() => { setEditingPost(null); setModalDefaultDay(new Date().toISOString().slice(0, 10)); setShowModal(true); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20 transition-all font-medium"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20 transition font-medium"
           >
             <Plus className="h-4 w-4" />
             New Post
@@ -468,20 +468,20 @@ export default function CalendarPage() {
         <span className="text-xs text-muted-foreground uppercase tracking-wider flex-shrink-0">Filter:</span>
         {PLATFORMS.map(p => (
           <button key={p} onClick={() => setFilterPlatform(filterPlatform === p ? ALL : p)}
-            className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full border transition-all ${filterPlatform === p ? "bg-primary/10 border-primary/40 text-primary" : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"}`}>
+            className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full border transition ${filterPlatform === p ? "bg-primary/10 border-primary/40 text-primary" : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"}`}>
             {PLATFORM_ABBR[p as CalendarPlatform]}
           </button>
         ))}
         <div className="h-4 w-px bg-border mx-1" />
         {(["draft","scheduled","posted","viral"] as PostStatus[]).map(s => (
           <button key={s} onClick={() => setFilterStatus(filterStatus === s ? ALL : s)}
-            className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full border transition-all ${filterStatus === s ? `${STATUS_CONFIG[s].color} ${STATUS_CONFIG[s].bg} ${STATUS_CONFIG[s].border}` : "border-border text-muted-foreground hover:border-primary/30"}`}>
+            className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full border transition ${filterStatus === s ? `${STATUS_CONFIG[s].color} ${STATUS_CONFIG[s].bg} ${STATUS_CONFIG[s].border}` : "border-border text-muted-foreground hover:border-primary/30"}`}>
             {STATUS_CONFIG[s].label}
           </button>
         ))}
         {(filterPlatform !== ALL || filterStatus !== ALL || filterNiche !== ALL) && (
           <button onClick={() => { setFilterPlatform(ALL); setFilterStatus(ALL); setFilterNiche(ALL); }}
-            className="flex-shrink-0 text-xs px-2.5 py-1 rounded-full border border-destructive/30 text-destructive hover:bg-destructive/10 transition-all">
+            className="flex-shrink-0 text-xs px-2.5 py-1 rounded-full border border-destructive/30 text-destructive hover:bg-destructive/10 transition">
             Clear
           </button>
         )}
@@ -504,7 +504,7 @@ export default function CalendarPage() {
                     onDragOver={e => handleDragOver(e, day)}
                     onDrop={e => handleDrop(e, day)}
                     onDragLeave={() => setDragOverDay(null)}
-                    className={`flex flex-col min-h-[380px] rounded-xl border transition-all duration-200 ${
+                    className={`flex flex-col min-h-[380px] rounded-xl border transition duration-200 ${
                       isOver
                         ? "border-primary/60 bg-primary/5 scale-[1.01]"
                         : isToday
@@ -545,7 +545,7 @@ export default function CalendarPage() {
                     {/* Add button */}
                     <button
                       onClick={() => { setEditingPost(null); setModalDefaultDay(day); setShowModal(true); }}
-                      className="m-2 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-border hover:border-primary/40 hover:bg-primary/5 text-xs text-muted-foreground hover:text-primary transition-all"
+                      className="m-2 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-border hover:border-primary/40 hover:bg-primary/5 text-xs text-muted-foreground hover:text-primary transition"
                     >
                       <Plus className="h-3 w-3" />
                       Add
@@ -571,7 +571,7 @@ export default function CalendarPage() {
                 <button
                   key={p}
                   onClick={() => setActivePlatformTab(p as CalendarPlatform)}
-                  className={`flex-shrink-0 text-[10px] px-2 py-1 rounded border transition-all ${
+                  className={`flex-shrink-0 text-[10px] px-2 py-1 rounded border transition ${
                     activePlatformTab === p
                       ? "bg-primary/10 border-primary/40 text-primary"
                       : "border-border text-muted-foreground hover:border-primary/30"
@@ -597,7 +597,7 @@ export default function CalendarPage() {
                       const today = new Date().toISOString().slice(0, 10);
                       applyWindow(today, w.time);
                     }}
-                    className="text-[10px] px-2 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-all flex-shrink-0"
+                    className="text-[10px] px-2 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition flex-shrink-0"
                   >
                     Apply
                   </button>
@@ -638,7 +638,7 @@ export default function CalendarPage() {
                       key={post.id}
                       draggable
                       onDragStart={e => handleDragStart(e, post.id)}
-                      className="flex items-start gap-2 p-2.5 rounded-lg border border-border hover:border-primary/30 cursor-grab transition-all group"
+                      className="flex items-start gap-2 p-2.5 rounded-lg border border-border hover:border-primary/30 cursor-grab transition group"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-1">
@@ -665,7 +665,7 @@ export default function CalendarPage() {
             <div className="space-y-1.5">
               <button
                 onClick={() => setFilterNiche(ALL)}
-                className={`w-full text-left text-xs px-3 py-2 rounded-lg border transition-all ${filterNiche === ALL ? "bg-primary/10 border-primary/40 text-primary" : "border-border text-muted-foreground hover:border-primary/30"}`}
+                className={`w-full text-left text-xs px-3 py-2 rounded-lg border transition ${filterNiche === ALL ? "bg-primary/10 border-primary/40 text-primary" : "border-border text-muted-foreground hover:border-primary/30"}`}
               >
                 All Niches
               </button>
@@ -673,7 +673,7 @@ export default function CalendarPage() {
                 <button
                   key={n}
                   onClick={() => setFilterNiche(filterNiche === n ? ALL : n)}
-                  className={`w-full text-left text-xs px-3 py-2 rounded-lg border transition-all ${filterNiche === n ? "bg-primary/10 border-primary/40 text-primary" : "border-border text-muted-foreground hover:border-primary/30"}`}
+                  className={`w-full text-left text-xs px-3 py-2 rounded-lg border transition ${filterNiche === n ? "bg-primary/10 border-primary/40 text-primary" : "border-border text-muted-foreground hover:border-primary/30"}`}
                 >
                   {n}
                 </button>

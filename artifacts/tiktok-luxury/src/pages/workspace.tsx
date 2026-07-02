@@ -142,7 +142,7 @@ function InputField({
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-card border border-card-border rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all min-h-[44px]"
+        className="w-full bg-card border border-card-border rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition min-h-[44px]"
       />
     </div>
   );
@@ -162,7 +162,7 @@ function SelectField({
         <select
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="w-full appearance-none bg-card border border-card-border rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all cursor-pointer pr-9 min-h-[44px]"
+          className="w-full appearance-none bg-card border border-card-border rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition cursor-pointer pr-9 min-h-[44px]"
         >
           {options.map(o =>
             typeof o === "string"
@@ -190,7 +190,7 @@ function TextAreaField({
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full bg-card border border-card-border rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all resize-none"
+        className="w-full bg-card border border-card-border rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition resize-none"
       />
     </div>
   );
@@ -275,14 +275,14 @@ function WorkspaceCard({
       <div className="flex items-center gap-2 flex-wrap pt-1">
         <button
           onClick={onOpen}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary transition-all min-h-[44px] flex-1 justify-center"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary transition min-h-[44px] flex-1 justify-center"
         >
           <ExternalLink className="h-3.5 w-3.5" />
           {isActive ? "Open (Active)" : "Open & Activate"}
         </button>
         <button
           onClick={onEdit}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium hover:bg-secondary/50 border border-border text-muted-foreground hover:text-foreground transition-all min-h-[44px]"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium hover:bg-secondary/50 border border-border text-muted-foreground hover:text-foreground transition min-h-[44px]"
         >
           <Pencil className="h-3.5 w-3.5" />
           Edit
@@ -290,7 +290,7 @@ function WorkspaceCard({
         <button
           onClick={onDelete}
           disabled={deleting}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium hover:bg-destructive/10 border border-border text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-all min-h-[44px] disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium hover:bg-destructive/10 border border-border text-muted-foreground hover:text-destructive hover:border-destructive/30 transition min-h-[44px] disabled:opacity-50"
         >
           {deleting
             ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -415,7 +415,7 @@ function WorkspaceForm({
         <button
           type="submit"
           disabled={saving || !form.workspaceName.trim()}
-          className="flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-all disabled:opacity-50 min-h-[44px] flex-1 sm:flex-none justify-center"
+          className="flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition disabled:opacity-50 min-h-[44px] flex-1 sm:flex-none justify-center"
         >
           {saving ? (
             <><RefreshCw className="h-4 w-4 animate-spin" /> Saving…</>
@@ -428,7 +428,7 @@ function WorkspaceForm({
         <button
           type="button"
           onClick={onCancel}
-          className="flex items-center gap-2 px-6 py-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 text-sm transition-all min-h-[44px]"
+          className="flex items-center gap-2 px-6 py-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 text-sm transition min-h-[44px]"
         >
           Cancel
         </button>
@@ -492,7 +492,7 @@ function WorkspaceDetail({
         </div>
         <button
           onClick={onEdit}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all min-h-[44px]"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition min-h-[44px]"
         >
           <Pencil className="h-3.5 w-3.5" />
           Edit
@@ -505,7 +505,7 @@ function WorkspaceDetail({
             key={t.id}
             onClick={() => setTab(t.id)}
             className={cn(
-              "flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium whitespace-nowrap transition-all min-h-[44px] rounded-t-lg border-b-2",
+              "flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium whitespace-nowrap transition min-h-[44px] rounded-t-lg border-b-2",
               tab === t.id
                 ? "text-primary border-primary bg-primary/5"
                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/30 border-transparent"
@@ -774,7 +774,7 @@ export default function WorkspacePage() {
         </div>
         <button
           onClick={() => navigate("/login")}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-all min-h-[44px]"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition min-h-[44px]"
         >
           <LogIn className="h-4 w-4" />
           Sign In
@@ -857,7 +857,7 @@ export default function WorkspacePage() {
           </button>
           <button
             onClick={() => { setSaveError(null); setView("create"); }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-all min-h-[44px]"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition min-h-[44px]"
           >
             <Plus className="h-4 w-4" />
             New Workspace
@@ -889,7 +889,7 @@ export default function WorkspacePage() {
           </div>
           <button
             onClick={() => { setSaveError(null); setView("create"); }}
-            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-all min-h-[44px]"
+            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition min-h-[44px]"
           >
             <Plus className="h-4 w-4" />
             Create First Workspace

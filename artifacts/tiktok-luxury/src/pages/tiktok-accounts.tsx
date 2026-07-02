@@ -117,7 +117,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       </p>
       <button
         onClick={onAdd}
-        className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-black text-sm font-semibold hover:bg-primary/90 transition-all"
+        className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-black text-sm font-semibold hover:bg-primary/90 transition"
       >
         <Plus className="h-4 w-4" />
         Add First Account
@@ -155,7 +155,7 @@ function AccountCard({
 }) {
   return (
     <div className={cn(
-      "luxury-card relative overflow-hidden group transition-all duration-200",
+      "luxury-card relative overflow-hidden group transition duration-200",
       "hover:border-primary/25 hover:shadow-lg hover:shadow-primary/5",
     )}>
       {/* Status accent bar */}
@@ -296,7 +296,7 @@ function FormField({
   );
 }
 
-const inputCls = "w-full bg-muted/20 border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:bg-muted/30 transition-all";
+const inputCls = "w-full bg-muted/20 border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:bg-muted/30 transition";
 const selectCls = inputCls + " appearance-none cursor-pointer pr-8";
 
 function FormPanel({
@@ -522,7 +522,7 @@ function FormPanel({
                       type="button"
                       onClick={() => set("status", opt.value)}
                       className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all",
+                        "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition",
                         form.status === opt.value
                           ? STATUS_STYLES[opt.value] + " border-current"
                           : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
@@ -600,7 +600,7 @@ function FormPanel({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
+            className="flex-1 py-2.5 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/30 transition"
           >
             Cancel
           </button>
@@ -608,7 +608,7 @@ function FormPanel({
             type="submit"
             disabled={saving}
             onClick={handleSubmit}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary text-black text-sm font-semibold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary text-black text-sm font-semibold hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? (
               <><RefreshCw className="h-4 w-4 animate-spin" /> Saving…</>
@@ -660,14 +660,14 @@ function DeleteDialog({
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 py-2.5 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground transition-all"
+            className="flex-1 py-2.5 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground transition"
           >
             Keep Account
           </button>
           <button
             onClick={onConfirm}
             disabled={deleting}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-rose-500 text-white text-sm font-semibold hover:bg-rose-600 transition-all disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-rose-500 text-white text-sm font-semibold hover:bg-rose-600 transition disabled:opacity-50"
           >
             {deleting ? <><RefreshCw className="h-3.5 w-3.5 animate-spin" /> Deleting…</> : "Delete"}
           </button>
@@ -690,7 +690,7 @@ function AuthGate() {
         Sign in to manage your TikTok accounts. Your data is protected with Row-Level Security.
       </p>
       <Link href="/login">
-        <button className="px-5 py-2.5 rounded-lg bg-primary text-black text-sm font-semibold hover:bg-primary/90 transition-all">
+        <button className="px-5 py-2.5 rounded-lg bg-primary text-black text-sm font-semibold hover:bg-primary/90 transition">
           Sign In
         </button>
       </Link>
@@ -858,7 +858,7 @@ export default function TikTokAccountsPage() {
         {user && (
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-black text-sm font-semibold hover:bg-primary/90 transition-all flex-shrink-0"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-black text-sm font-semibold hover:bg-primary/90 transition flex-shrink-0"
           >
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">Add Account</span>
@@ -901,7 +901,7 @@ export default function TikTokAccountsPage() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search by name, username, or email…"
-                className="w-full bg-muted/20 border border-border rounded-lg pl-9 pr-9 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 transition-all"
+                className="w-full bg-muted/20 border border-border rounded-lg pl-9 pr-9 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 transition"
               />
               {search && (
                 <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">

@@ -158,10 +158,10 @@ function Toggle({ active, onChange }: { active: boolean; onChange: () => void })
   return (
     <button
       onClick={onChange}
-      className={`relative w-11 h-6 rounded-full border transition-all duration-300 flex-shrink-0 ${active ? "bg-primary/20 border-primary/50" : "bg-muted/20 border-border"}`}
+      className={`relative w-11 h-6 rounded-full border transition duration-300 flex-shrink-0 ${active ? "bg-primary/20 border-primary/50" : "bg-muted/20 border-border"}`}
       aria-pressed={active}
     >
-      <span className={`absolute top-0.5 h-5 w-5 rounded-full transition-all duration-300 ${active ? "left-[22px] bg-primary" : "left-0.5 bg-muted-foreground/30"}`} />
+      <span className={`absolute top-0.5 h-5 w-5 rounded-full transition duration-300 ${active ? "left-[22px] bg-primary" : "left-0.5 bg-muted-foreground/30"}`} />
     </button>
   );
 }
@@ -275,7 +275,7 @@ export default function AIIntelligenceEngine() {
                 <div key={n.name}>
                   <button
                     onClick={() => setSelectedNode(i)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all duration-200 ${isSelected ? "border-primary/50 bg-primary/10" : "border-transparent hover:border-border hover:bg-muted/10"}`}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition duration-200 ${isSelected ? "border-primary/50 bg-primary/10" : "border-transparent hover:border-border hover:bg-muted/10"}`}
                   >
                     <div className={`p-1.5 rounded-md flex-shrink-0 ${isSelected ? "bg-primary/20" : "bg-muted/20"}`}>
                       <n.icon className={`h-3.5 w-3.5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
@@ -336,7 +336,7 @@ export default function AIIntelligenceEngine() {
             </div>
             <button
               onClick={() => navigate("/")}
-              className="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-primary/30 bg-primary/8 hover:bg-primary/15 hover:border-primary/50 transition-all text-xs font-semibold text-primary uppercase tracking-widest min-h-[44px]"
+              className="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-primary/30 bg-primary/8 hover:bg-primary/15 hover:border-primary/50 transition text-xs font-semibold text-primary uppercase tracking-widest min-h-[44px]"
             >
               View Module <ChevronRight className="h-3.5 w-3.5" />
             </button>
@@ -357,7 +357,7 @@ export default function AIIntelligenceEngine() {
           {INTEL_MODULES.map(mod => (
             <div
               key={mod.name}
-              className={`p-4 rounded-lg border transition-all hover:border-primary/25 hover:bg-primary/3 ${mod.status === "Active" ? "border-border" : mod.status === "Idle" ? "border-border/40 opacity-70" : "border-border"}`}
+              className={`p-4 rounded-lg border transition hover:border-primary/25 hover:bg-primary/3 ${mod.status === "Active" ? "border-border" : mod.status === "Idle" ? "border-border/40 opacity-70" : "border-border"}`}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="p-2 rounded-lg bg-primary/10">
@@ -493,7 +493,7 @@ export default function AIIntelligenceEngine() {
             <button
               key={tab}
               onClick={() => setActiveQueueTab(tab)}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-widest transition-all ${activeQueueTab === tab ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-widest transition ${activeQueueTab === tab ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
             >
               {tab}
             </button>
@@ -504,7 +504,7 @@ export default function AIIntelligenceEngine() {
           {PROCESSING_TASKS[activeQueueTab].map((job, i) => (
             <div
               key={i}
-              className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
+              className={`flex items-start gap-3 p-3 rounded-lg border transition ${
                 activeQueueTab === "failed"
                   ? "border-red-400/20 bg-red-400/3"
                   : activeQueueTab === "running"
@@ -539,7 +539,7 @@ export default function AIIntelligenceEngine() {
           {AI_PROVIDERS.map(provider => (
             <div
               key={provider.name}
-              className="p-4 rounded-lg border border-primary/15 bg-primary/3 hover:border-primary/30 hover:bg-primary/8 transition-all group"
+              className="p-4 rounded-lg border border-primary/15 bg-primary/3 hover:border-primary/30 hover:bg-primary/8 transition group"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
@@ -551,7 +551,7 @@ export default function AIIntelligenceEngine() {
               </div>
               <p className="text-sm font-semibold text-foreground mb-1">{provider.name}</p>
               <p className="text-xs text-muted-foreground leading-relaxed">{provider.desc}</p>
-              <button className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-primary/20 hover:border-primary/50 hover:bg-primary/10 transition-all text-[10px] font-semibold uppercase tracking-widest text-primary min-h-[36px]">
+              <button className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-primary/20 hover:border-primary/50 hover:bg-primary/10 transition text-[10px] font-semibold uppercase tracking-widest text-primary min-h-[36px]">
                 Connect <ChevronRight className="h-3 w-3" />
               </button>
             </div>
@@ -585,7 +585,7 @@ export default function AIIntelligenceEngine() {
             <select
               value={refreshInterval}
               onChange={e => setRefreshInterval(e.target.value)}
-              className="bg-black/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all w-full sm:w-auto"
+              className="bg-black/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition w-full sm:w-auto"
             >
               {REFRESH_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
@@ -600,7 +600,7 @@ export default function AIIntelligenceEngine() {
             <button
               onClick={handleManualAnalysis}
               disabled={analysisLoading}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-primary/30 bg-primary/8 hover:bg-primary/15 hover:border-primary/50 transition-all text-sm font-semibold text-primary disabled:opacity-50 min-h-[44px] w-full sm:w-auto"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-primary/30 bg-primary/8 hover:bg-primary/15 hover:border-primary/50 transition text-sm font-semibold text-primary disabled:opacity-50 min-h-[44px] w-full sm:w-auto"
             >
               <RotateCcw className={`h-4 w-4 ${analysisLoading ? "animate-spin" : ""}`} />
               {analysisLoading ? "Analysing…" : "Run Analysis"}
@@ -613,7 +613,7 @@ export default function AIIntelligenceEngine() {
               <p className="text-sm font-semibold text-foreground">Export Intelligence</p>
               <p className="text-xs text-muted-foreground mt-0.5">Export all AI analysis results and confidence metrics</p>
             </div>
-            <button className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-sm font-semibold text-foreground min-h-[44px] w-full sm:w-auto">
+            <button className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition text-sm font-semibold text-foreground min-h-[44px] w-full sm:w-auto">
               <Download className="h-4 w-4 text-muted-foreground" />
               Export Intelligence
             </button>

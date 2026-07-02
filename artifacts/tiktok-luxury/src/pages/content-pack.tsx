@@ -61,7 +61,7 @@ function SelectField({ label, options, value, onChange }: {
         <select
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="w-full appearance-none bg-card border border-card-border rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all cursor-pointer pr-9"
+          className="w-full appearance-none bg-card border border-card-border rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition cursor-pointer pr-9"
         >
           {options.map(o => <option key={o} value={o} className="bg-card">{o}</option>)}
         </select>
@@ -81,7 +81,7 @@ function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) 
   return (
     <button
       onClick={handleCopy}
-      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary transition-all duration-200"
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary transition duration-200"
     >
       {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
       {copied ? "Copied!" : label}
@@ -178,7 +178,7 @@ function WorkflowProgress({
             className="flex-1 group"
           >
             <div className={cn(
-              "h-1 rounded-full transition-all duration-200 group-hover:opacity-80",
+              "h-1 rounded-full transition duration-200 group-hover:opacity-80",
               i <= idx ? "bg-primary" : "bg-primary/15"
             )} />
           </button>
@@ -563,7 +563,7 @@ export default function ContentPackGenerator() {
             onClick={handleGenerate}
             disabled={loading}
             className={cn(
-              "w-full flex items-center justify-center gap-2.5 py-4 rounded-xl border font-semibold text-sm tracking-widest uppercase transition-all duration-300",
+              "w-full flex items-center justify-center gap-2.5 py-4 rounded-xl border font-semibold text-sm tracking-widest uppercase transition duration-300",
               loading
                 ? "bg-primary/5 border-primary/20 text-primary/40 cursor-not-allowed"
                 : "bg-primary/10 hover:bg-primary/20 border-primary/30 hover:border-primary/60 text-primary shadow-sm hover:shadow-primary/10"
@@ -616,7 +616,7 @@ export default function ContentPackGenerator() {
               </div>
               <button
                 onClick={handleGenerate}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/30 bg-primary/10 text-primary text-sm hover:bg-primary/20 transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/30 bg-primary/10 text-primary text-sm hover:bg-primary/20 transition"
               >
                 <RefreshCw className="h-3.5 w-3.5" /> Retry
               </button>
@@ -634,7 +634,7 @@ export default function ContentPackGenerator() {
                 <button
                   onClick={handleCopyAll}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-md text-xs border transition-all duration-200",
+                    "flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-md text-xs border transition duration-200",
                     allCopied
                       ? "bg-primary/15 border-primary/40 text-primary"
                       : "bg-muted/20 hover:bg-primary/10 border-border hover:border-primary/30 text-muted-foreground hover:text-primary"
@@ -646,7 +646,7 @@ export default function ContentPackGenerator() {
                 <button
                   onClick={handleSaveToVault}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-md text-xs border transition-all duration-200",
+                    "flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-md text-xs border transition duration-200",
                     savedToVault
                       ? "bg-primary/15 border-primary/40 text-primary"
                       : "bg-muted/20 hover:bg-primary/10 border-border hover:border-primary/30 text-muted-foreground hover:text-primary"
@@ -658,7 +658,7 @@ export default function ContentPackGenerator() {
                 <button
                   onClick={handleAddToCalendar}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-md text-xs border transition-all duration-200",
+                    "flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-md text-xs border transition duration-200",
                     savedToCalendar
                       ? "bg-chart-2/10 border-chart-2/30 text-chart-2"
                       : "bg-muted/20 hover:bg-primary/10 border-border hover:border-primary/30 text-muted-foreground hover:text-primary"
@@ -671,7 +671,7 @@ export default function ContentPackGenerator() {
                   onClick={handleSavePack}
                   disabled={isSavingPack}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-md text-xs border transition-all duration-200",
+                    "flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-md text-xs border transition duration-200",
                     savedToPacks
                       ? "bg-primary/15 border-primary/40 text-primary"
                       : savePackError

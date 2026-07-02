@@ -474,7 +474,7 @@ export default function Niche() {
                   </td>
                   <td className="px-6 py-4">
                     <Link href={`/generator?niche=${encodeURIComponent(n.name)}&tab=hooks`}>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary border border-transparent group-hover:border-primary/30 group-hover:bg-primary/10 px-2.5 py-1.5 rounded-md transition-all duration-200 whitespace-nowrap cursor-pointer">
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary border border-transparent group-hover:border-primary/30 group-hover:bg-primary/10 px-2.5 py-1.5 rounded-md transition duration-200 whitespace-nowrap cursor-pointer">
                         <Sparkles className="h-3 w-3" />
                         Generate
                       </span>

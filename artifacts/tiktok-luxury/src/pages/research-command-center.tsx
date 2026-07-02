@@ -404,7 +404,7 @@ export default function ResearchCommandCenter() {
             return (
               <div
                 key={source.name}
-                className={`p-4 rounded-lg border transition-all ${ready ? "border-border hover:border-primary/30 hover:bg-primary/3" : "border-border/40 bg-muted/5 opacity-60"}`}
+                className={`p-4 rounded-lg border transition ${ready ? "border-border hover:border-primary/30 hover:bg-primary/3" : "border-border/40 bg-muted/5 opacity-60"}`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="p-2 rounded-lg bg-primary/10">
@@ -1067,7 +1067,7 @@ export default function ResearchCommandCenter() {
               placeholder="Filter saved keywords…"
               value={keywordSearch}
               onChange={e => setKeywordSearch(e.target.value)}
-              className="w-full bg-black/40 border border-border rounded-lg pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+              className="w-full bg-black/40 border border-border rounded-lg pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition"
             />
           </div>
           <div className="relative flex-1">
@@ -1077,12 +1077,12 @@ export default function ResearchCommandCenter() {
               value={newKeyword}
               onChange={e => setNewKeyword(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleAddKeyword()}
-              className="w-full bg-black/40 border border-border rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+              className="w-full bg-black/40 border border-border rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition"
             />
           </div>
           <button
             onClick={handleAddKeyword}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all text-xs font-semibold uppercase tracking-widest flex-shrink-0 min-h-[44px]"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition text-xs font-semibold uppercase tracking-widest flex-shrink-0 min-h-[44px]"
           >
             <Plus className="h-3.5 w-3.5" />
             Add
@@ -1104,7 +1104,7 @@ export default function ResearchCommandCenter() {
             filteredKeywords.map(kw => (
               <div
                 key={kw.word}
-                className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 md:gap-4 items-center p-3 rounded-lg border border-border hover:border-primary/25 hover:bg-primary/3 transition-all"
+                className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 md:gap-4 items-center p-3 rounded-lg border border-border hover:border-primary/25 hover:bg-primary/3 transition"
               >
                 <p className="text-sm text-foreground font-medium">{kw.word}</p>
                 <DifficultyBadge value={kw.difficulty} />
@@ -1118,7 +1118,7 @@ export default function ResearchCommandCenter() {
                 <TrendArrow direction={kw.trend} />
                 <button
                   onClick={() => removeKeyword(kw.word)}
-                  className="p-1.5 rounded border border-border hover:border-red-400/40 hover:bg-red-400/5 transition-all opacity-0 hover:opacity-100 group-hover:opacity-100 ml-auto"
+                  className="p-1.5 rounded border border-border hover:border-red-400/40 hover:bg-red-400/5 transition opacity-0 hover:opacity-100 group-hover:opacity-100 ml-auto"
                 >
                   <X className="h-3 w-3 text-muted-foreground hover:text-red-400 transition-colors" />
                 </button>
@@ -1144,7 +1144,7 @@ export default function ResearchCommandCenter() {
                 <button
                   key={action.label}
                   onClick={() => handleAiAction(action.label)}
-                  className={`flex items-start gap-3 p-3.5 rounded-lg border text-left transition-all ${
+                  className={`flex items-start gap-3 p-3.5 rounded-lg border text-left transition ${
                     activeAction === action.label
                       ? "border-primary/50 bg-primary/10 text-primary"
                       : "border-border hover:border-primary/30 hover:bg-primary/5"
@@ -1171,11 +1171,11 @@ export default function ResearchCommandCenter() {
                 onKeyDown={e => {
                   if (e.key === "Enter" && aiQuery.trim()) handleCustomQuery();
                 }}
-                className="flex-1 bg-black/40 border border-border rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+                className="flex-1 bg-black/40 border border-border rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition"
               />
               <button
                 onClick={handleCustomQuery}
-                className="p-2.5 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/10 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+                className="p-2.5 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/10 transition min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 <Send className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors" />
               </button>
@@ -1231,17 +1231,17 @@ export default function ResearchCommandCenter() {
           <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Intelligence Export</h2>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <button className="flex-1 flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-lg border border-primary/30 bg-primary/8 hover:bg-primary/15 hover:border-primary/50 transition-all text-sm font-semibold text-primary min-h-[48px]">
+          <button className="flex-1 flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-lg border border-primary/30 bg-primary/8 hover:bg-primary/15 hover:border-primary/50 transition text-sm font-semibold text-primary min-h-[48px]">
             <FileText className="h-4 w-4" />
             Export PDF
           </button>
-          <button className="flex-1 flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-sm font-semibold text-foreground min-h-[48px]">
+          <button className="flex-1 flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition text-sm font-semibold text-foreground min-h-[48px]">
             <BookOpen className="h-4 w-4 text-muted-foreground" />
             Export Markdown
           </button>
           <button
             onClick={() => navigate("/vault")}
-            className="flex-1 flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-sm font-semibold text-foreground min-h-[48px]"
+            className="flex-1 flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition text-sm font-semibold text-foreground min-h-[48px]"
           >
             <Database className="h-4 w-4 text-muted-foreground" />
             Save to Intelligence Vault

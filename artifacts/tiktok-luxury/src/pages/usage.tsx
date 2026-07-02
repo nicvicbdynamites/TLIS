@@ -185,7 +185,7 @@ export default function UsagePage() {
           </span>
           <button
             onClick={reload}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border border-border hover:border-primary/40 hover:text-primary text-muted-foreground transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border border-border hover:border-primary/40 hover:text-primary text-muted-foreground transition"
           >
             <RefreshCw className="h-3 w-3" />
             Refresh
@@ -392,7 +392,7 @@ export default function UsagePage() {
                 />
                 <button
                   onClick={handleApplyLimit}
-                  className="px-3 py-2 rounded-lg text-xs bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all font-medium"
+                  className="px-3 py-2 rounded-lg text-xs bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition font-medium"
                 >
                   Apply
                 </button>
@@ -412,13 +412,13 @@ export default function UsagePage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleReset(scope)}
-                        className="flex-1 px-3 py-2 rounded-lg text-xs bg-destructive/10 border border-destructive/30 text-destructive hover:bg-destructive/20 transition-all"
+                        className="flex-1 px-3 py-2 rounded-lg text-xs bg-destructive/10 border border-destructive/30 text-destructive hover:bg-destructive/20 transition"
                       >
                         Confirm
                       </button>
                       <button
                         onClick={() => setConfirmReset(null)}
-                        className="flex-1 px-3 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/30 transition-all"
+                        className="flex-1 px-3 py-2 rounded-lg text-xs border border-border text-muted-foreground hover:border-primary/30 transition"
                       >
                         Cancel
                       </button>
@@ -426,7 +426,7 @@ export default function UsagePage() {
                   ) : (
                     <button
                       onClick={() => setConfirmReset(scope)}
-                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-border hover:border-destructive/30 hover:bg-destructive/5 text-xs text-muted-foreground hover:text-destructive transition-all group"
+                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-border hover:border-destructive/30 hover:bg-destructive/5 text-xs text-muted-foreground hover:text-destructive transition group"
                     >
                       <span>{labels[scope]}</span>
                       <RefreshCw className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -448,7 +448,7 @@ export default function UsagePage() {
                   <button
                     key={tier}
                     onClick={() => handleTierChange(tier)}
-                    className={`w-full text-left px-4 py-3 rounded-lg border transition-all duration-200 ${
+                    className={`w-full text-left px-4 py-3 rounded-lg border transition duration-200 ${
                       isActive
                         ? "bg-primary/10 border-primary/40"
                         : "border-border hover:border-primary/30 hover:bg-primary/5"

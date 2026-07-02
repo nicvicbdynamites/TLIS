@@ -323,7 +323,7 @@ export default function IntegrationHub() {
           {AI_PROVIDERS.map(provider => (
             <div
               key={provider.name}
-              className={`p-5 rounded-xl border transition-all ${
+              className={`p-5 rounded-xl border transition ${
                 provider.status === "Connected"
                   ? "border-emerald-400/20 bg-emerald-400/3"
                   : "border-border bg-black/10"
@@ -380,7 +380,7 @@ export default function IntegrationHub() {
               <button
                 onClick={() => handleTest(provider.name)}
                 disabled={!provider.keyConfigured || testingProvider === provider.name}
-                className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border text-xs font-semibold uppercase tracking-widest transition-all min-h-[44px] ${
+                className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border text-xs font-semibold uppercase tracking-widest transition min-h-[44px] ${
                   provider.keyConfigured
                     ? "border-primary/30 bg-primary/8 hover:bg-primary/15 hover:border-primary/50 text-primary disabled:opacity-50"
                     : "border-border/40 text-muted-foreground/40 cursor-not-allowed"
@@ -490,7 +490,7 @@ export default function IntegrationHub() {
               : undefined;
 
             return (
-              <div key={provider.name} className={`p-4 rounded-lg border transition-all ${
+              <div key={provider.name} className={`p-4 rounded-lg border transition ${
                 isLive
                   ? "border-emerald-400/20 bg-emerald-400/3 hover:border-emerald-400/35"
                   : liveStatus === "Error"
@@ -577,7 +577,7 @@ export default function IntegrationHub() {
                 {!cacheStatus && !isGSC && !isAhrefs && <div className="mb-3" />}
                 {(isGSC || isAhrefs) && <div className="mb-1" />}
 
-                <button className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border transition-all text-[10px] font-semibold uppercase tracking-widest min-h-[40px] ${
+                <button className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border transition text-[10px] font-semibold uppercase tracking-widest min-h-[40px] ${
                   isLive
                     ? "border-emerald-400/20 text-emerald-400 hover:bg-emerald-400/5"
                     : (isGSC && !gscHubData?.authenticated) || (isAhrefs && !ahrefsHubData?.authenticated)
@@ -606,7 +606,7 @@ export default function IntegrationHub() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {SOCIAL_PROVIDERS.map(provider => (
-            <div key={provider.name} className="p-4 rounded-lg border border-border hover:border-primary/20 transition-all bg-black/10">
+            <div key={provider.name} className="p-4 rounded-lg border border-border hover:border-primary/20 transition bg-black/10">
               <div className="flex items-start justify-between mb-3">
                 <div className="p-2 rounded-lg bg-muted/20">
                   <provider.icon className="h-4 w-4 text-muted-foreground/60" />
@@ -615,7 +615,7 @@ export default function IntegrationHub() {
               </div>
               <p className="text-sm font-semibold text-foreground mb-1">{provider.name}</p>
               <p className="text-[10px] text-muted-foreground/50 mb-4 leading-relaxed">{provider.note}</p>
-              <button className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-primary min-h-[40px]">
+              <button className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-primary min-h-[40px]">
                 <Settings className="h-3 w-3" /> Configure
               </button>
             </div>
@@ -651,7 +651,7 @@ export default function IntegrationHub() {
             <button
               key={tab}
               onClick={() => setActiveJobTab(tab)}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-widest transition-all ${activeJobTab === tab ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-widest transition ${activeJobTab === tab ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
             >
               {tab}
             </button>
@@ -662,7 +662,7 @@ export default function IntegrationHub() {
           {BG_JOBS[activeJobTab].map((job, i) => (
             <div
               key={i}
-              className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
+              className={`flex items-start gap-3 p-3 rounded-lg border transition ${
                 activeJobTab === "failed"   ? "border-red-400/20 bg-red-400/3"   :
                 activeJobTab === "running"  ? "border-primary/20 bg-primary/3"   :
                 "border-border hover:border-primary/15"
@@ -702,7 +702,7 @@ export default function IntegrationHub() {
           {INTEGRATION_LOGS.map((log, i) => (
             <div
               key={i}
-              className={`grid grid-cols-1 md:grid-cols-[80px_100px_140px_80px_1fr] gap-2 md:gap-3 items-center p-3 rounded-lg border transition-all ${
+              className={`grid grid-cols-1 md:grid-cols-[80px_100px_140px_80px_1fr] gap-2 md:gap-3 items-center p-3 rounded-lg border transition ${
                 log.status === "error" ? "border-red-400/15 bg-red-400/3" : "border-border hover:border-primary/15"
               }`}
             >
@@ -734,7 +734,7 @@ export default function IntegrationHub() {
           {SECRETS.map(secret => (
             <div
               key={secret.name}
-              className={`flex items-center gap-3 p-3.5 rounded-lg border transition-all ${
+              className={`flex items-center gap-3 p-3.5 rounded-lg border transition ${
                 secret.configured
                   ? "border-emerald-400/20 bg-emerald-400/3"
                   : secret.required
@@ -785,7 +785,7 @@ export default function IntegrationHub() {
           {/* Module health */}
           <div className="lg:col-span-2 space-y-3">
             {SYSTEM_HEALTH_MODULES.map(mod => (
-              <div key={mod.name} className="flex items-center gap-4 p-3 rounded-lg border border-border hover:border-primary/15 transition-all">
+              <div key={mod.name} className="flex items-center gap-4 p-3 rounded-lg border border-border hover:border-primary/15 transition">
                 <ConnIcon status={mod.status} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">

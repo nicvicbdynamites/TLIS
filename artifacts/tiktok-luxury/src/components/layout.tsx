@@ -72,7 +72,7 @@ function UserDropdown({ onNavigate }: { onNavigate: (href: string) => void }) {
   if (!user) {
     return (
       <Link href="/login">
-        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/40 transition-all cursor-pointer">
+        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/40 transition cursor-pointer">
           <LogIn className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium text-primary tracking-wide">Sign In</span>
         </div>
@@ -182,7 +182,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
+      <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-background/95 sticky top-0 z-50">
         <Link href="/" onClick={() => setSidebarOpen(false)}>
           <div className="flex items-center gap-2 cursor-pointer">
             <div className="font-serif font-bold text-xl tracking-widest text-primary hover:opacity-80 transition-opacity select-none">TLIS</div>
@@ -237,7 +237,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <button
             onClick={() => setSearchOpen(true)}
             aria-label="Open search"
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border bg-muted/10 hover:border-primary/30 hover:bg-primary/5 transition-all text-muted-foreground hover:text-foreground"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border bg-muted/10 hover:border-primary/30 hover:bg-primary/5 transition text-muted-foreground hover:text-foreground"
           >
             <Search className="h-3.5 w-3.5 flex-shrink-0" />
             <span className="text-xs flex-1 text-left">Search everything…</span>
@@ -257,7 +257,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   onClick={() => setSidebarOpen(false)}
                   role="menuitem"
                   className={cn(
-                    "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer relative overflow-hidden group",
+                    "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition duration-200 cursor-pointer relative overflow-hidden group",
                     isActive
                       ? "text-primary bg-primary/10 border border-primary/20"
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary/50",
@@ -282,7 +282,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               onClick={() => setSidebarOpen(false)}
               role="menuitem"
               className={cn(
-                "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer relative overflow-hidden group",
+                "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition duration-200 cursor-pointer relative overflow-hidden group",
                 location === "/settings"
                   ? "text-primary bg-primary/10 border border-primary/20"
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary/50",
@@ -324,7 +324,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"
+          className="fixed inset-0 bg-black/60 z-30 md:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />

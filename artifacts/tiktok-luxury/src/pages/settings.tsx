@@ -74,7 +74,7 @@ function ThemeOption({ value, current, label, icon: Icon, onClick }: {
       type="button"
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center gap-2 p-3 rounded-lg border transition-all",
+        "flex flex-col items-center gap-2 p-3 rounded-lg border transition",
         current === value
           ? "border-primary bg-primary/10 text-primary"
           : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
@@ -133,7 +133,7 @@ export default function SettingsPage() {
           <a
             key={s.id}
             href={`#${s.id}`}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-border text-muted-foreground hover:border-primary/40 hover:text-primary transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-border text-muted-foreground hover:border-primary/40 hover:text-primary transition"
           >
             <s.icon className="h-3 w-3" />
             {s.label}
@@ -164,7 +164,7 @@ export default function SettingsPage() {
                 key={d}
                 onClick={() => setDensity(d)}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs border transition-all capitalize",
+                  "px-3 py-1.5 rounded-lg text-xs border transition capitalize",
                   density === d
                     ? "bg-primary/10 border-primary/30 text-primary"
                     : "border-border text-muted-foreground hover:border-primary/20",
