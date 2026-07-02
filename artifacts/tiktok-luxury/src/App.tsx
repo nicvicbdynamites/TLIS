@@ -16,6 +16,7 @@ import AuthPage           from "@/pages/auth";
 // Lazy imports (heavier pages)
 const ResearchCommandCenter  = lazy(() => import("@/pages/research-command-center"));
 const IntelligencePipeline   = lazy(() => import("@/pages/intelligence-pipeline"));
+const AIIntelligenceEngine   = lazy(() => import("@/pages/ai-intelligence-engine"));
 const Niche              = lazy(() => import("@/pages/niche"));
 const Hooks              = lazy(() => import("@/pages/hooks"));
 const Prompts            = lazy(() => import("@/pages/prompts"));
@@ -67,6 +68,7 @@ function AppRoutes() {
               <Route path="/brief"         component={ExecutiveBrief}        />
               <Route path="/research"      component={ResearchCommandCenter}  />
               <Route path="/pipeline"     component={IntelligencePipeline}   />
+              <Route path="/ai-engine"    component={AIIntelligenceEngine}   />
               <Route path="/"             component={Dashboard}             />
               <Route path="/niche"        component={Niche}              />
               <Route path="/hooks"        component={Hooks}              />
