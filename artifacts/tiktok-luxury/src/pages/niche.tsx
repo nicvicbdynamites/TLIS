@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { useTrendSummary } from "@/lib/trends-provider";
 import { useRedditSummary } from "@/lib/reddit-provider";
 import { useSearchConsoleAnalytics } from "@/lib/search-console-provider";
+import { useAhrefsIntelligence }     from "@/lib/ahrefs-provider";
 
 const niches = [
   { name: "Quiet Luxury Lifestyle", score: 94, demand: "Explosive", competition: "Low", growth: "+312%", status: "hot" },
@@ -57,18 +58,21 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function Niche() {
   const { data: liveTrends, loading: liveTrendsLoading } = useTrendSummary();
   const { data: redditData, loading: redditLoading }     = useRedditSummary();
-  const { data: gscData,   loading: gscLoading }         = useSearchConsoleAnalytics();
+  const { data: gscData,    loading: gscLoading }          = useSearchConsoleAnalytics();
+  const { data: ahrefsData, loading: ahrefsLoading }       = useAhrefsIntelligence();
 
-  const liveScore        = liveTrends?.trendScore;
-  const communityScore   = redditData?.communityInterestScore;
-  const searchDemandScore = gscData?.searchDemandScore;
+  const liveScore          = liveTrends?.trendScore;
+  const communityScore     = redditData?.communityInterestScore;
+  const searchDemandScore  = gscData?.searchDemandScore;
+  const competitionScore   = ahrefsData?.competitionScore;
   const stats = [
-    { label: "Niches Tracked",          value: "847",                                                                          icon: Target       },
-    { label: "Hot Opportunities",       value: "23",                                                                           icon: Zap          },
-    { label: "Trend Score (Live)",      value: liveTrendsLoading ? "…" : liveScore != null ? String(liveScore) : "86.2",       icon: Activity     },
-    { label: "Community Score (Live)",  value: redditLoading ? "…" : communityScore != null ? String(communityScore) : "82",   icon: MessageCircle},
-    { label: "Declining Niches",        value: "12",                                                                           icon: TrendingDown },
-    { label: "Search Demand Score",     value: gscLoading ? "…" : searchDemandScore != null ? String(searchDemandScore) : "84", icon: Search      },
+    { label: "Niches Tracked",          value: "847",                                                                              icon: Target       },
+    { label: "Hot Opportunities",       value: "23",                                                                               icon: Zap          },
+    { label: "Trend Score (Live)",      value: liveTrendsLoading ? "…" : liveScore != null ? String(liveScore) : "86.2",           icon: Activity     },
+    { label: "Community Score (Live)",  value: redditLoading ? "…" : communityScore != null ? String(communityScore) : "82",       icon: MessageCircle},
+    { label: "Declining Niches",        value: "12",                                                                               icon: TrendingDown },
+    { label: "Search Demand Score",     value: gscLoading ? "…" : searchDemandScore != null ? String(searchDemandScore) : "84",   icon: Search       },
+    { label: "Competition Score",       value: ahrefsLoading ? "…" : competitionScore != null ? String(competitionScore) : "38",  icon: AlertCircle  },
   ];
 
   return (
@@ -79,7 +83,7 @@ export default function Niche() {
         <p className="text-muted-foreground text-sm">AI-identified market gaps with untapped luxury creator potential.</p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
         {stats.map((s, i) => (
           <div key={i} className="luxury-card p-5">
             <div className="flex items-center justify-between mb-3">
@@ -111,6 +115,15 @@ export default function Niche() {
                 : "text-muted-foreground"
               }`}>
                 {gscData.source === "live" ? "↑ Live data" : gscData.source === "cached" ? "→ Cached" : "Fallback"}
+              </p>
+            )}
+            {i === 6 && ahrefsData && (
+              <p className={`text-[10px] font-mono mt-1 ${
+                ahrefsData.competitionScore <= 30 ? "text-emerald-400"
+                : ahrefsData.competitionScore <= 55 ? "text-amber-400"
+                : "text-red-400"
+              }`}>
+                {ahrefsData.competitionScore <= 30 ? "↓ Low" : ahrefsData.competitionScore <= 55 ? "→ Medium" : "↑ High"}
               </p>
             )}
           </div>

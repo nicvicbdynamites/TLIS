@@ -11,6 +11,7 @@ import { aiService, type ConnectionTestResult } from "@/lib/ai-provider";
 import { useTrendSummary } from "@/lib/trends-provider";
 import { useRedditSummary } from "@/lib/reddit-provider";
 import { useSearchConsoleAnalytics } from "@/lib/search-console-provider";
+import { useAhrefsIntelligence }     from "@/lib/ahrefs-provider";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -227,6 +228,7 @@ export default function IntegrationHub() {
   const { data: trendHubData, loading: trendHubLoading }           = useTrendSummary();
   const { data: redditHubData, loading: redditHubLoading }         = useRedditSummary();
   const { data: gscHubData,    loading: gscHubLoading    }         = useSearchConsoleAnalytics();
+  const { data: ahrefsHubData, loading: ahrefsHubLoading }         = useAhrefsIntelligence();
 
   const handleTest = useCallback(async (name: string) => {
     setTestingProvider(name);
@@ -438,41 +440,54 @@ export default function IntegrationHub() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {RESEARCH_PROVIDERS.map(provider => {
-            const isGT     = provider.name === "Google Trends";
-            const isReddit = provider.name === "Reddit";
-            const isGSC    = provider.name === "Google Search Console";
+            const isGT      = provider.name === "Google Trends";
+            const isReddit  = provider.name === "Reddit";
+            const isGSC     = provider.name === "Google Search Console";
+            const isAhrefs  = provider.name === "Ahrefs";
 
             const liveStatus: ConnStatus =
-              isGT     && trendHubData  ? (trendHubData.source  === "fallback" ? "Error" : "Connected")
-              : isReddit && redditHubData ? (redditHubData.source === "fallback" ? "Error" : "Connected")
-              : isGSC   && gscHubData   ? (
+              isGT      && trendHubData   ? (trendHubData.source  === "fallback" ? "Error" : "Connected")
+              : isReddit && redditHubData  ? (redditHubData.source === "fallback" ? "Error" : "Connected")
+              : isGSC   && gscHubData     ? (
                   gscHubData.source === "live" || gscHubData.source === "cached" ? "Connected"
                   : gscHubData.authenticated ? "Error" : "Disconnected"
+                )
+              : isAhrefs && ahrefsHubData ? (
+                  ahrefsHubData.source === "live" || ahrefsHubData.source === "cached" ? "Connected"
+                  : ahrefsHubData.authenticated ? "Error" : "Disconnected"
                 )
               : provider.status;
 
             const liveHealth =
-              isGT     && trendHubData  ? trendHubData.trendScore
-              : isReddit && redditHubData ? redditHubData.communityInterestScore
-              : isGSC   && gscHubData && liveStatus === "Connected" ? gscHubData.searchDemandScore
+              isGT      && trendHubData   ? trendHubData.trendScore
+              : isReddit && redditHubData  ? redditHubData.communityInterestScore
+              : isGSC   && gscHubData   && liveStatus === "Connected" ? gscHubData.searchDemandScore
+              : isAhrefs && ahrefsHubData && liveStatus === "Connected" ? ahrefsHubData.seoOpportunityScore
               : 0;
 
             const liveSyncStatus =
-              isGT     && trendHubData  ? `${trendHubData.source} · score ${trendHubData.trendScore}/100`
-              : isReddit && redditHubData ? `${redditHubData.source} · interest ${redditHubData.communityInterestScore}/100`
-              : isGSC   && gscHubData && liveStatus === "Connected" ? `${gscHubData.source} · demand ${gscHubData.searchDemandScore}/100`
-              : isGSC   && gscHubData   ? "OAuth credentials required"
+              isGT      && trendHubData   ? `${trendHubData.source} · score ${trendHubData.trendScore}/100`
+              : isReddit && redditHubData  ? `${redditHubData.source} · interest ${redditHubData.communityInterestScore}/100`
+              : isGSC   && gscHubData   && liveStatus === "Connected" ? `${gscHubData.source} · demand ${gscHubData.searchDemandScore}/100`
+              : isGSC   && gscHubData     ? "OAuth credentials required"
+              : isAhrefs && ahrefsHubData && liveStatus === "Connected" ? `${ahrefsHubData.source} · opportunity ${ahrefsHubData.seoOpportunityScore}/100`
+              : isAhrefs && ahrefsHubData  ? "API key required"
               : provider.syncStatus;
 
             const liveLastSync =
-              isGT     && trendHubData  ? new Date(trendHubData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
-              : isReddit && redditHubData ? new Date(redditHubData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
-              : isGSC   && gscHubData && liveStatus === "Connected" ? new Date(gscHubData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+              isGT      && trendHubData   ? new Date(trendHubData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+              : isReddit && redditHubData  ? new Date(redditHubData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+              : isGSC   && gscHubData   && liveStatus === "Connected" ? new Date(gscHubData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+              : isAhrefs && ahrefsHubData && liveStatus === "Connected" ? new Date(ahrefsHubData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
               : provider.lastSync;
 
-            const liveLoading = (isGT && trendHubLoading) || (isReddit && redditHubLoading) || (isGSC && gscHubLoading);
-            const isLive      = liveStatus === "Connected";
-            const cacheStatus = isGT ? trendHubData?.source : isReddit ? redditHubData?.source : (isGSC && liveStatus === "Connected") ? gscHubData?.source : undefined;
+            const liveLoading  = (isGT && trendHubLoading) || (isReddit && redditHubLoading) || (isGSC && gscHubLoading) || (isAhrefs && ahrefsHubLoading);
+            const isLive       = liveStatus === "Connected";
+            const cacheStatus  = isGT      ? trendHubData?.source
+              : isReddit  ? redditHubData?.source
+              : (isGSC    && liveStatus === "Connected") ? gscHubData?.source
+              : (isAhrefs && liveStatus === "Connected") ? ahrefsHubData?.source
+              : undefined;
 
             return (
               <div key={provider.name} className={`p-4 rounded-lg border transition-all ${
@@ -537,18 +552,44 @@ export default function IntegrationHub() {
                     <span className="font-mono text-emerald-400">&lt;200ms</span>
                   </div>
                 )}
-                {!cacheStatus && !isGSC && <div className="mb-3" />}
-                {isGSC && <div className="mb-1" />}
+                {isAhrefs && ahrefsHubData && (
+                  <div className="flex items-center justify-between text-[10px] mb-2">
+                    <span className="text-muted-foreground">API Key</span>
+                    <span className={`font-mono ${ahrefsHubData.authenticated ? "text-emerald-400" : "text-amber-400"}`}>
+                      {ahrefsHubData.authenticated ? "✓ Configured" : "⚠ Setup required"}
+                    </span>
+                  </div>
+                )}
+                {isAhrefs && ahrefsHubData && isLive && (
+                  <>
+                    <div className="flex items-center justify-between text-[10px] mb-2">
+                      <span className="text-muted-foreground">Quota</span>
+                      <span className="font-mono text-primary">
+                        {ahrefsHubData.quotaUsed}/{ahrefsHubData.quotaLimit} units
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] mb-2">
+                      <span className="text-muted-foreground">Latency</span>
+                      <span className="font-mono text-emerald-400">&lt;100ms</span>
+                    </div>
+                  </>
+                )}
+                {!cacheStatus && !isGSC && !isAhrefs && <div className="mb-3" />}
+                {(isGSC || isAhrefs) && <div className="mb-1" />}
 
                 <button className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border transition-all text-[10px] font-semibold uppercase tracking-widest min-h-[40px] ${
                   isLive
                     ? "border-emerald-400/20 text-emerald-400 hover:bg-emerald-400/5"
-                    : isGSC && !gscHubData?.authenticated
+                    : (isGSC && !gscHubData?.authenticated) || (isAhrefs && !ahrefsHubData?.authenticated)
                     ? "border-amber-400/20 text-amber-400 hover:bg-amber-400/5"
                     : "border-border hover:border-primary/30 hover:bg-primary/5 text-muted-foreground hover:text-primary"
                 }`}>
                   <Settings className="h-3 w-3" />
-                  {isLive ? "View Data" : isGSC && !gscHubData?.authenticated ? "Configure OAuth" : "Configure"}
+                  {isLive
+                    ? "View Data"
+                    : isGSC   && !gscHubData?.authenticated   ? "Configure OAuth"
+                    : isAhrefs && !ahrefsHubData?.authenticated ? "Configure API Key"
+                    : "Configure"}
                 </button>
               </div>
             );

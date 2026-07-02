@@ -12,6 +12,7 @@ import { aiService, type BriefResult } from "@/lib/ai-provider";
 import { useTrendSummary } from "@/lib/trends-provider";
 import { useRedditSummary } from "@/lib/reddit-provider";
 import { useSearchConsoleAnalytics } from "@/lib/search-console-provider";
+import { useAhrefsIntelligence }     from "@/lib/ahrefs-provider";
 
 // ── Greeting ──────────────────────────────────────────────────────────────
 
@@ -235,6 +236,7 @@ export default function ExecutiveBrief() {
   const { data: trendSummary, loading: trendLoading } = useTrendSummary();
   const { data: redditSummary }                       = useRedditSummary();
   const { data: gscData, loading: gscLoading }        = useSearchConsoleAnalytics();
+  const { data: ahrefsData, loading: ahrefsLoading }  = useAhrefsIntelligence();
 
   const generateBrief = useCallback(async () => {
     setBriefLoading(true);
@@ -458,6 +460,72 @@ export default function ExecutiveBrief() {
                 ))}
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 1.6. SEO Opportunity ── */}
+      {(ahrefsData || ahrefsLoading) && (
+        <div className="luxury-card p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">SEO Opportunity</h2>
+            {ahrefsLoading && <RefreshCw className="h-3 w-3 text-muted-foreground/40 animate-spin" />}
+            {ahrefsData && (
+              <span className="ml-auto text-[9px] font-mono text-muted-foreground/40 uppercase tracking-wider">
+                Ahrefs · {ahrefsData.source}
+              </span>
+            )}
+          </div>
+          {ahrefsData && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="p-4 rounded-lg border border-primary/15 bg-primary/5 text-center">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Search Volume</p>
+                  <p className="text-2xl font-bold font-serif luxury-gradient-text">
+                    {ahrefsData.searchVolume.toLocaleString()}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/50 font-mono mt-1">avg / mo</p>
+                </div>
+                <div className="p-4 rounded-lg border border-amber-400/15 bg-amber-400/5 text-center">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Keyword Difficulty</p>
+                  <p className="text-2xl font-bold font-serif text-amber-400">
+                    {ahrefsData.avgDifficulty}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/50 font-mono mt-1">KD / 100</p>
+                </div>
+                <div className="p-4 rounded-lg border border-emerald-400/15 bg-emerald-400/5 text-center">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Traffic Potential</p>
+                  <p className="text-2xl font-bold font-serif text-emerald-400">
+                    {(ahrefsData.trafficPotential / 1000).toFixed(0)}K
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/50 font-mono mt-1">visits / mo</p>
+                </div>
+                <div className="p-4 rounded-lg border border-chart-2/15 bg-chart-2/5 text-center">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Competition</p>
+                  <p className="text-2xl font-bold font-serif text-chart-2">
+                    {ahrefsData.competition}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/50 font-mono mt-1">score / 100</p>
+                </div>
+              </div>
+              {ahrefsData.easyWins.length > 0 && (
+                <div className="pt-4 border-t border-border">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
+                    Easy Win Keywords <span className="text-primary ml-1">KD &lt; 30</span>
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ahrefsData.easyWins.slice(0, 6).map((k, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full border border-emerald-400/20 bg-emerald-400/5 text-emerald-400/90">
+                        <Zap className="h-2.5 w-2.5" />
+                        {k.keyword}
+                        <span className="opacity-60 ml-0.5">· {k.volume.toLocaleString()}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

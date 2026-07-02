@@ -14,6 +14,7 @@ import { aiService } from "@/lib/ai-provider";
 import { useTrendSummary } from "@/lib/trends-provider";
 import { useRedditSummary, type RedditSummary } from "@/lib/reddit-provider";
 import { useSearchConsoleAnalytics } from "@/lib/search-console-provider";
+import { useAhrefsIntelligence }     from "@/lib/ahrefs-provider";
 
 // ── Placeholder data ──────────────────────────────────────────────────────
 
@@ -30,6 +31,7 @@ const TREND_SOURCES = [
   { name: "TikTok Trends",        status: "Ready",          lastUpdated: "12 min ago", confidence: 94, icon: TrendingUp   },
   { name: "Reddit Insights",      status: "Ready",          lastUpdated: "2h ago",     confidence: 82, icon: MessageSquare},
   { name: "Search Console",       status: "Ready",          lastUpdated: "15 min ago", confidence: 89, icon: Search       },
+  { name: "Ahrefs SEO",          status: "Ready",          lastUpdated: "15 min ago", confidence: 91, icon: BarChart2    },
   { name: "YouTube Trends",       status: "Ready",          lastUpdated: "1h ago",     confidence: 82, icon: Play         },
   { name: "Pinterest Trends",     status: "Connected Soon", lastUpdated: "—",          confidence: 0,  icon: Grid2X2      },
   { name: "Instagram Trends",     status: "Connected Soon", lastUpdated: "—",          confidence: 0,  icon: Camera       },
@@ -242,6 +244,7 @@ export default function ResearchCommandCenter() {
   const { data: trendData, loading: trendLoading }   = useTrendSummary();
   const { data: redditData, loading: redditLoading } = useRedditSummary();
   const { data: gscData,   loading: gscLoading }     = useSearchConsoleAnalytics();
+  const { data: ahrefsData, loading: ahrefsLoading } = useAhrefsIntelligence();
 
   const filteredKeywords = savedKeywords.filter(k =>
     k.word.toLowerCase().includes(keywordSearch.toLowerCase()),
@@ -754,6 +757,212 @@ export default function ResearchCommandCenter() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── SECTION 2.8: SEO Intelligence (Ahrefs) ── */}
+      <div className="luxury-card p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <BarChart2 className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">SEO Intelligence</h2>
+          {(ahrefsData || ahrefsLoading) && (
+            <span className={`ml-2 text-[9px] font-mono uppercase px-2 py-0.5 rounded border ${
+              ahrefsData?.source === "live"
+                ? "text-emerald-400 border-emerald-400/25 bg-emerald-400/10"
+                : "text-muted-foreground border-border bg-muted/20"
+            }`}>
+              <span className={`inline-block h-1.5 w-1.5 rounded-full mr-1 align-middle ${ahrefsData?.source === "live" ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground/40"}`} />
+              Ahrefs · {ahrefsLoading ? "Loading" : (ahrefsData?.source ?? "fallback")}
+            </span>
+          )}
+          {ahrefsLoading && <RefreshCw className="h-3 w-3 text-muted-foreground/40 animate-spin" />}
+          {ahrefsData && (
+            <span className="ml-auto text-[10px] font-mono text-muted-foreground/50">
+              SEO score {ahrefsData.seoOpportunityScore}/100 · KD avg {ahrefsData.avgDifficulty}
+            </span>
+          )}
+        </div>
+
+        {/* Overview metrics */}
+        {ahrefsData && (
+          <div className="mb-5 p-4 rounded-lg border border-border bg-black/10">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Search Volume</p>
+                <p className="text-xl font-bold font-serif luxury-gradient-text">{ahrefsData.searchVolume.toLocaleString()}</p>
+                <p className="text-[9px] font-mono text-muted-foreground/40 mt-0.5">avg / mo</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Keyword Difficulty</p>
+                <p className="text-xl font-bold font-serif text-amber-400">{ahrefsData.avgDifficulty}/100</p>
+                <p className="text-[9px] font-mono text-muted-foreground/40 mt-0.5">avg KD</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Traffic Potential</p>
+                <p className="text-xl font-bold font-serif text-emerald-400">{(ahrefsData.trafficPotential / 1000).toFixed(0)}K</p>
+                <p className="text-[9px] font-mono text-muted-foreground/40 mt-0.5">visits / mo</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Competition</p>
+                <p className="text-xl font-bold font-serif text-chart-2">{ahrefsData.competition}/100</p>
+                <p className="text-[9px] font-mono text-muted-foreground/40 mt-0.5">score</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+          {/* Column 1: Keyword Opportunities + Easy Wins */}
+          <div className="space-y-5">
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                <BarChart2 className="h-3.5 w-3.5 text-primary" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-primary">Keyword Opportunities</p>
+              </div>
+              {(ahrefsData?.keywordOpportunities ?? []).slice(0, 5).map((k, i) => (
+                <div key={i}>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className="text-xs text-foreground truncate pr-2 max-w-[150px]">{k.keyword}</p>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-[10px] font-mono text-primary">{k.volume.toLocaleString()}</span>
+                      <span className={`text-[9px] font-mono ${k.difficulty < 30 ? "text-emerald-400" : k.difficulty < 60 ? "text-amber-400" : "text-red-400"}`}>
+                        KD {k.difficulty}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="h-1 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary/50 rounded-full"
+                      style={{ width: `${Math.round((k.volume / ((ahrefsData?.keywordOpportunities[0]?.volume) || 1)) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {!ahrefsData && <p className="text-xs text-muted-foreground/50 italic">Loading keyword data…</p>}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                <Zap className="h-3.5 w-3.5 text-emerald-400" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-emerald-400">Easy Wins <span className="text-muted-foreground font-normal">KD &lt; 30</span></p>
+              </div>
+              {(ahrefsData?.easyWins ?? []).slice(0, 4).map((k, i) => (
+                <div key={i} className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-foreground truncate pr-2 max-w-[150px]">{k.keyword}</p>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className="text-[9px] font-mono text-muted-foreground">{k.volume.toLocaleString()} vol</span>
+                    <span className="text-[10px] font-mono text-emerald-400">KD {k.difficulty}</span>
+                  </div>
+                </div>
+              ))}
+              {!ahrefsData && <p className="text-xs text-muted-foreground/50 italic">Loading…</p>}
+            </div>
+          </div>
+
+          {/* Column 2: Difficult Keywords + Competitor Gap */}
+          <div className="space-y-5">
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                <AlertCircle className="h-3.5 w-3.5 text-red-400" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-red-400">Difficult Keywords <span className="text-muted-foreground font-normal">KD &gt; 55</span></p>
+              </div>
+              {(ahrefsData?.difficultKeywords ?? []).slice(0, 4).map((k, i) => (
+                <div key={i} className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-foreground truncate pr-2 max-w-[150px]">{k.keyword}</p>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className="text-[9px] font-mono text-muted-foreground">{k.volume.toLocaleString()} vol</span>
+                    <span className="text-[10px] font-mono text-red-400">KD {k.difficulty}</span>
+                  </div>
+                </div>
+              ))}
+              {!ahrefsData && <p className="text-xs text-muted-foreground/50 italic">Loading…</p>}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                <Target className="h-3.5 w-3.5 text-chart-2" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-chart-2">Competitor Gap</p>
+              </div>
+              {(ahrefsData?.competitorGap ?? []).slice(0, 3).map((c, i) => (
+                <div key={i} className="mb-3">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className="text-xs text-foreground truncate pr-2 max-w-[140px]">{c.domain}</p>
+                    <span className="text-[10px] font-mono text-chart-2 flex-shrink-0">{c.opportunities} opps</span>
+                  </div>
+                  <div className="h-1 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-chart-2/50 rounded-full"
+                      style={{ width: `${Math.min(100, Math.round((c.opportunities / 300) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {!ahrefsData && <p className="text-xs text-muted-foreground/50 italic">Loading…</p>}
+            </div>
+          </div>
+
+          {/* Column 3: Top Pages + Backlink Opportunities */}
+          <div className="space-y-5">
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                <Star className="h-3.5 w-3.5 text-amber-400" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-amber-400">Top Pages</p>
+              </div>
+              {(ahrefsData?.topPages ?? []).slice(0, 4).map((p, i) => (
+                <div key={i} className="mb-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-foreground truncate pr-2 max-w-[140px]">{p.url}</p>
+                    <span className="text-[10px] font-mono text-amber-400 flex-shrink-0">
+                      {p.traffic.toLocaleString()} visits
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground/50 mt-0.5 truncate">{p.topKeyword}</p>
+                </div>
+              ))}
+              {!ahrefsData && <p className="text-xs text-muted-foreground/50 italic">Loading…</p>}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                <ExternalLink className="h-3.5 w-3.5 text-primary" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-primary">Backlink Opportunities</p>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {(ahrefsData?.backlinkOpportunities ?? []).slice(0, 6).map((domain, i) => (
+                  <span key={i} className="text-[9px] px-2 py-0.5 rounded-full border border-primary/20 bg-primary/5 text-foreground/70">
+                    {domain}
+                  </span>
+                ))}
+              </div>
+              {!ahrefsData && <p className="text-xs text-muted-foreground/50 italic">Loading…</p>}
+              {/* Domain Rating summary */}
+              {ahrefsData && (
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="p-2 rounded-lg border border-border bg-muted/10 text-center">
+                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground">Domain Rating</p>
+                    <p className="text-base font-bold font-serif luxury-gradient-text">{ahrefsData.domainRating}</p>
+                  </div>
+                  <div className="p-2 rounded-lg border border-border bg-muted/10 text-center">
+                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground">Ref. Domains</p>
+                    <p className="text-base font-bold font-serif text-chart-2">{ahrefsData.referringDomains.toLocaleString()}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Parent Topics */}
+        {ahrefsData && ahrefsData.parentTopics.length > 0 && (
+          <div className="mt-5 pt-4 border-t border-border">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Parent Topics</p>
+            <div className="flex flex-wrap gap-2">
+              {ahrefsData.parentTopics.map((topic, i) => (
+                <span key={i} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border border-primary/20 bg-primary/5 text-foreground/80">
+                  <Hash className="h-3 w-3 text-primary opacity-60" />
+                  {topic}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── SECTION 3: Opportunity Discovery ── */}
