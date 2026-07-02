@@ -26,6 +26,7 @@ import { useRedditSummary }    from "@/lib/reddit-provider";
 import { useAhrefsIntelligence }    from "@/lib/ahrefs-provider";
 import { useSearchConsoleAnalytics } from "@/lib/search-console-provider";
 import { aiService, type BriefResult } from "@/lib/ai-provider";
+import { useIntelligenceStatus } from "@/lib/intelligence-service";
 import {
   checkSupabaseConnection,
   fetchWorkspaceStatsFromCloud,
@@ -192,6 +193,9 @@ export default function ExecutiveCommandCenter() {
   const [cmdLoading, setCmdLoading] = useState(false);
   const [cmdSuggestionIdx, setCmdSuggestionIdx] = useState<number | null>(null);
 
+  // Intelligence Service Layer — real provider health
+  const { providers: liveProviders } = useIntelligenceStatus();
+
   // Mission checklist overrides (user-toggled)
   const [missionOver, setMissionOver] = useState<Record<number, boolean>>({});
 
@@ -223,8 +227,18 @@ export default function ExecutiveCommandCenter() {
     setCmdLoading(true);
     setCmdResult(null);
     try {
-      const result = await aiService.generateText(`You are TLIS, a luxury TikTok intelligence system. Answer concisely for a luxury creator CEO: ${q}`);
-      setCmdResult(result.text);
+      const res = await fetch("/api/intelligence/command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command: q }),
+      });
+      const data = await res.json() as { response?: string; provider?: string; model?: string; error?: string };
+      if (!res.ok || data.error) {
+        setCmdResult(`Unable to process: ${data.error ?? "unknown error"}`);
+      } else {
+        const providerTag = data.provider ? ` [${data.provider}]` : "";
+        setCmdResult((data.response ?? "") + (providerTag ? `\n\n_Powered by ${data.provider}${data.model ? ` / ${data.model}` : ""}_` : ""));
+      }
     } catch (e: any) {
       setCmdResult(`Unable to process: ${e?.message ?? "unknown error"}`);
     } finally {
@@ -281,22 +295,38 @@ export default function ExecutiveCommandCenter() {
   const integrations = useMemo<Integration[]>(() => {
     const tSrc = trendData?.source;
     const rSrc = redditData?.source;
+
+    // Map real provider health → Integration status string
+    const aiStatus = (id: string): Integration["status"] => {
+      const p = liveProviders.find(p => p.id === id);
+      if (!p) return "Disconnected";
+      switch (p.status) {
+        case "connected":    return "Connected";
+        case "unconfigured": return "Configure";
+        case "rate_limited": return "Fallback";
+        case "initializing": return "Disconnected";
+        default:             return "Disconnected";
+      }
+    };
+
     return [
-      { name: "Gemini",               category: "AI",       status: "Connected"    },
-      { name: "OpenAI",               category: "AI",       status: "Disconnected" },
-      { name: "Claude",               category: "AI",       status: "Disconnected" },
-      { name: "DeepSeek",             category: "AI",       status: "Disconnected" },
-      { name: "Google Trends",        category: "Research", status: (tSrc && tSrc !== "fallback") ? "Connected" : "Fallback" },
-      { name: "Google Search Console",category: "Research", status: gscData?.authenticated ? "Connected" : "Configure"      },
-      { name: "Ahrefs",               category: "Research", status: ahrefsData?.authenticated ? "Connected" : "Configure"    },
-      { name: "SEMrush",              category: "Research", status: "Disconnected"  },
-      { name: "Reddit",               category: "Social",   status: (rSrc && rSrc !== "fallback") ? "Connected" : "Fallback" },
-      { name: "TikTok",               category: "Social",   status: accounts.length > 0 ? "Connected" : "Disconnected"       },
-      { name: "Instagram",            category: "Social",   status: "Disconnected"  },
-      { name: "YouTube",              category: "Social",   status: "Disconnected"  },
-      { name: "Pinterest",            category: "Social",   status: "Disconnected"  },
+      { name: "Gemini",                category: "AI",       status: liveProviders.length ? aiStatus("gemini")   : "Connected"    },
+      { name: "OpenAI",                category: "AI",       status: liveProviders.length ? aiStatus("openai")   : "Disconnected"  },
+      { name: "Claude",                category: "AI",       status: liveProviders.length ? aiStatus("claude")   : "Disconnected"  },
+      { name: "DeepSeek",              category: "AI",       status: liveProviders.length ? aiStatus("deepseek") : "Disconnected"  },
+      { name: "Grok",                  category: "AI",       status: liveProviders.length ? aiStatus("grok")     : "Disconnected"  },
+      { name: "Mistral",               category: "AI",       status: liveProviders.length ? aiStatus("mistral")  : "Disconnected"  },
+      { name: "Google Trends",         category: "Research", status: (tSrc && tSrc !== "fallback") ? "Connected" : "Fallback"      },
+      { name: "Google Search Console", category: "Research", status: gscData?.authenticated ? "Connected" : "Configure"           },
+      { name: "Ahrefs",                category: "Research", status: ahrefsData?.authenticated ? "Connected" : "Configure"        },
+      { name: "SEMrush",               category: "Research", status: "Disconnected"                                               },
+      { name: "Reddit",                category: "Social",   status: (rSrc && rSrc !== "fallback") ? "Connected" : "Fallback"     },
+      { name: "TikTok",                category: "Social",   status: accounts.length > 0 ? "Connected" : "Disconnected"           },
+      { name: "Instagram",             category: "Social",   status: "Disconnected"                                               },
+      { name: "YouTube",               category: "Social",   status: "Disconnected"                                               },
+      { name: "Pinterest",             category: "Social",   status: "Disconnected"                                               },
     ];
-  }, [trendData, redditData, ahrefsData, gscData, accounts]);
+  }, [trendData, redditData, ahrefsData, gscData, accounts, liveProviders]);
 
   const connectedCount = integrations.filter(i => i.status === "Connected").length;
   const systemHealth   = Math.round(40 + connectedCount * 5 + (dbOk ? 15 : 0));
