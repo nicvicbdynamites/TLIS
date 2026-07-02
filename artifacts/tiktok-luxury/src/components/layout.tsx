@@ -4,7 +4,7 @@ import {
   Sparkles, Activity, CalendarDays, BarChart3, Database,
   Package, UserCircle, Briefcase, UserCheck2,
   LogIn, LogOut, Menu, X, Search, Settings,
-  User, Key, CreditCard, HelpCircle, ChevronUp, Crown, Radio, Layers, BrainCircuit, Plug,
+  User, Key, CreditCard, HelpCircle, ChevronUp, Crown, Radio, Layers, BrainCircuit, Plug, Monitor,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const navItems = [
+  { href: "/command",      label: "Executive Command",      icon: Monitor         },
   { href: "/brief",        label: "Executive Brief",        icon: Crown           },
   { href: "/research",     label: "Research Command",       icon: Radio           },
   { href: "/pipeline",     label: "Intelligence Pipeline",  icon: Layers          },
