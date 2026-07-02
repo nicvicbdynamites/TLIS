@@ -10,6 +10,7 @@ import { useLocation } from "wouter";
 import { useState, useCallback } from "react";
 import { aiService, type BriefResult } from "@/lib/ai-provider";
 import { useTrendSummary } from "@/lib/trends-provider";
+import { useRedditSummary } from "@/lib/reddit-provider";
 
 // ── Greeting ──────────────────────────────────────────────────────────────
 
@@ -231,6 +232,7 @@ export default function ExecutiveBrief() {
   const [briefError, setBriefError]         = useState<string | null>(null);
 
   const { data: trendSummary, loading: trendLoading } = useTrendSummary();
+  const { data: redditSummary }                       = useRedditSummary();
 
   const generateBrief = useCallback(async () => {
     setBriefLoading(true);
@@ -353,6 +355,46 @@ export default function ExecutiveBrief() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+        {/* ── Community Pulse ── */}
+        {redditSummary && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <div className="flex items-center gap-2 mb-3">
+              <MessageCircle className="h-3 w-3 text-chart-5" />
+              <p className="text-[10px] uppercase tracking-widest text-chart-5/70">Community Pulse</p>
+              <span className="ml-auto text-[9px] font-mono text-muted-foreground/40 uppercase tracking-wider">
+                Reddit · {redditSummary.source}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div>
+                <p className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">Sentiment</p>
+                <p className={`text-xs font-semibold font-mono ${
+                  redditSummary.sentiment.overall === "positive" ? "text-emerald-400"
+                  : redditSummary.sentiment.overall === "negative" ? "text-red-400"
+                  : "text-muted-foreground"
+                }`}>
+                  {redditSummary.sentiment.label}
+                  <span className="text-[9px] text-muted-foreground/50 font-normal ml-1">
+                    {redditSummary.sentiment.positive}% pos
+                  </span>
+                </p>
+              </div>
+              <div>
+                <p className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">Discussion Volume</p>
+                <p className="text-xs font-bold font-mono text-chart-5">
+                  {redditSummary.discussionVolume.toLocaleString()}
+                  <span className="text-muted-foreground/50 text-[9px] font-normal"> comments</span>
+                </p>
+              </div>
+              <div className="col-span-2 sm:col-span-1 min-w-0">
+                <p className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">Fastest Growing Topic</p>
+                <p className="text-xs font-semibold text-foreground truncate capitalize">
+                  {redditSummary.fastestGrowingTopic}
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>

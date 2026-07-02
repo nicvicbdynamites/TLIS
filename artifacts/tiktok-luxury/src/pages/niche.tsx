@@ -1,7 +1,8 @@
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
-import { TrendingUp, TrendingDown, Target, Zap, Sparkles, Activity } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Zap, Sparkles, Activity, MessageCircle, Users, Hash, AlertCircle, ThumbsUp } from "lucide-react";
 import { Link } from "wouter";
 import { useTrendSummary } from "@/lib/trends-provider";
+import { useRedditSummary } from "@/lib/reddit-provider";
 
 const niches = [
   { name: "Quiet Luxury Lifestyle", score: 94, demand: "Explosive", competition: "Low", growth: "+312%", status: "hot" },
@@ -54,13 +55,16 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function Niche() {
   const { data: liveTrends, loading: liveTrendsLoading } = useTrendSummary();
+  const { data: redditData, loading: redditLoading }     = useRedditSummary();
 
-  const liveScore = liveTrends?.trendScore;
+  const liveScore     = liveTrends?.trendScore;
+  const communityScore = redditData?.communityInterestScore;
   const stats = [
-    { label: "Niches Tracked",       value: "847",                                                               icon: Target     },
-    { label: "Hot Opportunities",     value: "23",                                                                icon: Zap        },
-    { label: "Trend Score (Live)",    value: liveTrendsLoading ? "…" : liveScore != null ? String(liveScore) : "86.2", icon: Activity   },
-    { label: "Declining Niches",      value: "12",                                                                icon: TrendingDown},
+    { label: "Niches Tracked",         value: "847",                                                                    icon: Target      },
+    { label: "Hot Opportunities",      value: "23",                                                                     icon: Zap         },
+    { label: "Trend Score (Live)",     value: liveTrendsLoading ? "…" : liveScore != null ? String(liveScore) : "86.2", icon: Activity    },
+    { label: "Community Score (Live)", value: redditLoading ? "…" : communityScore != null ? String(communityScore) : "82", icon: MessageCircle },
+    { label: "Declining Niches",       value: "12",                                                                     icon: TrendingDown },
   ];
 
   return (
@@ -71,7 +75,7 @@ export default function Niche() {
         <p className="text-muted-foreground text-sm">AI-identified market gaps with untapped luxury creator potential.</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {stats.map((s, i) => (
           <div key={i} className="luxury-card p-5">
             <div className="flex items-center justify-between mb-3">
@@ -85,6 +89,15 @@ export default function Niche() {
                 liveTrends.growthDirection === "down" ? "text-red-400"     : "text-muted-foreground"
               }`}>
                 {liveTrends.growthDirection === "up" ? "↑ Rising" : liveTrends.growthDirection === "down" ? "↓ Falling" : "→ Stable"}
+              </p>
+            )}
+            {i === 3 && redditData && (
+              <p className={`text-[10px] font-mono mt-1 ${
+                redditData.sentiment.overall === "positive" ? "text-emerald-400"
+                : redditData.sentiment.overall === "negative" ? "text-red-400"
+                : "text-muted-foreground"
+              }`}>
+                {redditData.sentiment.label}
               </p>
             )}
           </div>
@@ -133,6 +146,92 @@ export default function Niche() {
             </div>
           </div>
           <p className="text-[10px] text-muted-foreground/60 mt-3 leading-relaxed">{liveTrends.opportunitySummary}</p>
+        </div>
+      )}
+
+      {/* Community Intelligence */}
+      {redditData && (
+        <div className="luxury-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <MessageCircle className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Community Intelligence</h2>
+            <span className={`ml-2 text-[9px] font-mono uppercase px-2 py-0.5 rounded border ${
+              redditData.source === "live"
+                ? "text-emerald-400 border-emerald-400/25 bg-emerald-400/10"
+                : "text-muted-foreground border-border bg-muted/20"
+            }`}>
+              <span className={`inline-block h-1.5 w-1.5 rounded-full mr-1 align-middle ${redditData.source === "live" ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground/40"}`} />
+              Reddit · {redditData.source}
+            </span>
+            <span className="ml-auto text-[10px] font-mono text-muted-foreground/40">
+              {new Date(redditData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Sentiment */}
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Community Sentiment</p>
+              <div className="space-y-2.5">
+                <div>
+                  <div className="flex justify-between text-[10px] mb-1">
+                    <span className="text-emerald-400">Positive</span>
+                    <span className="font-mono text-emerald-400">{redditData.sentiment.positive}%</span>
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-400 rounded-full transition-all duration-700" style={{ width: `${redditData.sentiment.positive}%` }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-[10px] mb-1">
+                    <span className="text-muted-foreground">Neutral</span>
+                    <span className="font-mono text-muted-foreground">{redditData.sentiment.neutral}%</span>
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-muted-foreground/40 rounded-full transition-all duration-700" style={{ width: `${redditData.sentiment.neutral}%` }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-[10px] mb-1">
+                    <span className="text-red-400">Negative</span>
+                    <span className="font-mono text-red-400">{redditData.sentiment.negative}%</span>
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-red-400 rounded-full transition-all duration-700" style={{ width: `${redditData.sentiment.negative}%` }} />
+                  </div>
+                </div>
+              </div>
+              <p className={`text-[10px] font-mono mt-3 font-semibold ${
+                redditData.sentiment.overall === "positive" ? "text-emerald-400"
+                : redditData.sentiment.overall === "negative" ? "text-red-400"
+                : "text-muted-foreground"
+              }`}>{redditData.sentiment.label}</p>
+            </div>
+            {/* Frequent Topics */}
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Frequent Topics</p>
+              <div className="flex flex-wrap gap-1.5">
+                {redditData.frequentTopics.map((topic, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border border-primary/20 bg-primary/5 text-foreground/80 capitalize">
+                    <Hash className="h-2.5 w-2.5 text-primary opacity-60" />
+                    {topic}
+                  </span>
+                ))}
+              </div>
+            </div>
+            {/* Top Discussion */}
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Top Discussion</p>
+              {redditData.topDiscussions.slice(0, 2).map((post, i) => (
+                <div key={i} className="mb-3">
+                  <p className="text-xs text-foreground leading-snug line-clamp-2">{post.title}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-mono text-primary">↑ {post.score.toLocaleString()}</span>
+                    <span className="text-[9px] text-muted-foreground/60">r/{post.subreddit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

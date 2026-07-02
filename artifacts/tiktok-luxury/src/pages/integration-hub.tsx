@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { useState, useCallback } from "react";
 import { aiService, type ConnectionTestResult } from "@/lib/ai-provider";
+import { useTrendSummary } from "@/lib/trends-provider";
+import { useRedditSummary } from "@/lib/reddit-provider";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -17,10 +19,10 @@ type JobStatus  = "running" | "waiting" | "failed" | "completed";
 // ── Overview ──────────────────────────────────────────────────────────────
 
 const OVERVIEW = {
-  connected:    2,
-  disconnected: 10,
-  apiHealth:    72,
-  lastSync:     "3 min ago",
+  connected:    4,
+  disconnected: 8,
+  apiHealth:    86,
+  lastSync:     "Just now",
   activeJobs:   2,
 };
 
@@ -161,8 +163,8 @@ const SECRETS = [
 // ── System Health ─────────────────────────────────────────────────────────
 
 const SYSTEM_HEALTH_MODULES = [
-  { name: "AI Layer (Gemini)",      health: 97, status: "Connected"    as ConnStatus },
-  { name: "Research Layer",         health: 0,  status: "Disconnected" as ConnStatus },
+  { name: "AI Layer (Gemini)",      health: 97, status: "Connected" as ConnStatus },
+  { name: "Research Layer",         health: 92, status: "Connected" as ConnStatus },
   { name: "Social Layer",           health: 0,  status: "Disconnected" as ConnStatus },
   { name: "Background Jobs",        health: 88, status: "Connected"    as ConnStatus },
   { name: "Database / Storage",     health: 85, status: "Connected"    as ConnStatus },
@@ -221,6 +223,8 @@ export default function IntegrationHub() {
   const [activeJobTab, setActiveJobTab]                            = useState<JobStatus>("running");
   const [testingProvider, setTestingProvider]                      = useState<string | null>(null);
   const [testResults, setTestResults]                              = useState<Record<string, ConnectionTestResult>>({});
+  const { data: trendHubData, loading: trendHubLoading }           = useTrendSummary();
+  const { data: redditHubData, loading: redditHubLoading }         = useRedditSummary();
 
   const handleTest = useCallback(async (name: string) => {
     setTestingProvider(name);
@@ -431,33 +435,95 @@ export default function IntegrationHub() {
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {RESEARCH_PROVIDERS.map(provider => (
-            <div key={provider.name} className="p-4 rounded-lg border border-border hover:border-primary/20 transition-all bg-black/10">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-muted/20">
-                    <provider.icon className="h-4 w-4 text-muted-foreground/60" />
+          {RESEARCH_PROVIDERS.map(provider => {
+            const isGT     = provider.name === "Google Trends";
+            const isReddit = provider.name === "Reddit";
+
+            const liveStatus: ConnStatus =
+              isGT     && trendHubData  ? (trendHubData.source  === "fallback" ? "Error" : "Connected")
+              : isReddit && redditHubData ? (redditHubData.source === "fallback" ? "Error" : "Connected")
+              : provider.status;
+
+            const liveHealth =
+              isGT     && trendHubData  ? trendHubData.trendScore
+              : isReddit && redditHubData ? redditHubData.communityInterestScore
+              : 0;
+
+            const liveSyncStatus =
+              isGT     && trendHubData  ? `${trendHubData.source} · score ${trendHubData.trendScore}/100`
+              : isReddit && redditHubData ? `${redditHubData.source} · interest ${redditHubData.communityInterestScore}/100`
+              : provider.syncStatus;
+
+            const liveLastSync =
+              isGT     && trendHubData  ? new Date(trendHubData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+              : isReddit && redditHubData ? new Date(redditHubData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+              : provider.lastSync;
+
+            const liveLoading = (isGT && trendHubLoading) || (isReddit && redditHubLoading);
+            const isLive      = liveStatus === "Connected";
+            const cacheStatus = isGT ? trendHubData?.source : isReddit ? redditHubData?.source : undefined;
+
+            return (
+              <div key={provider.name} className={`p-4 rounded-lg border transition-all ${
+                isLive
+                  ? "border-emerald-400/20 bg-emerald-400/3 hover:border-emerald-400/35"
+                  : liveStatus === "Error"
+                  ? "border-red-400/15 bg-red-400/3"
+                  : "border-border hover:border-primary/20 bg-black/10"
+              }`}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${isLive ? "bg-emerald-400/10" : "bg-muted/20"}`}>
+                      <provider.icon className={`h-4 w-4 ${isLive ? "text-emerald-400" : "text-muted-foreground/60"}`} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{provider.name}</p>
+                      <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider font-mono">{provider.category}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{provider.name}</p>
-                    <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider font-mono">{provider.category}</p>
-                  </div>
+                  {liveLoading
+                    ? <RefreshCw className="h-3.5 w-3.5 text-primary animate-spin flex-shrink-0" />
+                    : <ConnBadge status={liveStatus} />}
                 </div>
-                <ConnBadge status={provider.status} />
+
+                {isLive && (
+                  <>
+                    <div className="flex justify-between text-[10px] mb-1">
+                      <span className="text-muted-foreground">Health</span>
+                      <span className="font-mono text-emerald-400">{liveHealth}%</span>
+                    </div>
+                    <HealthBar value={liveHealth} />
+                  </>
+                )}
+
+                <div className="flex items-center justify-between text-[10px] mt-3 mb-2">
+                  <span className="text-muted-foreground">Status</span>
+                  <span className={`font-mono truncate max-w-[140px] ${isLive ? "text-emerald-400" : "text-muted-foreground/60"}`}>
+                    {liveSyncStatus}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[10px] mb-2">
+                  <span className="text-muted-foreground">Last Sync</span>
+                  <span className="font-mono text-muted-foreground/60">{liveLastSync}</span>
+                </div>
+                {cacheStatus && (
+                  <div className="flex items-center justify-between text-[10px] mb-3">
+                    <span className="text-muted-foreground">Cache</span>
+                    <span className="font-mono text-primary capitalize">{cacheStatus}</span>
+                  </div>
+                )}
+                {!cacheStatus && <div className="mb-3" />}
+
+                <button className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border transition-all text-[10px] font-semibold uppercase tracking-widest min-h-[40px] ${
+                  isLive
+                    ? "border-emerald-400/20 text-emerald-400 hover:bg-emerald-400/5"
+                    : "border-border hover:border-primary/30 hover:bg-primary/5 text-muted-foreground hover:text-primary"
+                }`}>
+                  <Settings className="h-3 w-3" /> {isLive ? "View Data" : "Configure"}
+                </button>
               </div>
-              <div className="flex items-center justify-between text-[10px] mb-3">
-                <span className="text-muted-foreground">Sync Status</span>
-                <span className="font-mono text-muted-foreground/60">{provider.syncStatus}</span>
-              </div>
-              <div className="flex items-center justify-between text-[10px] mb-4">
-                <span className="text-muted-foreground">Last Sync</span>
-                <span className="font-mono text-muted-foreground/60">{provider.lastSync}</span>
-              </div>
-              <button className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-primary min-h-[40px]">
-                <Settings className="h-3 w-3" /> Configure
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

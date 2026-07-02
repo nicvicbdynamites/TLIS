@@ -12,6 +12,7 @@ import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { aiService } from "@/lib/ai-provider";
 import { useTrendSummary } from "@/lib/trends-provider";
+import { useRedditSummary, type RedditSummary } from "@/lib/reddit-provider";
 
 // ── Placeholder data ──────────────────────────────────────────────────────
 
@@ -26,7 +27,7 @@ const RESEARCH_SUMMARY = {
 const TREND_SOURCES = [
   { name: "Google Trends",       status: "Ready",          lastUpdated: "5 min ago",  confidence: 96, icon: Globe        },
   { name: "TikTok Trends",       status: "Ready",          lastUpdated: "12 min ago", confidence: 94, icon: TrendingUp   },
-  { name: "Reddit Insights",     status: "Ready",          lastUpdated: "2h ago",     confidence: 78, icon: MessageSquare},
+  { name: "Reddit Insights",     status: "Ready",          lastUpdated: "2h ago",     confidence: 82, icon: MessageSquare},
   { name: "YouTube Trends",      status: "Ready",          lastUpdated: "1h ago",     confidence: 82, icon: Play         },
   { name: "Pinterest Trends",    status: "Connected Soon", lastUpdated: "—",          confidence: 0,  icon: Grid2X2      },
   { name: "Instagram Trends",    status: "Connected Soon", lastUpdated: "—",          confidence: 0,  icon: Camera       },
@@ -236,7 +237,8 @@ export default function ResearchCommandCenter() {
   const [aiOutput, setAiOutput]           = useState<string | null>(null);
   const [aiLoading, setAiLoading]         = useState(false);
 
-  const { data: trendData, loading: trendLoading } = useTrendSummary();
+  const { data: trendData, loading: trendLoading }   = useTrendSummary();
+  const { data: redditData, loading: redditLoading } = useRedditSummary();
 
   const filteredKeywords = savedKeywords.filter(k =>
     k.word.toLowerCase().includes(keywordSearch.toLowerCase()),
@@ -433,6 +435,163 @@ export default function ResearchCommandCenter() {
             );
           })}
         </div>
+      </div>
+
+      {/* ── SECTION 2.5: Community Intelligence ── */}
+      <div className="luxury-card p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <MessageSquare className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">Community Intelligence</h2>
+          {(redditData || redditLoading) && (
+            <span className={`ml-2 text-[9px] font-mono uppercase px-2 py-0.5 rounded border ${
+              redditData?.source === "live"
+                ? "text-emerald-400 border-emerald-400/25 bg-emerald-400/10"
+                : "text-muted-foreground border-border bg-muted/20"
+            }`}>
+              <span className={`inline-block h-1.5 w-1.5 rounded-full mr-1 align-middle ${redditData?.source === "live" ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground/40"}`} />
+              Reddit · {redditLoading ? "Loading" : (redditData?.source ?? "fallback")}
+            </span>
+          )}
+          {redditLoading && <RefreshCw className="h-3 w-3 text-muted-foreground/40 animate-spin" />}
+          {redditData && (
+            <span className="ml-auto text-[10px] font-mono text-muted-foreground/50">
+              {redditData.communityInterestScore}/100 interest · {new Date(redditData.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+            </span>
+          )}
+        </div>
+
+        {/* Sentiment Overview Row */}
+        {redditData && (
+          <div className="mb-5 p-4 rounded-lg border border-border bg-black/10">
+            <div className="grid grid-cols-3 gap-4 mb-1">
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5">Positive Sentiment</p>
+                <p className="text-2xl font-bold font-serif text-emerald-400">{redditData.sentiment.positive}%</p>
+                <div className="h-1 bg-muted rounded-full overflow-hidden mt-2">
+                  <div className="h-full bg-emerald-400 rounded-full transition-all duration-700" style={{ width: `${redditData.sentiment.positive}%` }} />
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5">Neutral</p>
+                <p className="text-2xl font-bold font-serif text-muted-foreground">{redditData.sentiment.neutral}%</p>
+                <div className="h-1 bg-muted rounded-full overflow-hidden mt-2">
+                  <div className="h-full bg-muted-foreground/50 rounded-full transition-all duration-700" style={{ width: `${redditData.sentiment.neutral}%` }} />
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5">Negative Sentiment</p>
+                <p className="text-2xl font-bold font-serif text-red-400">{redditData.sentiment.negative}%</p>
+                <div className="h-1 bg-muted rounded-full overflow-hidden mt-2">
+                  <div className="h-full bg-red-400 rounded-full transition-all duration-700" style={{ width: `${redditData.sentiment.negative}%` }} />
+                </div>
+              </div>
+            </div>
+            <p className="text-center text-[10px] text-muted-foreground/50 mt-2 font-mono">
+              Overall: <span className={`font-semibold ${
+                redditData.sentiment.overall === "positive" ? "text-emerald-400"
+                : redditData.sentiment.overall === "negative" ? "text-red-400"
+                : "text-muted-foreground"
+              }`}>{redditData.sentiment.label}</span>
+              &nbsp;·&nbsp; {redditData.discussionVolume.toLocaleString()} total comments
+            </p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {/* Top Discussions */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-border">
+              <Flame className="h-3.5 w-3.5 text-primary" />
+              <p className="text-[10px] uppercase tracking-widest font-semibold text-primary">Top Discussions</p>
+            </div>
+            {(redditData?.topDiscussions ?? []).slice(0, 4).map((post, i) => (
+              <div key={i} className="group">
+                <p className="text-xs text-foreground leading-snug line-clamp-2 group-hover:text-primary/80 transition-colors">{post.title}</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-[10px] font-mono text-primary">↑ {post.score.toLocaleString()}</span>
+                  <span className="text-[10px] text-muted-foreground">{post.numComments} comments</span>
+                  <span className="text-[9px] text-muted-foreground/50 truncate">r/{post.subreddit}</span>
+                </div>
+              </div>
+            ))}
+            {!redditData && (
+              <p className="text-xs text-muted-foreground/50 italic">Loading community data…</p>
+            )}
+          </div>
+
+          {/* Emerging + FAQs */}
+          <div className="space-y-5">
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                <Zap className="h-3.5 w-3.5 text-chart-2" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-chart-2">Emerging Conversations</p>
+              </div>
+              {(redditData?.emergingConversations ?? []).slice(0, 2).map((post, i) => (
+                <div key={i} className="mb-2">
+                  <p className="text-xs text-foreground leading-snug line-clamp-2">{post.title}</p>
+                  <p className="text-[10px] text-muted-foreground font-mono mt-0.5">↑ {post.score.toLocaleString()} · r/{post.subreddit}</p>
+                </div>
+              ))}
+              {!redditData && <p className="text-xs text-muted-foreground/50 italic">Loading…</p>}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                <BookOpen className="h-3.5 w-3.5 text-emerald-400" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-emerald-400">Frequently Asked</p>
+              </div>
+              {(redditData?.faqs ?? []).slice(0, 3).map((faq, i) => (
+                <p key={i} className="text-xs text-muted-foreground leading-snug mb-2 line-clamp-1">
+                  <span className="text-emerald-400 mr-1">?</span>{faq}
+                </p>
+              ))}
+              {!redditData && <p className="text-xs text-muted-foreground/50 italic">Loading…</p>}
+            </div>
+          </div>
+
+          {/* Opinions + Pain Points */}
+          <div className="space-y-5">
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                <MessageSquare className="h-3.5 w-3.5 text-amber-400" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-amber-400">Common Opinions</p>
+              </div>
+              {(redditData?.opinions ?? []).slice(0, 2).map((op, i) => (
+                <p key={i} className="text-xs text-foreground leading-snug mb-2 line-clamp-2 italic">
+                  &ldquo;{op}&rdquo;
+                </p>
+              ))}
+              {!redditData && <p className="text-xs text-muted-foreground/50 italic">Loading…</p>}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                <AlertCircle className="h-3.5 w-3.5 text-red-400" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-red-400">Pain Points</p>
+              </div>
+              {(redditData?.painPoints ?? []).slice(0, 2).map((pain, i) => (
+                <div key={i} className="flex items-start gap-2 mb-2">
+                  <span className="text-red-400 text-xs flex-shrink-0 mt-0.5">•</span>
+                  <p className="text-xs text-muted-foreground leading-snug line-clamp-2">{pain}</p>
+                </div>
+              ))}
+              {!redditData && <p className="text-xs text-muted-foreground/50 italic">Loading…</p>}
+            </div>
+          </div>
+        </div>
+
+        {/* Frequent Topics */}
+        {redditData && redditData.frequentTopics.length > 0 && (
+          <div className="mt-5 pt-4 border-t border-border">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Frequently Discussed Topics</p>
+            <div className="flex flex-wrap gap-2">
+              {redditData.frequentTopics.map((topic, i) => (
+                <span key={i} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border border-primary/20 bg-primary/5 text-foreground/80 capitalize">
+                  <Hash className="h-3 w-3 text-primary opacity-60" />
+                  {topic}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── SECTION 3: Opportunity Discovery ── */}

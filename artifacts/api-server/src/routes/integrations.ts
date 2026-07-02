@@ -7,6 +7,10 @@
  * POST /api/integrations/gemini/research        — structured research result
  * POST /api/integrations/gemini/executive-brief — full creator brief
  * POST /api/integrations/gemini/content-ideas   — 3 viral content ideas
+ *
+ * Gemini research is silently enriched with:
+ *  1. Google Trends live data  (Phase 3.2)
+ *  2. Reddit community data    (Phase 3.3)
  */
 
 import { Router, type IRouter, type Request, type Response } from "express";
@@ -19,7 +23,8 @@ import {
   errorMessage,
   type ContentIdeaParams,
 } from "../services/gemini.js";
-import { getLuxurySummary, formatTrendContext } from "../services/google-trends.js";
+import { getLuxurySummary,      formatTrendContext  } from "../services/google-trends.js";
+import { getLuxuryRedditSummary, formatRedditContext } from "../services/reddit.js";
 
 const router: IRouter = Router();
 
@@ -28,7 +33,6 @@ const router: IRouter = Router();
 router.post("/integrations/gemini/test", async (req: Request, res: Response) => {
   try {
     const result = await testConnection(req.log);
-    // Always 200 — success/failure is inside the result object
     res.json(result);
   } catch (err: any) {
     req.log.error({ err }, "integrations/gemini/test unexpected error");
@@ -62,16 +66,21 @@ router.post("/integrations/gemini/research", async (req: Request, res: Response)
     res.status(400).json({ error: "query is required" }); return;
   }
   try {
-    // Silently enrich with live trend data — non-critical, never blocks the request
-    let trendContext: string | undefined;
-    try {
-      const summary = await getLuxurySummary(req.log);
-      if (summary.source !== "fallback") trendContext = formatTrendContext(summary);
-    } catch {
-      // Trend enrichment is optional — Gemini still runs without it
-    }
+    // Silently enrich with live data — both calls are non-critical, never block
+    const [trendContext, redditContext] = await Promise.all([
+      getLuxurySummary(req.log)
+        .then(s => s.source !== "fallback" ? formatTrendContext(s) : undefined)
+        .catch(() => undefined),
+      getLuxuryRedditSummary(req.log)
+        .then(s => s.source !== "fallback" ? formatRedditContext(s) : undefined)
+        .catch(() => undefined),
+    ]);
 
-    const result = await generateResearch(query.trim(), niche?.trim(), req.log, trendContext);
+    // Combine both contexts into one enrichment string
+    const combined = [trendContext, redditContext].filter(Boolean).join("\n\n");
+    const enrichment = combined.length > 0 ? combined : undefined;
+
+    const result = await generateResearch(query.trim(), niche?.trim(), req.log, enrichment);
     res.json(result);
   } catch (err: any) {
     req.log.error({ err }, "integrations/gemini/research failed");
