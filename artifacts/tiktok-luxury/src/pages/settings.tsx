@@ -111,6 +111,7 @@ export default function SettingsPage() {
 
   // Modules 4/5 — workspace + audit trail
   const [workspaceCtx, setWorkspaceCtx] = useState<MyWorkspaceContext | null>(null);
+  const [workspaceLoading, setWorkspaceLoading] = useState(true);
   const [orgNameDraft, setOrgNameDraft] = useState("");
   const [wsNameDraft, setWsNameDraft]   = useState("");
   const [savingNames, setSavingNames]   = useState(false);
@@ -127,13 +128,14 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!user) return;
+    setWorkspaceLoading(true);
     fetchOrCreateMyWorkspace(user.id).then(ctx => {
       setWorkspaceCtx(ctx);
       if (ctx) {
         setOrgNameDraft(ctx.organization.name);
         setWsNameDraft(ctx.workspace.name);
       }
-    }).catch(() => setWorkspaceCtx(null));
+    }).catch(() => setWorkspaceCtx(null)).finally(() => setWorkspaceLoading(false));
     fetchAuditLog(8).then(setAuditEntries).catch(() => setAuditEntries([]));
   }, [user]);
 
@@ -324,13 +326,19 @@ export default function SettingsPage() {
       {/* ── Workspace (Modules 4/5) ── */}
       <Section id="workspace" icon={Building2} title="Workspace" subtitle="Organization, membership, and account activity">
         <div className="px-5 py-5 space-y-4">
+          {workspaceLoading && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading workspace details...
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-muted-foreground mb-1.5 block">Organization Name</label>
               <input
                 value={orgNameDraft}
                 onChange={e => setOrgNameDraft(e.target.value)}
-                disabled={!canManage}
+                disabled={workspaceLoading || !canManage}
+                placeholder={workspaceLoading ? "Loading..." : undefined}
                 className="w-full bg-muted/20 border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/50 disabled:opacity-60"
               />
             </div>
@@ -339,11 +347,17 @@ export default function SettingsPage() {
               <input
                 value={wsNameDraft}
                 onChange={e => setWsNameDraft(e.target.value)}
-                disabled={!canManage}
+                disabled={workspaceLoading || !canManage}
+                placeholder={workspaceLoading ? "Loading..." : undefined}
                 className="w-full bg-muted/20 border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/50 disabled:opacity-60"
               />
             </div>
           </div>
+          {!workspaceLoading && !canManage && workspaceCtx && (
+            <p className="text-xs text-muted-foreground">
+              Your role ({ROLE_LABELS[workspaceCtx.role]}) does not permit renaming the organization or workspace.
+            </p>
+          )}
           {canManage && (
             <div className="flex items-center gap-3">
               <button
@@ -369,11 +383,6 @@ export default function SettingsPage() {
                 </span>
               )}
             </div>
-          )}
-          {!canManage && (
-            <p className="text-[10px] text-muted-foreground/60">
-              Only Admins and Owners can rename the organization or workspace.
-            </p>
           )}
         </div>
         <Row label="Your Role" sub="Determines what you can manage in this workspace">

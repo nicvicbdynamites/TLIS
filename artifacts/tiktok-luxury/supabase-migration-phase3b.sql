@@ -84,7 +84,10 @@ CREATE POLICY "org_owner_all" ON public.organizations
 
 -- NOTE: the "members of an org may read it" policy is created further below
 -- (section 4), after workspaces/workspace_members exist, since it needs to
--- subquery those tables.
+-- subquery those tables. It is routed through a SECURITY DEFINER helper
+-- (my_member_organization_ids) rather than a raw cross-table subquery — see
+-- the recursion note in section 4 for why a raw subquery here would deadlock
+-- against the workspaces policies.
 
 DROP TRIGGER IF EXISTS set_organizations_updated_at ON public.organizations;
 CREATE TRIGGER set_organizations_updated_at
@@ -156,6 +159,50 @@ $$;
 REVOKE ALL ON FUNCTION public.my_workspace_ids() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.my_workspace_ids() TO authenticated;
 
+-- SECURITY DEFINER helper: returns the caller's OWNED organization ids
+-- without going through RLS on organizations. Required so that the
+-- "workspace_owner_all" policy on workspaces (below) never has to run a raw
+-- subquery against organizations — a raw subquery there evaluates the
+-- organizations RLS policies (including org_member_read, which itself
+-- subqueries workspaces), which re-triggers the workspaces policies being
+-- evaluated in the first place: organizations <-> workspaces mutual
+-- recursion, Postgres error 42P17 "infinite recursion detected in policy".
+-- Routing through this SECURITY DEFINER function breaks the cycle the same
+-- way my_workspace_ids() breaks the workspace_members self-reference above.
+CREATE OR REPLACE FUNCTION public.my_organization_ids()
+RETURNS SETOF UUID
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT id FROM public.organizations WHERE owner_id = auth.uid();
+$$;
+
+REVOKE ALL ON FUNCTION public.my_organization_ids() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.my_organization_ids() TO authenticated;
+
+-- SECURITY DEFINER helper: returns organization ids the caller can reach via
+-- workspace membership, without going through RLS on workspaces. Used by
+-- "org_member_read" (below) for the same reason my_organization_ids() above
+-- is used by "workspace_owner_all" — a raw subquery on workspaces there
+-- would re-trigger the workspaces policies, which subquery organizations,
+-- which would re-trigger this same policy: mutual recursion.
+CREATE OR REPLACE FUNCTION public.my_member_organization_ids()
+RETURNS SETOF UUID
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT w.organization_id
+  FROM public.workspaces w
+  WHERE w.id IN (SELECT public.my_workspace_ids());
+$$;
+
+REVOKE ALL ON FUNCTION public.my_member_organization_ids() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.my_member_organization_ids() TO authenticated;
+
 DROP POLICY IF EXISTS "workspace_member_self" ON public.workspace_members;
 CREATE POLICY "workspace_member_self" ON public.workspace_members
   FOR ALL TO authenticated
@@ -170,27 +217,25 @@ CREATE POLICY "workspace_member_peers_read" ON public.workspace_members
   );
 
 -- Now that workspace_members exists, wire up the org-level "members may
--- read their org" policy deferred from section 2 above.
+-- read their org" policy deferred from section 2 above. Routed through
+-- my_member_organization_ids() — see the recursion note on that function.
 DROP POLICY IF EXISTS "org_member_read" ON public.organizations;
 CREATE POLICY "org_member_read" ON public.organizations
   FOR SELECT TO authenticated
   USING (
-    id IN (
-      SELECT w.organization_id
-      FROM public.workspaces w
-      WHERE w.id IN (SELECT public.my_workspace_ids())
-    )
+    id IN (SELECT public.my_member_organization_ids())
   );
 
--- Workspace read/write scoped to org owner or workspace members
+-- Workspace read/write scoped to org owner or workspace members. Routed
+-- through my_organization_ids() — see the recursion note on that function.
 DROP POLICY IF EXISTS "workspace_owner_all" ON public.workspaces;
 CREATE POLICY "workspace_owner_all" ON public.workspaces
   FOR ALL TO authenticated
   USING (
-    organization_id IN (SELECT id FROM public.organizations WHERE owner_id = auth.uid())
+    organization_id IN (SELECT public.my_organization_ids())
   )
   WITH CHECK (
-    organization_id IN (SELECT id FROM public.organizations WHERE owner_id = auth.uid())
+    organization_id IN (SELECT public.my_organization_ids())
   );
 
 DROP POLICY IF EXISTS "workspace_member_read" ON public.workspaces;
