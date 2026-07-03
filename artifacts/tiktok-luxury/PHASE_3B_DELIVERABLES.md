@@ -49,8 +49,9 @@ Diff stat vs. pre-Phase-3B baseline (commit `9594a28`):
  src/pages/platform-health.tsx               | NEW  (+355) Platform Health page
  src/pages/profile.tsx                       | +148 -8     workspace/preferences card, role display
  src/pages/settings.tsx                      | +258 -18    workspace section, Danger Zone, Export/Import, loading fix
- supabase-migration-phase3b.sql              | NEW  (+540) full idempotent migration (source of truth for schema)
+ supabase-migration-phase3b.sql              | NEW  (+540+) full idempotent migration (source of truth for schema, incl. workspace_members security fix)
  supabase-fix-rls-recursion.sql              | scratch patch file, created+applied+deleted during this session
+ supabase-fix-workspace-member-escalation.sql | scratch patch file, created+applied+verified live+deleted during this session (see Test Report #3); the fix is folded into supabase-migration-phase3b.sql above
 
 20 files changed, 2663 insertions(+), 156 deletions(-)
 ```
@@ -71,7 +72,7 @@ Source of truth: `artifacts/tiktok-luxury/supabase-migration-phase3b.sql` (idemp
 |---|---|---|
 | `organizations` | Top-level tenant | owner via `org_owner_all`; members via `org_member_read` (uses `my_organization_ids()`) |
 | `workspaces` | Org sub-unit | owner via `workspace_owner_all` (uses `my_member_organization_ids()`); members via `workspace_member_read` |
-| `workspace_members` | User↔workspace + per-workspace role | self-row via `workspace_member_self`; peers via `workspace_member_peers_read` (uses `my_workspace_ids()`) |
+| `workspace_members` | User↔workspace + per-workspace role | `workspace_member_self_read`/`_insert`/`_delete` (self-row only, insert scoped to a workspace the caller owns via `my_owned_workspace_ids()`) + `workspace_member_owner_manage` (org owner full control); peers via `workspace_member_peers_read` (uses `my_workspace_ids()`) — see Test Report #3 for why the original single self-policy was replaced |
 | `projects` | Workspace sub-unit | `project_workspace_member` |
 | `audit_logs` | Action trail (user, action, module, provider, duration, status, tokens, cost) | `auth_own_audit_logs` / `anon_unowned_audit_logs` |
 | `executive_briefs`, `automation_history`, `research_sessions`, `alerts`, `notifications`, `usage_events` | Cloud sync for previously localStorage-only data | `auth_own_*` / `anon_unowned_*` (cloud-wins) |
@@ -126,10 +127,13 @@ Source of truth: `artifacts/tiktok-luxury/supabase-migration-phase3b.sql` (idemp
 
 1. **RLS infinite recursion (Postgres 42P17)** between `organizations` and `workspaces` policies — cross-table mutual recursion (table A's policy subqueried table B, and vice versa), not a self-reference, so it wasn't caught by the original self-recursion audit. Symptom: Settings → Workspace fields stuck permanently disabled, `fetchOrCreateMyWorkspace` failed silently. Fixed via `my_organization_ids()` / `my_member_organization_ids()` `SECURITY DEFINER` helpers. Verified via direct REST simulation (workspace_members/workspaces/organizations/peers-read all 200, previously 500) and confirmed by full e2e re-run.
 2. **`fetchRecentActivityFromCloud` TypeError** (`q.eq is not a function`) — `.eq()` was called on the raw `.from()` query builder before `.select()` was chained; Supabase JS v2 only exposes `.eq()` after `.select()`/`.update()`/etc. This silently broke the dashboard's Recent Activity widget on every load. Fixed by reordering to `.select(...).eq("user_id", userId)...` across all 5 parallel sub-queries.
+3. **Cross-tenant privilege escalation via `workspace_members`** (found by an architect review pass after the two fixes above, before this phase was called done) — the original `workspace_member_self` policy was `FOR ALL USING/WITH CHECK (auth.uid() = user_id)` with no constraint on `workspace_id` or `role`. Any authenticated user could INSERT a membership row granting themselves `role='owner'` in any workspace whose UUID they learned (unlocking that workspace, its parent org, its projects, and peer member rows), and an existing member could UPDATE their own role to escalate privileges. Fixed by splitting it into `workspace_member_self_read` (SELECT own row), `workspace_member_self_insert` (INSERT own row, but only into a workspace the caller already owns via their organization — matches the exact auto-provisioning flow), `workspace_member_self_delete` (leave a workspace), and a new `workspace_member_owner_manage` (org owners may fully manage member rows, including role changes, for workspaces they own) — all routed through a new `my_owned_workspace_ids()` `SECURITY DEFINER` helper. Applied live via `supabase-fix-workspace-member-escalation.sql` and verified by inspecting the resulting `pg_policy` rows (exactly the 5 expected policies, old permissive one gone) plus a full e2e regression re-run confirming the existing owner's read/rename/save flow is unaffected.
 
-**Final e2e run: PASS.** Confirmed: login → dashboard renders → Settings → Workspace section loads within a few seconds, fields become enabled, role badge shows "Owner" → rename+save → "Saved" confirmation with checkmark, no errors.
+**Final e2e run: PASS** (twice — once after bugs #1/#2, once more after the #3 security tightening). Confirmed: login → dashboard renders → Settings → Workspace section loads within a few seconds, fields become enabled, role badge shows "Owner" → rename+save → "Saved" confirmation with checkmark, no errors.
 
 **Typecheck:** clean across all 4 checked packages (`api-server`, `mockup-sandbox`, `tiktok-luxury`, `scripts`) as of the final change in this phase.
+
+**Independent review:** an architect (code-review) subagent pass was run against the two bug fixes and the overall Phase 3B surface before sign-off. It confirmed the RLS recursion fix has zero remaining cycles in the policy graph, confirmed no other Supabase query-builder ordering bugs exist anywhere else in the codebase (all ~65 call sites checked), confirmed the `RequireAuth`/`ErrorBoundary` gates have no functional gaps, and is what surfaced the privilege-escalation issue (#3 above) that has since been fixed and re-verified.
 
 **Not covered / residual gaps:**
 - Console-error absence on the dashboard could not be *conclusively* re-verified by the automated test tooling on the final run (a known tooling limitation, not a reported failure) — mitigated by direct code review confirming the fix is a correct, minimal reordering matching the Supabase JS v2 API, and by the fact the same test tooling *did* catch this exact error before the fix.
@@ -142,7 +146,7 @@ Source of truth: `artifacts/tiktok-luxury/supabase-migration-phase3b.sql` (idemp
 
 **Green:**
 - TypeScript strict, zero errors across the workspace.
-- RLS is the real security boundary on every new and existing user-data table; verified no self- or cross-table recursion remains.
+- RLS is the real security boundary on every new and existing user-data table; verified no self- or cross-table recursion remains, and the `workspace_members` cross-tenant privilege-escalation hole found during architect review (Test Report #3) has been fixed and re-verified live.
 - Auth gate (`RequireAuth`) added last, after full e2e verification, so no route was ever exposed unauthenticated during development.
 - `ErrorBoundary` wraps the whole app — a component crash degrades to a fallback UI instead of a blank screen.
 - Zod validation on auth/settings forms rejects malformed input client-side before it reaches Supabase.
@@ -155,7 +159,7 @@ Source of truth: `artifacts/tiktok-luxury/supabase-migration-phase3b.sql` (idemp
 - No automated CI is wired up yet for the `typecheck`/e2e steps — currently a manual pre-ship habit.
 - The Reddit and Google Trends `dailyTrending` integrations are logging fallback/warning states in the API server logs (pre-existing, upstream API friction — not part of this phase's scope, but worth triage before a hard launch since they affect the Executive Command Center's live-data claims).
 
-**Red:** none identified that block a soft launch.
+**Red:** none outstanding. One was found and closed during this phase's own review cycle — the `workspace_members` cross-tenant privilege-escalation hole (Test Report #3) — before sign-off, rather than being deferred.
 
 ---
 

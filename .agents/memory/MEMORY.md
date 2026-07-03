@@ -1,4 +1,5 @@
 - [TLIS Research Provider Architecture](tlis-module13.md) — How Google Trends (and future providers) are wired: service + routes + frontend hook + Gemini enrichment pattern
-- [TLIS Supabase auth pattern](tlis-supabase-auth.md) — getAuthUserId()/getDeviceId() used for RLS; vaultEntryToRow/calendarPostToRow are module-private helpers
+- [TLIS Supabase auth pattern](supabase-rls-user-id.md) — getAuthUserId()/getDeviceId() used for RLS; every write payload needs user_id or the policy rejects it
+- [RLS self-ownership escalation on membership tables](supabase-rls-membership-escalation.md) — a `FOR ALL USING (auth.uid()=user_id)` policy on a junction/membership table lets users self-insert into ANY parent row they can guess the UUID of
 - [TLIS Integration Core architecture](tlis-integration-core.md) — centralized provider registry pattern + scheduler warm-up staleness pitfall on restart
 - [Supabase RLS recursion (self + cross-table)](supabase-rls-recursion.md) — 42P17 from a policy subquerying its own table OR two tables' policies subquerying each other; use SECURITY DEFINER helpers
