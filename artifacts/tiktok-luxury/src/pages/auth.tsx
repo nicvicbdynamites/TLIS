@@ -4,6 +4,7 @@ import { Eye, EyeOff, LogIn, UserPlus, KeyRound, CheckCircle, AlertCircle, Loade
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { signInSchema, signUpSchema, newPasswordSchema, emailSchema, firstIssueMessage } from "@/lib/validation";
 
 type Tab = "login" | "signup" | "reset" | "newpass";
 
@@ -68,10 +69,19 @@ function SubmitButton({
   );
 }
 
+// Dedicated auth routes (Module 1) all render this same page — the path
+// only selects which tab starts active. The canonical /login route (used
+// for Supabase email redirects) always starts on "login".
+function initialTabFromPath(path: string): Tab {
+  if (path === "/auth/register") return "signup";
+  if (path === "/auth/forgot-password") return "reset";
+  return "login";
+}
+
 export default function AuthPage() {
   const { user, loading: authLoading, signIn, signUp, resetPassword, setNewPassword } = useAuth();
-  const [, navigate] = useLocation();
-  const [tab, setTab]               = useState<Tab>("login");
+  const [location, navigate] = useLocation();
+  const [tab, setTab]               = useState<Tab>(() => initialTabFromPath(location));
   const [email, setEmail]           = useState("");
   const [password, setPassword]     = useState("");
   const [confirmPass, setConfirmPass] = useState("");
@@ -135,8 +145,10 @@ export default function AuthPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const parsed = signInSchema.safeParse({ email, password });
+    if (!parsed.success) { setError(firstIssueMessage(parsed)); return; }
     setSubmitting(true);
-    const err = await signIn(email, password);
+    const err = await signIn(parsed.data.email, parsed.data.password);
     setSubmitting(false);
     if (err) { setError(err); return; }
     navigate("/command");
@@ -145,10 +157,10 @@ export default function AuthPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (password !== confirmPass) { setError("Passwords do not match."); return; }
-    if (password.length < 8)     { setError("Password must be at least 8 characters."); return; }
+    const parsed = signUpSchema.safeParse({ email, password, confirmPassword: confirmPass });
+    if (!parsed.success) { setError(firstIssueMessage(parsed)); return; }
     setSubmitting(true);
-    const err = await signUp(email, password);
+    const err = await signUp(parsed.data.email, parsed.data.password);
     setSubmitting(false);
     if (err) { setError(err); return; }
     setSuccess("Check your email to confirm your account, then sign in.");
@@ -157,8 +169,10 @@ export default function AuthPage() {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const parsed = emailSchema.safeParse(email);
+    if (!parsed.success) { setError(firstIssueMessage(parsed)); return; }
     setSubmitting(true);
-    const err = await resetPassword(email);
+    const err = await resetPassword(parsed.data);
     setSubmitting(false);
     if (err) { setError(err); return; }
     setSuccess("Password reset link sent. Check your inbox.");
@@ -167,10 +181,10 @@ export default function AuthPage() {
   const handleSetNewPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (password !== confirmPass) { setError("Passwords do not match."); return; }
-    if (password.length < 8)     { setError("Password must be at least 8 characters."); return; }
+    const parsed = newPasswordSchema.safeParse({ password, confirmPassword: confirmPass });
+    if (!parsed.success) { setError(firstIssueMessage(parsed)); return; }
     setSubmitting(true);
-    const err = await setNewPassword(password);
+    const err = await setNewPassword(parsed.data.password);
     setSubmitting(false);
     if (err) { setError(err); return; }
     setSuccess("Password updated. Redirecting…");

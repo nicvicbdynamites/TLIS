@@ -5,6 +5,7 @@ import {
   Package, UserCircle, Briefcase, UserCheck2,
   LogIn, LogOut, Menu, X, Search, Settings,
   User, Key, CreditCard, HelpCircle, ChevronUp, Crown, Radio, Layers, BrainCircuit, Plug, Monitor,
+  ScrollText, HeartPulse,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,8 @@ const navItems = [
   { href: "/workspace",    label: "TikTok Workspace",       icon: Briefcase       },
   { href: "/accounts",     label: "TikTok Accounts",        icon: UserCheck2      },
   { href: "/profile",      label: "User Profile",           icon: UserCircle      },
+  { href: "/audit-log",    label: "Audit Log",              icon: ScrollText      },
+  { href: "/platform-health", label: "Platform Health",     icon: HeartPulse      },
 ];
 
 // ── User dropdown ─────────────────────────────────────────────────────────
@@ -54,7 +57,7 @@ function UserDropdown({ onNavigate }: { onNavigate: (href: string) => void }) {
     setSigningOut(true);
     await signOut();
     setSigningOut(false);
-    onNavigate("/");
+    onNavigate("/login");
   };
 
   if (loading) {

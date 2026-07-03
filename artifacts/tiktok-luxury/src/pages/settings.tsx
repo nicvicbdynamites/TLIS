@@ -1,9 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Settings, Palette, Bell, Key, User, Info,
-  Shield, Moon, Sun, Laptop, Check,
+  Shield, Moon, Sun, Laptop, Check, Building2, Users, Save, Activity, Loader2,
+  Download, AlertTriangle, Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
+import { fetchOrCreateMyWorkspace, renameOrganization, renameWorkspace, type MyWorkspaceContext } from "@/lib/organization";
+import { fetchAuditLog, logAudit, type AuditLogEntry } from "@/lib/audit";
+import { ROLE_LABELS, canManageMembers } from "@/lib/rbac";
+import { exportAllMyData, downloadExportedData, deleteAllMyContent } from "@/lib/account-data";
+import { orgOrWorkspaceNameSchema, firstIssueMessage } from "@/lib/validation";
 
 // ── Section wrapper ────────────────────────────────────────────────────────
 
@@ -90,6 +97,7 @@ function ThemeOption({ value, current, label, icon: Icon, onClick }: {
 // ── Main page ──────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
+  const { user, signOut } = useAuth();
   const [notify, setNotify] = useState({
     generation:  true,
     sync:        true,
@@ -101,12 +109,102 @@ export default function SettingsPage() {
   const [language, setLanguage] = useState("en");
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
 
+  // Modules 4/5 — workspace + audit trail
+  const [workspaceCtx, setWorkspaceCtx] = useState<MyWorkspaceContext | null>(null);
+  const [orgNameDraft, setOrgNameDraft] = useState("");
+  const [wsNameDraft, setWsNameDraft]   = useState("");
+  const [savingNames, setSavingNames]   = useState(false);
+  const [namesSaved, setNamesSaved]     = useState(false);
+  const [namesError, setNamesError]     = useState<string | null>(null);
+  const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>([]);
+
+  // Module 7 — export + danger zone
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteResult, setDeleteResult] = useState<{ success: boolean; errors: string[] } | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchOrCreateMyWorkspace(user.id).then(ctx => {
+      setWorkspaceCtx(ctx);
+      if (ctx) {
+        setOrgNameDraft(ctx.organization.name);
+        setWsNameDraft(ctx.workspace.name);
+      }
+    }).catch(() => setWorkspaceCtx(null));
+    fetchAuditLog(8).then(setAuditEntries).catch(() => setAuditEntries([]));
+  }, [user]);
+
+  const canManage = canManageMembers(workspaceCtx?.role);
+
+  const handleSaveNames = useCallback(async () => {
+    if (!workspaceCtx) return;
+    setNamesError(null);
+    const orgParsed = orgOrWorkspaceNameSchema.safeParse(orgNameDraft);
+    if (!orgParsed.success) { setNamesError(firstIssueMessage(orgParsed)); return; }
+    const wsParsed = orgOrWorkspaceNameSchema.safeParse(wsNameDraft);
+    if (!wsParsed.success) { setNamesError(firstIssueMessage(wsParsed)); return; }
+    setSavingNames(true);
+    setNamesSaved(false);
+    const [orgOk, wsOk] = await Promise.all([
+      orgNameDraft !== workspaceCtx.organization.name
+        ? renameOrganization(workspaceCtx.organization.id, orgNameDraft)
+        : Promise.resolve(true),
+      wsNameDraft !== workspaceCtx.workspace.name
+        ? renameWorkspace(workspaceCtx.workspace.id, wsNameDraft)
+        : Promise.resolve(true),
+    ]);
+    setSavingNames(false);
+    if (orgOk && wsOk) {
+      setWorkspaceCtx(prev => prev ? {
+        ...prev,
+        organization: { ...prev.organization, name: orgNameDraft },
+        workspace: { ...prev.workspace, name: wsNameDraft },
+      } : prev);
+      setNamesSaved(true);
+      setTimeout(() => setNamesSaved(false), 2500);
+      void logAudit({ action: "Renamed organization/workspace", module: "workspace" });
+    }
+  }, [workspaceCtx, orgNameDraft, wsNameDraft]);
+
+  const handleExportData = useCallback(async () => {
+    if (!user) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const data = await exportAllMyData(user.id);
+      downloadExportedData(data);
+      void logAudit({ action: "Exported account data", module: "settings" });
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : "Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  }, [user]);
+
+  const handleDeleteContent = useCallback(async () => {
+    if (!user || deleteConfirmText !== "DELETE") return;
+    setDeleting(true);
+    setDeleteResult(null);
+    const result = await deleteAllMyContent(user.id);
+    setDeleting(false);
+    setDeleteResult(result);
+    if (result.success) {
+      setDeleteConfirmText("");
+      setTimeout(() => { void signOut(); }, 1500);
+    }
+  }, [user, deleteConfirmText, signOut]);
+
   const sections = [
     { id: "general",      icon: Settings, label: "General"            },
     { id: "appearance",   icon: Palette,  label: "Appearance"         },
     { id: "notifications",icon: Bell,     label: "Notifications"      },
+    { id: "workspace",    icon: Building2,label: "Workspace"          },
     { id: "api-keys",     icon: Key,      label: "API Keys"           },
     { id: "account",      icon: User,     label: "Account Preferences"},
+    { id: "data-privacy", icon: Shield,   label: "Data & Privacy"     },
     { id: "version",      icon: Info,     label: "Version Info"       },
   ];
 
@@ -223,6 +321,94 @@ export default function SettingsPage() {
         </Row>
       </Section>
 
+      {/* ── Workspace (Modules 4/5) ── */}
+      <Section id="workspace" icon={Building2} title="Workspace" subtitle="Organization, membership, and account activity">
+        <div className="px-5 py-5 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">Organization Name</label>
+              <input
+                value={orgNameDraft}
+                onChange={e => setOrgNameDraft(e.target.value)}
+                disabled={!canManage}
+                className="w-full bg-muted/20 border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/50 disabled:opacity-60"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">Workspace Name</label>
+              <input
+                value={wsNameDraft}
+                onChange={e => setWsNameDraft(e.target.value)}
+                disabled={!canManage}
+                className="w-full bg-muted/20 border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/50 disabled:opacity-60"
+              />
+            </div>
+          </div>
+          {canManage && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSaveNames}
+                disabled={savingNames || !workspaceCtx}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition duration-200",
+                  savingNames
+                    ? "opacity-50 cursor-not-allowed bg-primary/10 text-primary"
+                    : "bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30"
+                )}
+              >
+                {savingNames
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</>
+                  : <><Save className="h-3.5 w-3.5" /> Save</>}
+              </button>
+              {namesError && (
+                <span className="text-xs text-red-400">{namesError}</span>
+              )}
+              {namesSaved && (
+                <span className="flex items-center gap-1.5 text-xs text-primary">
+                  <Check className="h-3.5 w-3.5" /> Saved
+                </span>
+              )}
+            </div>
+          )}
+          {!canManage && (
+            <p className="text-[10px] text-muted-foreground/60">
+              Only Admins and Owners can rename the organization or workspace.
+            </p>
+          )}
+        </div>
+        <Row label="Your Role" sub="Determines what you can manage in this workspace">
+          <span className="text-[10px] px-2 py-0.5 rounded-full border font-medium text-primary border-primary/30 bg-primary/10">
+            {workspaceCtx ? ROLE_LABELS[workspaceCtx.role] : "—"}
+          </span>
+        </Row>
+        <Row label="Members" sub="People with access to this workspace">
+          <span className="flex items-center gap-1.5 text-xs text-foreground">
+            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+            {workspaceCtx?.memberCount ?? "—"}
+          </span>
+        </Row>
+        <Row label="Plan" sub="Current subscription tier for this organization">
+          <span className="text-xs text-foreground capitalize">{workspaceCtx?.organization.plan ?? "—"}</span>
+        </Row>
+        <div className="px-5 py-4">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
+            <Activity className="h-3.5 w-3.5" /> Recent Activity
+          </p>
+          {auditEntries.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground/60">No recorded activity yet.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {auditEntries.map(entry => (
+                <div key={entry.id} className="flex items-center justify-between text-[11px] py-1.5 border-b border-border/50 last:border-0">
+                  <span className="text-foreground font-mono truncate max-w-[60%]">{entry.action}</span>
+                  <span className="text-muted-foreground">{new Date(entry.createdAt).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Section>
+
       {/* ── API Keys ── */}
       <Section id="api-keys" icon={Key} title="API Keys" subtitle="Manage integration credentials">
         <div className="px-5 py-4 space-y-4">
@@ -284,6 +470,65 @@ export default function SettingsPage() {
         <Row label="Public Profile" sub="Make your TLIS profile discoverable">
           <Toggle checked={false} onChange={() => {}} />
         </Row>
+      </Section>
+
+      {/* ── Data & Privacy ── */}
+      <Section id="data-privacy" icon={Shield} title="Data & Privacy" subtitle="Export your data or manage account content">
+        <div className="px-5 py-5 space-y-6">
+          <Row label="Export All My Data" sub="Download a JSON file of your profile, workspace, vault, calendar, and cloud-synced content">
+            <button
+              onClick={() => void handleExportData()}
+              disabled={exporting || !user}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+              {exporting ? "Exporting…" : "Export Data"}
+            </button>
+          </Row>
+          {exportError && <p className="text-xs text-red-400">{exportError}</p>}
+
+          <div className="border-t border-red-500/20 pt-5">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-4 w-4 text-red-400" />
+              <p className="text-xs uppercase tracking-widest text-red-400 font-semibold">Danger Zone</p>
+            </div>
+            <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4 space-y-3">
+              <div>
+                <p className="text-sm text-foreground font-medium">Delete My Data</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Permanently deletes your vault entries, calendar posts, content packs, saved outputs, AI generation
+                  history, and TikTok workspace/account records, then signs you out. This cannot be undone.
+                  Your login, organization membership, and audit history are not affected — to fully close your
+                  account, contact support.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder='Type "DELETE" to confirm'
+                  className="bg-black/30 border border-red-500/30 rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-red-500/60 w-full sm:w-48"
+                />
+                <button
+                  onClick={() => void handleDeleteContent()}
+                  disabled={deleting || deleteConfirmText !== "DELETE" || !user}
+                  className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 border border-red-500/40 text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                  {deleting ? "Deleting…" : "Delete My Data"}
+                </button>
+              </div>
+              {deleteResult && (
+                <p className={cn("text-xs", deleteResult.success ? "text-emerald-400" : "text-red-400")}>
+                  {deleteResult.success
+                    ? "Your content has been deleted. Signing you out…"
+                    : `Some data could not be deleted: ${deleteResult.errors.join("; ")}`}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
       </Section>
 
       {/* ── Version Info ── */}

@@ -1,12 +1,13 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
-import { lazy, Suspense } from "react";
+import { Switch, Route, Redirect, Router as WouterRouter } from "wouter";
+import { lazy, Suspense, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
-import { AuthProvider } from "@/lib/auth";
+import { AuthProvider, useAuth } from "@/lib/auth";
 import { WorkspaceProvider } from "@/lib/workspace-context";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Eager imports (lightweight / entry pages)
 import Dashboard          from "@/pages/dashboard";
@@ -34,6 +35,8 @@ const ProfilePage        = lazy(() => import("@/pages/profile"));
 const WorkspacePage      = lazy(() => import("@/pages/workspace"));
 const TikTokAccountsPage = lazy(() => import("@/pages/tiktok-accounts"));
 const SettingsPage       = lazy(() => import("@/pages/settings"));
+const AuditLogPage       = lazy(() => import("@/pages/audit"));
+const PlatformHealthPage = lazy(() => import("@/pages/platform-health"));
 
 // Thin loading fallback — preserves layout, shows a subtle shimmer
 function PageLoader() {
@@ -56,42 +59,63 @@ const queryClient = new QueryClient({
   },
 });
 
+// Module 11 — centralized auth gate for all Layout routes. Never redirects
+// while the Supabase session is still hydrating (avoids a login-page flash
+// for already-authenticated users on refresh/deep-link).
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <PageLoader />;
+  if (!user) return <Redirect to="/login" replace />;
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   return (
     <Switch>
-      {/* Auth page — no Layout */}
-      <Route path="/login" component={AuthPage} />
+      {/* Auth pages — no Layout. All render AuthPage; the path only picks
+          which tab starts active (see initialTabFromPath in pages/auth.tsx).
+          /login remains the canonical route used for Supabase email
+          redirects (signup confirmation + password recovery links). */}
+      <Route path="/login"                  component={AuthPage} />
+      <Route path="/auth/login"             component={AuthPage} />
+      <Route path="/auth/register"          component={AuthPage} />
+      <Route path="/auth/forgot-password"   component={AuthPage} />
+      <Route path="/auth/reset-password"    component={AuthPage} />
 
       {/* All other routes — inside Layout */}
       <Route>
         <Layout>
-          <Suspense fallback={<PageLoader />}>
-            <Switch>
-              <Route path="/command"       component={ExecutiveCommandCenter} />
-              <Route path="/brief"         component={ExecutiveBrief}        />
-              <Route path="/research"      component={ResearchCommandCenter}  />
-              <Route path="/pipeline"     component={IntelligencePipeline}   />
-              <Route path="/ai-engine"    component={AIIntelligenceEngine}   />
-              <Route path="/integrations" component={IntegrationHub}         />
-              <Route path="/"             component={Dashboard}             />
-              <Route path="/niche"        component={Niche}              />
-              <Route path="/hooks"        component={Hooks}              />
-              <Route path="/prompts"      component={Prompts}            />
-              <Route path="/competitors"  component={Competitors}        />
-              <Route path="/automation"   component={Automation}         />
-              <Route path="/generator"    component={Generator}          />
-              <Route path="/vault"        component={VaultPage}          />
-              <Route path="/calendar"     component={CalendarPage}       />
-              <Route path="/analytics"    component={AnalyticsPage}      />
-              <Route path="/usage"        component={UsagePage}          />
-              <Route path="/content-pack" component={ContentPackPage}    />
-              <Route path="/workspace"    component={WorkspacePage}      />
-              <Route path="/accounts"     component={TikTokAccountsPage} />
-              <Route path="/profile"      component={ProfilePage}        />
-              <Route path="/settings"     component={SettingsPage}       />
-              <Route                      component={NotFound}           />
-            </Switch>
-          </Suspense>
+          <RequireAuth>
+            <Suspense fallback={<PageLoader />}>
+              <Switch>
+                <Route path="/command"       component={ExecutiveCommandCenter} />
+                <Route path="/brief"         component={ExecutiveBrief}        />
+                <Route path="/research"      component={ResearchCommandCenter}  />
+                <Route path="/pipeline"     component={IntelligencePipeline}   />
+                <Route path="/ai-engine"    component={AIIntelligenceEngine}   />
+                <Route path="/integrations" component={IntegrationHub}         />
+                <Route path="/"             component={Dashboard}             />
+                <Route path="/niche"        component={Niche}              />
+                <Route path="/hooks"        component={Hooks}              />
+                <Route path="/prompts"      component={Prompts}            />
+                <Route path="/competitors"  component={Competitors}        />
+                <Route path="/automation"   component={Automation}         />
+                <Route path="/generator"    component={Generator}          />
+                <Route path="/vault"        component={VaultPage}          />
+                <Route path="/calendar"     component={CalendarPage}       />
+                <Route path="/analytics"    component={AnalyticsPage}      />
+                <Route path="/usage"        component={UsagePage}          />
+                <Route path="/content-pack" component={ContentPackPage}    />
+                <Route path="/workspace"    component={WorkspacePage}      />
+                <Route path="/accounts"     component={TikTokAccountsPage} />
+                <Route path="/profile"      component={ProfilePage}        />
+                <Route path="/settings"     component={SettingsPage}       />
+                <Route path="/audit-log"    component={AuditLogPage}       />
+                <Route path="/platform-health" component={PlatformHealthPage} />
+                <Route                      component={NotFound}           />
+              </Switch>
+            </Suspense>
+          </RequireAuth>
         </Layout>
       </Route>
     </Switch>
@@ -100,18 +124,20 @@ function AppRoutes() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <AuthProvider>
-            <WorkspaceProvider>
-              <AppRoutes />
-            </WorkspaceProvider>
-          </AuthProvider>
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <AuthProvider>
+              <WorkspaceProvider>
+                <AppRoutes />
+              </WorkspaceProvider>
+            </AuthProvider>
+          </WouterRouter>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

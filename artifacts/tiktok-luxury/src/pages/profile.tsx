@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import {
   UserCircle, LogOut, Shield, Sparkles, Clock, Database,
   CalendarDays, Package, Zap, RefreshCw, CheckCircle,
-  AlertCircle, Crown, Loader2, ArrowRight, Lock,
+  AlertCircle, Crown, Loader2, ArrowRight, Lock, Building2, Users, Save,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -11,11 +11,42 @@ import {
   migrateDeviceDataToUser,
   fetchUserProfile,
   createOrUpdateProfile,
+  updateProfilePreferences,
   type UserProfile,
 } from "@/lib/supabase";
 import { loadVault } from "@/lib/vault";
 import { loadCalendar } from "@/lib/calendar";
 import { loadUsage } from "@/lib/usage";
+import { fetchOrCreateMyWorkspace, type MyWorkspaceContext } from "@/lib/organization";
+import { ROLE_LABELS, ROLE_DESCRIPTIONS, type Role } from "@/lib/rbac";
+import { logAudit } from "@/lib/audit";
+
+const TIMEZONES = [
+  "UTC", "America/New_York", "America/Los_Angeles", "America/Chicago",
+  "Europe/London", "Europe/Paris", "Europe/Berlin",
+  "Asia/Singapore", "Asia/Tokyo", "Asia/Dubai", "Australia/Sydney",
+];
+
+const AI_PROVIDER_OPTIONS = [
+  { value: "gemini",   label: "Gemini"   },
+  { value: "openai",   label: "OpenAI"   },
+  { value: "claude",   label: "Claude"   },
+  { value: "deepseek", label: "DeepSeek" },
+  { value: "grok",     label: "Grok"     },
+  { value: "mistral",  label: "Mistral"  },
+];
+
+function RoleBadge({ role }: { role: Role }) {
+  return (
+    <span
+      title={ROLE_DESCRIPTIONS[role]}
+      className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border bg-primary/10 border-primary/30 text-primary"
+    >
+      <Shield className="h-2.5 w-2.5" />
+      {ROLE_LABELS[role]}
+    </span>
+  );
+}
 
 // ── Plan config ────────────────────────────────────────────────────────────
 
@@ -67,6 +98,13 @@ export default function ProfilePage() {
   const [migrateMessage, setMigrateMessage] = useState("");
   const [signingOut, setSigningOut]   = useState(false);
 
+  // Module 2/3/4 — workspace context + editable preferences
+  const [workspaceCtx, setWorkspaceCtx] = useState<MyWorkspaceContext | null>(null);
+  const [prefTimezone, setPrefTimezone] = useState("UTC");
+  const [prefProvider, setPrefProvider] = useState("gemini");
+  const [prefSaving, setPrefSaving]     = useState(false);
+  const [prefSaved, setPrefSaved]       = useState(false);
+
   // Local stats
   const vaultCount    = loadVault().entries.length;
   const calendarCount = loadCalendar().length;
@@ -83,10 +121,37 @@ export default function ProfilePage() {
     createOrUpdateProfile(user).then(() =>
       fetchUserProfile(user.id).then(p => {
         setProfile(p);
+        if (p) {
+          setPrefTimezone(p.timezone);
+          setPrefProvider(p.preferredAiProvider);
+        }
         setProfileLoading(false);
       })
     ).catch(() => setProfileLoading(false));
   }, [user]);
+
+  // Load organization/workspace context (Module 4) — auto-provisions if missing
+  useEffect(() => {
+    if (!user) return;
+    fetchOrCreateMyWorkspace(user.id).then(setWorkspaceCtx).catch(() => setWorkspaceCtx(null));
+  }, [user]);
+
+  const handleSavePreferences = useCallback(async () => {
+    if (!user) return;
+    setPrefSaving(true);
+    setPrefSaved(false);
+    const ok = await updateProfilePreferences(user.id, {
+      timezone: prefTimezone,
+      preferredAiProvider: prefProvider,
+    });
+    setPrefSaving(false);
+    if (ok) {
+      setPrefSaved(true);
+      setProfile(prev => prev ? { ...prev, timezone: prefTimezone, preferredAiProvider: prefProvider } : prev);
+      setTimeout(() => setPrefSaved(false), 2500);
+      void logAudit({ action: "Updated preferences", module: "profile" });
+    }
+  }, [user, prefTimezone, prefProvider]);
 
   const handleSignOut = useCallback(async () => {
     setSigningOut(true);
@@ -265,6 +330,87 @@ export default function ProfilePage() {
               <StatCard icon={Database}    label="Vault Items"  value={vaultCount}    />
               <StatCard icon={CalendarDays} label="Calendar"    value={calendarCount} />
               <StatCard icon={Package}     label="Packs"       value="—"             />
+            </div>
+          </div>
+
+          {/* Workspace & Preferences (Modules 2/3/4) */}
+          <div className="luxury-card p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">
+                  Workspace & Preferences
+                </h2>
+              </div>
+              {profile && <RoleBadge role={profile.role} />}
+            </div>
+
+            {workspaceCtx && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 rounded-lg bg-black/20 border border-border">
+                  <p className="text-muted-foreground flex items-center gap-1.5 mb-1">
+                    <Building2 className="h-3 w-3" /> Organization
+                  </p>
+                  <p className="text-foreground font-medium truncate">{workspaceCtx.organization.name}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-black/20 border border-border">
+                  <p className="text-muted-foreground flex items-center gap-1.5 mb-1">
+                    <Package className="h-3 w-3" /> Workspace
+                  </p>
+                  <p className="text-foreground font-medium truncate">{workspaceCtx.workspace.name}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-black/20 border border-border">
+                  <p className="text-muted-foreground flex items-center gap-1.5 mb-1">
+                    <Users className="h-3 w-3" /> Members
+                  </p>
+                  <p className="text-foreground font-medium">{workspaceCtx.memberCount}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block">Timezone</label>
+                <select
+                  value={prefTimezone}
+                  onChange={(e) => setPrefTimezone(e.target.value)}
+                  className="w-full bg-black/30 border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block">Preferred AI Provider</label>
+                <select
+                  value={prefProvider}
+                  onChange={(e) => setPrefProvider(e.target.value)}
+                  className="w-full bg-black/30 border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  {AI_PROVIDER_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSavePreferences}
+                disabled={prefSaving}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition duration-200",
+                  prefSaving
+                    ? "opacity-50 cursor-not-allowed bg-primary/10 text-primary"
+                    : "bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30"
+                )}
+              >
+                {prefSaving
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</>
+                  : <><Save className="h-3.5 w-3.5" /> Save Preferences</>}
+              </button>
+              {prefSaved && (
+                <span className="flex items-center gap-1.5 text-xs text-primary">
+                  <CheckCircle className="h-3.5 w-3.5" /> Saved
+                </span>
+              )}
             </div>
           </div>
 

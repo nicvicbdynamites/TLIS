@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import { logAudit } from "./audit";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -64,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ): Promise<string | null> => {
     if (!supabase) return "Authentication not configured";
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    void logAudit({ action: "Signed in", module: "auth", status: error ? "error" : "success" });
     return error?.message ?? null;
   }, []);
 
@@ -86,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async (): Promise<void> => {
     if (!supabase) return;
+    void logAudit({ action: "Signed out", module: "auth" });
     await supabase.auth.signOut();
   }, []);
 

@@ -615,6 +615,13 @@ export interface UserProfile {
   creditsLimit:       number;
   stripeCustomerId:   string | null;
   subscriptionStatus: string | null;
+  // Module 2/3 — added by supabase-migration-phase3b.sql. Fall back to
+  // sensible defaults when the migration hasn't been applied yet so the
+  // app keeps working against the pre-Phase-3B schema.
+  role:               "owner" | "admin" | "manager" | "analyst" | "viewer";
+  timezone:           string;
+  preferredAiProvider: string;
+  theme:              "dark" | "light" | "system";
   createdAt:          string;
   updatedAt:          string;
 }
@@ -630,9 +637,36 @@ function rowToProfile(row: Record<string, unknown>): UserProfile {
     creditsLimit:       Number(row["credits_limit"] ?? 100),
     stripeCustomerId:   row["stripe_customer_id"] ? String(row["stripe_customer_id"]) : null,
     subscriptionStatus: row["subscription_status"] ? String(row["subscription_status"]) : null,
+    role:               (row["role"] as UserProfile["role"]) ?? "owner",
+    timezone:           row["timezone"] ? String(row["timezone"]) : "UTC",
+    preferredAiProvider: row["preferred_ai_provider"] ? String(row["preferred_ai_provider"]) : "gemini",
+    theme:              (row["theme"] as UserProfile["theme"]) ?? "dark",
     createdAt:          String(row["created_at"] ?? new Date().toISOString()),
     updatedAt:          String(row["updated_at"] ?? new Date().toISOString()),
   };
+}
+
+/**
+ * Updates the Module 2/3 preference columns on the caller's own profile row.
+ * Silently no-ops (returns false) if the migration hasn't added the columns
+ * yet, rather than throwing — preferences are a nice-to-have, not a blocker.
+ */
+export async function updateProfilePreferences(
+  userId: string,
+  prefs: Partial<Pick<UserProfile, "timezone" | "preferredAiProvider" | "theme" | "fullName">>
+): Promise<boolean> {
+  if (!supabase) return false;
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (prefs.timezone !== undefined) patch["timezone"] = prefs.timezone;
+  if (prefs.preferredAiProvider !== undefined) patch["preferred_ai_provider"] = prefs.preferredAiProvider;
+  if (prefs.theme !== undefined) patch["theme"] = prefs.theme;
+  if (prefs.fullName !== undefined) patch["full_name"] = prefs.fullName;
+  try {
+    const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
+    return !error;
+  } catch {
+    return false;
+  }
 }
 
 export async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
