@@ -55,4 +55,4 @@ CREATE POLICY "workspace_member_owner_manage" ON public.workspace_members
   WITH CHECK (workspace_id IN (SELECT public.my_owned_workspace_ids()));
 
 -- Verification: policies on workspace_members after the patch.
-SELECT polname, cmd FROM pg_policy WHERE polrelid = 'public.workspace_members'::regclass;
+SELECT polname, polcmd FROM pg_policy WHERE polrelid = 'public.workspace_members'::regclass;
