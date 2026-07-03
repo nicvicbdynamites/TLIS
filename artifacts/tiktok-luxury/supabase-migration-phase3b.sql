@@ -203,10 +203,64 @@ $$;
 REVOKE ALL ON FUNCTION public.my_member_organization_ids() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.my_member_organization_ids() TO authenticated;
 
+-- SECURITY DEFINER helper: returns workspace ids the caller OWNS (i.e. whose
+-- parent organization the caller owns), without going through RLS on
+-- workspaces/organizations. Used below to scope who may write
+-- workspace_members rows (see security note on workspace_member_self_insert).
+CREATE OR REPLACE FUNCTION public.my_owned_workspace_ids()
+RETURNS SETOF UUID
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT w.id
+  FROM public.workspaces w
+  WHERE w.organization_id IN (SELECT public.my_organization_ids());
+$$;
+
+REVOKE ALL ON FUNCTION public.my_owned_workspace_ids() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.my_owned_workspace_ids() TO authenticated;
+
+-- SECURITY NOTE: the original "workspace_member_self" policy was
+-- `FOR ALL USING/WITH CHECK (auth.uid() = user_id)` with no constraint on
+-- workspace_id or role. That let ANY authenticated user INSERT a membership
+-- row granting themselves role='owner' in ANY workspace whose UUID they
+-- learn (cross-tenant escalation — unlocks that workspace, its parent org,
+-- its projects, and peer member rows), and let an existing member UPDATE
+-- their own role (viewer -> owner self-promotion). Replaced with narrower
+-- policies below: self may only READ their own row and DELETE it (leave a
+-- workspace); self-INSERT is restricted to workspaces the caller already
+-- OWNS via their organization (this is exactly what the auto-provisioning
+-- flow in organization.ts does: create org -> create workspace -> insert
+-- own membership row, all while the caller owns that org); and only
+-- organization owners may fully manage (insert/update/delete, including
+-- role changes) member rows for workspaces they own.
 DROP POLICY IF EXISTS "workspace_member_self" ON public.workspace_members;
-CREATE POLICY "workspace_member_self" ON public.workspace_members
+
+DROP POLICY IF EXISTS "workspace_member_self_read" ON public.workspace_members;
+CREATE POLICY "workspace_member_self_read" ON public.workspace_members
+  FOR SELECT TO authenticated
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "workspace_member_self_insert" ON public.workspace_members;
+CREATE POLICY "workspace_member_self_insert" ON public.workspace_members
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    auth.uid() = user_id
+    AND workspace_id IN (SELECT public.my_owned_workspace_ids())
+  );
+
+DROP POLICY IF EXISTS "workspace_member_self_delete" ON public.workspace_members;
+CREATE POLICY "workspace_member_self_delete" ON public.workspace_members
+  FOR DELETE TO authenticated
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "workspace_member_owner_manage" ON public.workspace_members;
+CREATE POLICY "workspace_member_owner_manage" ON public.workspace_members
   FOR ALL TO authenticated
-  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+  USING (workspace_id IN (SELECT public.my_owned_workspace_ids()))
+  WITH CHECK (workspace_id IN (SELECT public.my_owned_workspace_ids()));
 
 -- A user can also read (but not write) other members of a workspace they belong to
 DROP POLICY IF EXISTS "workspace_member_peers_read" ON public.workspace_members;

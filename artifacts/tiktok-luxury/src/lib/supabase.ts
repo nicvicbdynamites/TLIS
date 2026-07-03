@@ -1206,28 +1206,31 @@ export async function fetchRecentActivityFromCloud(limit = 10): Promise<Activity
     if (!userId) return [];
 
     const LIMIT = 5;
-    const uid = (q: ReturnType<typeof supabase.from>) =>
-      (q as any).eq("user_id", userId);
 
     const [ws, acc, vault, cal, cp] = await Promise.allSettled([
-      uid(supabase.from("tiktok_workspaces"))
+      supabase.from("tiktok_workspaces")
         .select("id, workspace_name, username, created_at, updated_at")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(LIMIT),
-      uid(supabase.from("tiktok_accounts"))
+      supabase.from("tiktok_accounts")
         .select("id, account_name, username, created_at, updated_at")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(LIMIT),
-      uid(supabase.from("vault_entries"))
+      supabase.from("vault_entries")
         .select("id, title, type, created_at")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(LIMIT),
-      uid(supabase.from("calendar_posts"))
+      supabase.from("calendar_posts")
         .select("id, title, status, created_at")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(LIMIT),
-      uid(supabase.from("content_packs"))
+      supabase.from("content_packs")
         .select("id, title, created_at")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(LIMIT),
     ]);
