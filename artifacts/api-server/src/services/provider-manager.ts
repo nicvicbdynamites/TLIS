@@ -23,6 +23,7 @@ import {
   deepSeekProvider,
   grokProvider,
   mistralProvider,
+  openRouterProvider,
 } from "./intelligence/index.js";
 import type { IProvider, ProviderInfo, HealthResult } from "./intelligence/interface.js";
 import { notificationService } from "./notification-service.js";
@@ -44,7 +45,7 @@ class ProviderManager {
 
   constructor() {
     // Register all providers in priority order
-    [geminiProvider, openAIProvider, claudeProvider, deepSeekProvider, grokProvider, mistralProvider]
+    [geminiProvider, openAIProvider, claudeProvider, deepSeekProvider, grokProvider, mistralProvider, openRouterProvider]
       .forEach(p => this.register(p));
 
     // Warm-up: run a first health check after 5 s (non-blocking) so the

@@ -21,6 +21,7 @@ const SECRET_MAP: Array<{ key: string; envVar: string; provider: string }> = [
   { key: "deepseek",       envVar: "DEEPSEEK_API_KEY",          provider: "DeepSeek"                },
   { key: "grok",           envVar: "XAI_API_KEY",               provider: "xAI Grok"               },
   { key: "mistral",        envVar: "MISTRAL_API_KEY",           provider: "Mistral AI"              },
+  { key: "openrouter",     envVar: "OPENROUTER_API_KEY",        provider: "OpenRouter"              },
   { key: "ahrefs",         envVar: "AHREFS_API_KEY",            provider: "Ahrefs"                  },
   { key: "semrush",        envVar: "SEMRUSH_API_KEY",           provider: "SEMrush"                 },
   { key: "reddit_id",      envVar: "REDDIT_CLIENT_ID",          provider: "Reddit"                  },

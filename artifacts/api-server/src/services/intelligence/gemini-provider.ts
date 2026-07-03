@@ -11,11 +11,12 @@ import {
 } from "../gemini.js";
 import { logger as rootLogger } from "../../lib/logger.js";
 import type {
-  IProvider, ProviderStatus, ProviderInfo, HealthResult,
+  ProviderStatus, ProviderInfo, HealthResult,
   GenerateOpts, GenerateResult, AnalyzeResult, StreamChunk,
 } from "./interface.js";
+import { BaseAiProvider } from "./base-provider.js";
 
-export class GeminiProvider implements IProvider {
+export class GeminiProvider extends BaseAiProvider {
   readonly id          = "gemini";
   readonly name        = "Google Gemini";
   readonly description = "Google's Gemini family (2.5 Flash → 2.0 Flash → Lite cascade)";

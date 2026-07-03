@@ -3,13 +3,14 @@
  */
 
 import type {
-  IProvider, ProviderStatus, ProviderInfo, HealthResult,
+  ProviderStatus, ProviderInfo, HealthResult,
   GenerateOpts, GenerateResult, AnalyzeResult, StreamChunk,
 } from "./interface.js";
+import { BaseAiProvider } from "./base-provider.js";
 
 const BASE_URL = "https://api.x.ai/v1";
 
-export class GrokProvider implements IProvider {
+export class GrokProvider extends BaseAiProvider {
   readonly id          = "grok";
   readonly name        = "xAI Grok";
   readonly description = "Grok-beta by xAI — real-time knowledge, OpenAI-compatible";
@@ -66,7 +67,7 @@ export class GrokProvider implements IProvider {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.apiKey}` },
       body: JSON.stringify({
-        model: "grok-beta", messages,
+        model: opts?.model ?? "grok-beta", messages,
         max_tokens: opts?.maxTokens ?? 1024,
         temperature: opts?.temperature ?? 0.7,
       }),

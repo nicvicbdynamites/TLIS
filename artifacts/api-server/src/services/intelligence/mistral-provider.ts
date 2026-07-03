@@ -4,13 +4,14 @@
  */
 
 import type {
-  IProvider, ProviderStatus, ProviderInfo, HealthResult,
+  ProviderStatus, ProviderInfo, HealthResult,
   GenerateOpts, GenerateResult, AnalyzeResult, StreamChunk,
 } from "./interface.js";
+import { BaseAiProvider } from "./base-provider.js";
 
 const BASE_URL = "https://api.mistral.ai/v1";
 
-export class MistralProvider implements IProvider {
+export class MistralProvider extends BaseAiProvider {
   readonly id          = "mistral";
   readonly name        = "Mistral AI";
   readonly description = "Mistral-small-latest — efficient European open-weights model";
@@ -67,7 +68,7 @@ export class MistralProvider implements IProvider {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.apiKey}` },
       body: JSON.stringify({
-        model: "mistral-small-latest", messages,
+        model: opts?.model ?? "mistral-small-latest", messages,
         max_tokens: opts?.maxTokens ?? 1024,
         temperature: opts?.temperature ?? 0.7,
       }),

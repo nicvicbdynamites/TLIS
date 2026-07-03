@@ -4,12 +4,13 @@
  */
 
 import type {
-  IProvider, ProviderStatus, ProviderInfo, HealthResult,
+  ProviderStatus, ProviderInfo, HealthResult,
   GenerateOpts, GenerateResult, AnalyzeResult, StreamChunk,
 } from "./interface.js";
 import { logger as rootLogger } from "../../lib/logger.js";
+import { BaseAiProvider } from "./base-provider.js";
 
-export class OpenAIProvider implements IProvider {
+export class OpenAIProvider extends BaseAiProvider {
   readonly id          = "openai";
   readonly name        = "OpenAI";
   readonly description = "GPT-4o-mini with automatic gpt-3.5-turbo fallback";
@@ -71,7 +72,7 @@ export class OpenAIProvider implements IProvider {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.apiKey}` },
       body: JSON.stringify({
-        model:       "gpt-4o-mini",
+        model:       opts?.model ?? "gpt-4o-mini",
         messages,
         max_tokens:  opts?.maxTokens  ?? 1024,
         temperature: opts?.temperature ?? 0.7,
@@ -126,7 +127,7 @@ export class OpenAIProvider implements IProvider {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4o-mini", messages, stream: true,
+        model: opts?.model ?? "gpt-4o-mini", messages, stream: true,
         max_tokens: opts?.maxTokens ?? 1024,
       }),
       signal: AbortSignal.timeout(60_000),

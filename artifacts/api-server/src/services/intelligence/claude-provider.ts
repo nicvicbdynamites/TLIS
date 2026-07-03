@@ -4,14 +4,15 @@
  */
 
 import type {
-  IProvider, ProviderStatus, ProviderInfo, HealthResult,
+  ProviderStatus, ProviderInfo, HealthResult,
   GenerateOpts, GenerateResult, AnalyzeResult, StreamChunk,
 } from "./interface.js";
+import { BaseAiProvider } from "./base-provider.js";
 
 const ANTHROPIC_BASE = "https://api.anthropic.com/v1";
 const DEFAULT_MODEL  = "claude-3-5-haiku-20241022";
 
-export class ClaudeProvider implements IProvider {
+export class ClaudeProvider extends BaseAiProvider {
   readonly id          = "claude";
   readonly name        = "Anthropic Claude";
   readonly description = "Claude 3.5 Haiku — fast, affordable Anthropic model";
@@ -76,7 +77,7 @@ export class ClaudeProvider implements IProvider {
     if (!this.isConfigured()) throw new Error("ANTHROPIC_API_KEY not configured");
     const start = Date.now();
     const body: Record<string, unknown> = {
-      model:       DEFAULT_MODEL,
+      model:       opts?.model ?? DEFAULT_MODEL,
       max_tokens:  opts?.maxTokens  ?? 1024,
       temperature: opts?.temperature ?? 0.7,
       messages:    [{ role: "user", content: prompt }],

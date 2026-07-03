@@ -10,6 +10,9 @@
  *   intelligenceLogger.getStats();
  */
 
+import { estimateCostUsd } from "./intelligence/pricing.js";
+import type { UsageStats } from "./intelligence/interface.js";
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface IntelligenceLog {
@@ -36,22 +39,16 @@ export interface LogStats {
   estimatedCostUsd: number;
 }
 
-// ── Cost estimation (very rough) ──────────────────────────────────────────
+// ── Cost estimation ──────────────────────────────────────────────────────
+// Delegates to the shared per-model pricing table (Phase 4A Cost Tracking
+// Service) instead of the old flat per-provider rate.
 
-const COST_PER_1K_TOKENS: Record<string, number> = {
-  "gemini":   0.00015,
-  "openai":   0.00060,
-  "claude":   0.00300,
-  "deepseek": 0.00014,
-  "grok":     0.00200,
-  "mistral":  0.00020,
-};
-
-function estimateCost(provider: string, tokens?: number): number | undefined {
+function estimateCost(provider: string, tokens?: number, model?: string): number | undefined {
   if (!tokens) return undefined;
-  const rate = COST_PER_1K_TOKENS[provider];
-  if (!rate) return undefined;
-  return Math.round(((tokens / 1000) * rate) * 1_000_000) / 1_000_000;
+  // No input/output split available at log time — treat all tokens as output,
+  // which is the more conservative (higher) estimate for most providers.
+  const cost = estimateCostUsd(provider, 0, tokens, model);
+  return cost || undefined;
 }
 
 // ── Logger ─────────────────────────────────────────────────────────────────
@@ -73,6 +70,7 @@ class IntelligenceLogger {
       estimatedCostUsd: estimateCost(
         entry.provider,
         (entry.inputTokens ?? 0) + (entry.outputTokens ?? 0),
+        entry.model,
       ),
     };
     this.logs.unshift(log);
@@ -125,6 +123,34 @@ class IntelligenceLogger {
 
   clear(): void {
     this.logs.splice(0);
+  }
+
+  /** Aggregate usage/cost/latency stats for a single provider — backs IProvider.usageStatistics() */
+  getProviderStats(provider: string): UsageStats {
+    const logs = this.logs.filter(l => l.provider === provider);
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let totalCostUsd = 0;
+    let totalLatency = 0;
+    let successCount = 0;
+
+    for (const log of logs) {
+      totalInputTokens  += log.inputTokens ?? 0;
+      totalOutputTokens += log.outputTokens ?? 0;
+      totalCostUsd      += log.estimatedCostUsd ?? 0;
+      totalLatency      += log.latencyMs;
+      if (log.status === "success" || log.status === "cached") successCount++;
+    }
+
+    return {
+      provider,
+      totalRequests:     logs.length,
+      totalInputTokens,
+      totalOutputTokens,
+      totalCostUsd:      Math.round(totalCostUsd * 1_000_000) / 1_000_000,
+      avgLatencyMs:      logs.length ? Math.round(totalLatency / logs.length) : 0,
+      successRate:       logs.length ? Math.round((successCount / logs.length) * 100) : 0,
+    };
   }
 }
 

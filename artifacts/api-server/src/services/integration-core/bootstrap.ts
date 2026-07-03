@@ -18,7 +18,7 @@ import { scheduler } from "../scheduler.js";
 import { secretsManager } from "../secrets-manager.js";
 import {
   geminiProvider, openAIProvider, claudeProvider,
-  deepSeekProvider, grokProvider, mistralProvider,
+  deepSeekProvider, grokProvider, mistralProvider, openRouterProvider,
 } from "../intelligence/index.js";
 import { integrationRegistry } from "./registry.js";
 import { AiAdapter } from "./adapters/ai-adapter.js";
@@ -40,7 +40,7 @@ export function bootstrapIntegrationCore(): void {
 }
 
 function registerAiAdapters(): void {
-  [geminiProvider, openAIProvider, claudeProvider, deepSeekProvider, grokProvider, mistralProvider]
+  [geminiProvider, openAIProvider, claudeProvider, deepSeekProvider, grokProvider, mistralProvider, openRouterProvider]
     .forEach(p => integrationRegistry.register(new AiAdapter(p)));
 }
 
