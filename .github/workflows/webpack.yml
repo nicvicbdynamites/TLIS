@@ -17,6 +17,12 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    # Add this new step to install pnpm
+    - uses: pnpm/action-setup@v4
+      name: Install pnpm
+      with:
+        version: 9
+
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
@@ -26,3 +32,4 @@ jobs:
       run: |
         pnpm install
         npx webpack
+ 
