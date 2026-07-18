@@ -1,0 +1,87 @@
+steps:
+  # ---------------------------------------------------------
+  # 1. Build Phase: Build Docker images for API and Frontend
+  # ---------------------------------------------------------
+  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/docker'
+    id: 'build-api'
+    args:
+      - 'build'
+      - '-t'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:$COMMIT_SHA'
+      - '-t'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
+      - '-f'
+      - 'artifacts/api-server/Dockerfile'
+      - '.'
+
+  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/docker'
+    id: 'build-frontend'
+    args:
+      - 'build'
+      - '-t'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:$COMMIT_SHA'
+      - '-t'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'
+      - '-f'
+      - 'artifacts/tiktok-luxury/Dockerfile'
+      - '.'
+
+  # ---------------------------------------------------------
+  # 2. Push Phase: Push Docker images to Artifact Registry
+  # ---------------------------------------------------------
+  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/docker'
+    id: 'push-api'
+    args:
+      - 'push'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:$COMMIT_SHA'
+
+  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/docker'
+    id: 'push-api-latest'
+    args:
+      - 'push'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
+
+  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/docker'
+    id: 'push-frontend'
+    args:
+      - 'push'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:$COMMIT_SHA'
+
+  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/docker'
+    id: 'push-frontend-latest'
+    args:
+      - 'push'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'
+
+  # ---------------------------------------------------------
+  # 3. Deploy Phase: Deploy services to Cloud Run
+  # ---------------------------------------------------------
+  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/gcloud'
+    id: 'deploy-api'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'tlis-api'
+      - '--image=europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:$COMMIT_SHA'
+      - '--region=europe-west2'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--port=5000'
+
+  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/gcloud'
+    id: 'deploy-frontend'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'tlis-frontend'
+      - '--image=europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:$COMMIT_SHA'
+      - '--region=europe-west2'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--port=80'
+
+images:
+  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:$COMMIT_SHA'
+  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
+  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:$COMMIT_SHA'
+  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'
