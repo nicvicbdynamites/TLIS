@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-api
+.git
+.replit
+.replit-artifact
+replit.md
+artifacts/*/node_modules
+artifacts/*/dist
+lib/*/node_modules
+lib/*/dist
+**/node_modules
+**/dist
