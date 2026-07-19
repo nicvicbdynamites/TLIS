@@ -1,77 +1,45 @@
-/**
- * Google Trends Service — first live Research Provider for TLIS.
- *
- * Architecture note: all research providers follow this pattern —
- * service file with typed results, in-memory cache, fallback data,
- * and a `formatTrendContext()` for Gemini prompt enrichment.
- *
- * Future providers (Reddit, Ahrefs, SEMrush, Search Console) should
- * create their own service file and routes following this exact shape.
- */
+ type { Log } from "./gemini.js";
 
-// @ts-ignore — google-trends-api has no official type declarations
-import googleTrends from "google-trends-api";
-import type { Log } from "./gemini.js";
+// ——— Result Types ———
 
-// ── Result Types ─────────────────────────────────────────────────────────────
-
-export interface TrendingTopic {
-  title:   string;
-  traffic: string;
+export interface TrendItem {
+  title: string;
+  formattedValue: string;
+  link: string;
+  pubDate: string;
+  source?: string;
 }
 
-export interface InterestPoint {
-  time:  string;
-  value: number;
+export interface GoogleTrendsSummary {
+  trendingTopics: string[];
+  recentTrends: TrendItem[];
+  fetchedAt: string;
+  source: "live" | "cached" | "fallback";
 }
 
-export interface RelatedQuery {
-  query: string;
-  value: number;
-  type:  "top" | "rising";
-}
+// ——— Fallback Data ———
 
-export interface LuxurySummary {
-  topTrendingTopic:   string;
-  trendScore:         number;
-  growthDirection:    "up" | "down" | "stable";
-  opportunitySummary: string;
-  trendingSearches:   string[];
-  relatedQueries:     string[];
-  weeklyInterest:     InterestPoint[];
-  fetchedAt:          string;
-  source:             "live" | "cached" | "fallback";
-}
+const FALLBACK_TRENDS: TrendItem[] = [
+  { title: "quiet luxury fashion", formattedValue: "+850%", link: "https://trends.google.com", pubDate: new Date().toDateString(), source: "Google Trends Fallback" },
+  { title: "minimalist capsule wardrobe", formattedValue: "+400%", link: "https://trends.google.com", pubDate: new Date().toDateString(), source: "Google Trends Fallback" },
+  { title: "sustainable luxury brands", formattedValue: "+250%", link: "https://trends.google.com", pubDate: new Date().toDateString(), source: "Google Trends Fallback" },
+  { title: "old money aesthetic clothing", formattedValue: "+600%", link: "https://trends.google.com", pubDate: new Date().toDateString(), source: "Google Trends Fallback" }
+];
 
-// ── Primary keyword cluster for luxury creators ────────────────────────────
-const PRIMARY_KEYWORD = "quiet luxury";
-const LUXURY_KEYWORDS = ["quiet luxury", "luxury lifestyle", "luxury skincare"];
-
-// ── Fallback data (served when Google Trends is unavailable) ──────────────
-const FALLBACK_WEEKLY: InterestPoint[] = [68, 72, 78, 82, 84, 89, 91].map((v, i) => ({
-  time:  `Day ${i + 1}`,
-  value: v,
-}));
-
-export const FALLBACK_SUMMARY: LuxurySummary = {
-  topTrendingTopic:   "Quiet Luxury Lifestyle",
-  trendScore:         87,
-  growthDirection:    "up",
-  opportunitySummary: "Quiet Luxury maintains strong search momentum with accelerating interest in skincare and morning routines.",
-  trendingSearches:   ["quiet luxury", "old money aesthetic", "luxury morning routine", "minimalist fashion", "investment pieces"],
-  relatedQueries:     ["quiet luxury outfits", "quiet luxury brands", "quiet luxury skincare", "quiet luxury aesthetic", "quiet luxury apartment"],
-  weeklyInterest:     FALLBACK_WEEKLY,
-  fetchedAt:          new Date().toISOString(),
-  source:             "fallback",
+export const FALLBACK_TRENDS_SUMMARY: GoogleTrendsSummary = {
+  trendingTopics: ["quiet luxury", "capsule wardrobe", "old money aesthetic", "timeless style"],
+  recentTrends: FALLBACK_TRENDS,
+  fetchedAt: new Date().toISOString(),
+  source: "fallback",
 };
 
-// ── In-Memory Cache ───────────────────────────────────────────────────────
+// ——— In-Memory Cache ———
 
-const CACHE_TTL_MS = 12 * 60 * 1000; // 12 minutes
+const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 Hours
 
 interface CacheEntry<T> { data: T; expiresAt: number }
 
-class TrendCache {
+class TrendsCache {
   private store = new Map<string, CacheEntry<unknown>>();
 
   get<T>(key: string): T | null {
@@ -91,224 +59,97 @@ class TrendCache {
   }
 }
 
-export const trendCache = new TrendCache();
+export const trendsCache = new TrendsCache();
 
-// ── Timeout Wrapper ───────────────────────────────────────────────────────
+// ——— High-Level Exported Methods ———
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const id = setTimeout(() => reject(new Error(`Google Trends timeout after ${ms}ms`)), ms);
-    promise
-      .then(v  => { clearTimeout(id); resolve(v);  })
-      .catch(e => { clearTimeout(id); reject(e);   });
-  });
-}
-
-// ── Low-Level Fetchers ────────────────────────────────────────────────────
-
-async function fetchInterestOverTime(keyword: string, log: Log): Promise<InterestPoint[]> {
-  const cacheKey  = `iot:${keyword}`;
-  const cached    = trendCache.get<InterestPoint[]>(cacheKey);
-  if (cached) return cached;
-
-  const endTime   = new Date();
-  const startTime = new Date(endTime.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-  log.info({ keyword }, "Google Trends: fetchInterestOverTime");
-  const raw = await withTimeout(
-    (googleTrends.interestOverTime({ keyword, startTime, endTime }) as Promise<string>),
-    8000,
-  );
-
-  const parsed = JSON.parse(raw) as {
-    default?: { timelineData?: Array<{ time?: string; value?: number[] }> };
-  };
-
-  const points: InterestPoint[] = (parsed.default?.timelineData ?? []).map(p => ({
-    time:  new Date(Number(p.time ?? 0) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    value: (p.value ?? [0])[0] ?? 0,
-  }));
-
-  trendCache.set(cacheKey, points);
-  return points;
-}
-
-async function fetchRelatedQueries(keyword: string, log: Log): Promise<RelatedQuery[]> {
-  const cacheKey = `rq:${keyword}`;
-  const cached   = trendCache.get<RelatedQuery[]>(cacheKey);
-  if (cached) return cached;
-
-  log.info({ keyword }, "Google Trends: fetchRelatedQueries");
-  const raw = await withTimeout(
-    (googleTrends.relatedQueries({ keyword }) as Promise<string>),
-    8000,
-  );
-
-  const parsed = JSON.parse(raw) as {
-    default?: {
-      rankedList?: Array<{
-        rankedKeyword?: Array<{ query?: string; value?: number | string }>;
-      }>;
-    };
-  };
-
-  const topList    = parsed.default?.rankedList?.[0]?.rankedKeyword ?? [];
-  const risingList = parsed.default?.rankedList?.[1]?.rankedKeyword ?? [];
-
-  const queries: RelatedQuery[] = [
-    ...topList.slice(0, 6).map(k => ({
-      query: String(k.query ?? ""),
-      value: Number(k.value ?? 0),
-      type:  "top" as const,
-    })),
-    ...risingList.slice(0, 4).map(k => ({
-      query: String(k.query ?? ""),
-      value: Number(k.value ?? 0),
-      type:  "rising" as const,
-    })),
-  ].filter(q => q.query.length > 0);
-
-  trendCache.set(cacheKey, queries);
-  return queries;
-}
-
-async function fetchDailyTrending(geo = "US", log: Log): Promise<TrendingTopic[]> {
-  const cacheKey = `daily:${geo}`;
-  const cached   = trendCache.get<TrendingTopic[]>(cacheKey);
-  if (cached) return cached;
-
-  log.info({ geo }, "Google Trends: fetchDailyTrending");
-  const raw = await withTimeout(
-    (googleTrends.dailyTrends({ geo }) as Promise<string>),
-    8000,
-  );
-
-  const parsed = JSON.parse(raw) as {
-    default?: {
-      trendingSearchesDays?: Array<{
-        trendingSearches?: Array<{
-          title?: { query?: string };
-          formattedTraffic?: string;
-        }>;
-      }>;
-    };
-  };
-
-  const topics: TrendingTopic[] = (
-    parsed.default?.trendingSearchesDays?.[0]?.trendingSearches ?? []
-  ).slice(0, 10).map(t => ({
-    title:   String(t.title?.query ?? ""),
-    traffic: String(t.formattedTraffic ?? ""),
-  })).filter(t => t.title.length > 0);
-
-  trendCache.set(cacheKey, topics);
-  return topics;
-}
-
-// ── High-Level Exported Methods ───────────────────────────────────────────
-
-/**
- * Composite luxury summary — the primary call for dashboards.
- * Combines interest over time, related queries, and daily trends.
- * Always returns data (falls back to static values on any error).
- */
-export async function getLuxurySummary(log: Log): Promise<LuxurySummary> {
-  const cacheKey = "luxury:summary";
-  const cached   = trendCache.get<LuxurySummary>(cacheKey);
+export async function getGoogleTrendsSummary(log: Log): Promise<GoogleTrendsSummary> {
+  const cacheKey = "trends:luxury:summary";
+  const cached = trendsCache.get<GoogleTrendsSummary>(cacheKey);
+  
   if (cached) {
-    log.info({ ttlMs: trendCache.ttlRemainingMs(cacheKey) }, "Google Trends: luxury summary served from cache");
+    log.info({ ttlMs: trendsCache.ttlRemainingMs(cacheKey) }, "Google Trends: cache hit");
     return { ...cached, source: "cached" };
   }
 
+  log.info({}, "Google Trends: fetch request initiated");
+
   try {
-    const [interest, related, daily] = await Promise.all([
-      fetchInterestOverTime(PRIMARY_KEYWORD, log).catch(e => {
-        log.warn({ err: e?.message }, "Google Trends: interestOverTime failed"); return [] as InterestPoint[];
-      }),
-      fetchRelatedQueries(PRIMARY_KEYWORD, log).catch(e => {
-        log.warn({ err: e?.message }, "Google Trends: relatedQueries failed"); return [] as RelatedQuery[];
-      }),
-      fetchDailyTrending("US", log).catch(e => {
-        log.warn({ err: e?.message }, "Google Trends: dailyTrending failed"); return [] as TrendingTopic[];
-      }),
-    ]);
+    // RSS Feed URL for US Daily Trending Searches
+    const url = "https://trends.google.com/trending/rss?geo=US";
+    
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/xml, text/xml, */*"
+      },
+      signal: AbortSignal.timeout(6000) // 6 second safety timeout
+    });
 
-    const weeklyInterest   = interest.length > 0 ? interest : FALLBACK_WEEKLY;
-    const latestScore      = weeklyInterest.at(-1)?.value ?? 80;
-    const earliestScore    = weeklyInterest[0]?.value ?? 70;
-    const growthDirection: LuxurySummary["growthDirection"] =
-      latestScore > earliestScore + 5 ? "up"
-      : latestScore < earliestScore - 5 ? "down"
-      : "stable";
+    if (!res.ok) {
+      throw new Error(`Google Trends API returned status: ${res.status}`);
+    }
 
-    const topTrendingTopic = daily[0]?.title ?? FALLBACK_SUMMARY.topTrendingTopic;
-    const topQueries       = related.filter(r => r.type === "top").map(r => r.query).slice(0, 5);
-    const relatedQueries   = topQueries.length > 0 ? topQueries : FALLBACK_SUMMARY.relatedQueries;
-    const trendingSearches = daily.slice(0, 5).map(t => t.title).filter(Boolean);
-    const finalSearches    = trendingSearches.length > 0 ? trendingSearches : FALLBACK_SUMMARY.trendingSearches;
+    const xmlText = await res.text();
+    
+    // Quick RegExp extraction to parse the basic RSS values without heavy XML library overhead
+    const items: TrendItem[] = [];
+    const itemMatches = xmlText.matchAll(/<item>([\s\S]*?)<\/item>/g);
+    
+    for (const match of itemMatches) {
+      const content = match[1];
+      const title = content.match(/<title>(.*?)<\/title>/)?.[1] ?? "";
+      const approxTraffic = content.match(/<ht:approx_traffic>(.*?)<\/ht:approx_traffic>/)?.[1] ?? "+100%";
+      const link = content.match(/<link>(.*?)<\/link>/)?.[1] ?? "https://trends.google.com";
+      const pubDate = content.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] ?? "";
 
-    const dir = growthDirection === "up" ? "accelerating" : growthDirection === "down" ? "slowing" : "stable";
-    const opportunitySummary = `${PRIMARY_KEYWORD} trending at ${latestScore}/100 — ${dir} momentum. Top related: ${relatedQueries[0] ?? "luxury content"}.`;
+      if (title) {
+        items.push({
+          title: title.toLowerCase(),
+          formattedValue: approxTraffic,
+          link,
+          pubDate,
+          source: "Google Trends Live"
+        });
+      }
+    }
 
-    const summary: LuxurySummary = {
-      topTrendingTopic,
-      trendScore:         latestScore,
-      growthDirection,
-      opportunitySummary,
-      trendingSearches:   finalSearches,
-      relatedQueries,
-      weeklyInterest,
-      fetchedAt:          new Date().toISOString(),
-      source:             "live",
+    // Filter relevant terms or default to top trending items if empty
+    const trendingTopics = items.slice(0, 5).map(i => i.title);
+
+    if (items.length === 0) {
+      throw new Error("No trend items could be parsed from the feed.");
+    }
+
+    const summary: GoogleTrendsSummary = {
+      trendingTopics: trendingTopics.length > 0 ? trendingTopics : FALLBACK_TRENDS_SUMMARY.trendingTopics,
+      recentTrends: items.slice(0, 10),
+      fetchedAt: new Date().toISOString(),
+      source: "live"
     };
 
-    trendCache.set(cacheKey, summary);
-    log.info({ trendScore: latestScore, growthDirection, source: "live" }, "Google Trends: luxury summary built");
+    trendsCache.set(cacheKey, summary);
+    log.info({ topicsCount: summary.trendingTopics.length }, "Google Trends: summary successfully compiled");
     return summary;
+
   } catch (err: any) {
-    log.warn({ err: err?.message }, "Google Trends: luxury summary failed, returning fallback");
-    return { ...FALLBACK_SUMMARY, fetchedAt: new Date().toISOString(), source: "fallback" };
+    // ⚠️ THIS CATCH BLOCK SAVES YOUR APP FROM CRASHING WHEN BLOCKED
+    log.warn({ err: err.message }, "Google Trends block/timeout detected. Gracefully serving fallback data.");
+    return {
+      ...FALLBACK_TRENDS_SUMMARY,
+      fetchedAt: new Date().toISOString(),
+      source: "fallback"
+    };
   }
 }
 
-/**
- * Interest over time for a keyword — used by Research Command charts.
- */
-export async function getTrendInterest(keywords: string[], log: Log): Promise<InterestPoint[]> {
-  const keyword = keywords[0] ?? PRIMARY_KEYWORD;
-  try {
-    return await fetchInterestOverTime(keyword, log);
-  } catch (err: any) {
-    log.warn({ err: err?.message, keyword }, "Google Trends: getTrendInterest failed");
-    return FALLBACK_WEEKLY;
-  }
-}
-
-/**
- * Related queries for a keyword — used to enrich Gemini prompts.
- */
-export async function getTrendQueries(keyword: string, log: Log): Promise<RelatedQuery[]> {
-  try {
-    return await fetchRelatedQueries(keyword, log);
-  } catch (err: any) {
-    log.warn({ err: err?.message, keyword }, "Google Trends: getTrendQueries failed");
-    return [];
-  }
-}
-
-/**
- * Format a LuxurySummary as a plain-text context string for Gemini prompts.
- * Returns empty string for fallback data (don't hallucinate with stale data).
- */
-export function formatTrendContext(summary: LuxurySummary): string {
+export function formatTrendsContext(summary: GoogleTrendsSummary): string {
   if (summary.source === "fallback") return "";
+  const topics = summary.trendingTopics.slice(0, 4).join(", ");
   return [
-    "Real-time Google Trends data (just fetched):",
-    `• Top trend score for "${PRIMARY_KEYWORD}": ${summary.trendScore}/100 (${summary.growthDirection} trajectory)`,
-    `• Today's top trending searches: ${summary.trendingSearches.slice(0, 3).join(", ")}`,
-    `• Top related queries: ${summary.relatedQueries.slice(0, 4).join(", ")}`,
-    `• Trend insight: ${summary.opportunitySummary}`,
-    "Use this data to ground your response in current search behaviour.",
+    "Current Google Trends macro data:",
+    `• High-velocity trending search topics: ${topics}`,
+    "Incorporate structural momentum from these themes if contextually relevant."
   ].join("\n");
 }
 
