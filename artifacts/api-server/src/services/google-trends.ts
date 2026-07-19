@@ -1,4 +1,4 @@
- type { Log } from "./gemini.js";
+import type { Log } from "./gemini.js";
 
 // ——— Result Types ———
 
