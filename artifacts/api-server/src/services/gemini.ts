@@ -70,13 +70,12 @@ export interface ContentIdeaParams {
 }
 
 // ── Model Cascade ──────────────────────────────────────────────────────────
-// gemini-2.5-flash → gemini-2.0-flash → gemini-2.0-flash-lite
+// gemini-3.5-flash → gemini-3.1-flash-lite
 // Ordered best→fastest; each skipped on 403/404, retried on 429
 
 export const MODEL_CASCADE = [
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
-  "gemini-2.0-flash-lite",
+  "gemini-3.5-flash",
+  "gemini-3.1-flash-lite",
 ];
 
 // ── Client Factory ─────────────────────────────────────────────────────────

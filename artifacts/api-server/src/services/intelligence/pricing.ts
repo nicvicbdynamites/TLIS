@@ -16,9 +16,8 @@ export interface ModelPricing {
 
 export const MODEL_PRICING: Record<string, ModelPricing> = {
   // Google Gemini
-  "gemini-2.5-flash":      { inputPer1k: 0.00015, outputPer1k: 0.00060 },
-  "gemini-2.0-flash":      { inputPer1k: 0.00010, outputPer1k: 0.00040 },
-  "gemini-2.0-flash-lite": { inputPer1k: 0.000075, outputPer1k: 0.00030 },
+  "gemini-3.5-flash":      { inputPer1k: 0.000075, outputPer1k: 0.00030 },
+  "gemini-3.1-flash-lite": { inputPer1k: 0.0000375, outputPer1k: 0.00015 },
 
   // OpenAI
   "gpt-4o-mini":    { inputPer1k: 0.00015, outputPer1k: 0.00060 },

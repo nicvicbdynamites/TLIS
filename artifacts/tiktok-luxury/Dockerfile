@@ -1,23 +1,42 @@
-# syntax=docker/dockerfile:1
-FROM node:24-slim AS base
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+# Use Node.js as the build environment
+FROM node:22-slim AS builder
 
-FROM base AS build
-COPY . /usr/src/app
-WORKDIR /usr/src/app
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
-RUN pnpm run build
-RUN pnpm --filter @workspace/tiktok-luxury --legacy deploy /app
-
-FROM base AS runner
 WORKDIR /app
-COPY --from=build /app /app
-# We use a simple server to serve the static files, or use pnpm preview if configured
-# For Vite apps, pnpm deploy will copy the dist/public folder.
-# We'll use a simple node script to serve the static files if needed, 
-# but pnpm preview is often enough for a quick deployment.
-RUN pnpm add -g serve
-EXPOSE 8080
-CMD ["serve", "-s", "dist/public", "-l", "8080"]
+
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# Copy root monorepo files
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+
+# Copy internal shared libraries
+COPY lib/ ./lib/
+
+# Copy the frontend artifact
+COPY artifacts/tiktok-luxury/ ./artifacts/tiktok-luxury/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Build the frontend static assets
+RUN pnpm --filter @workspace/tiktok-luxury run build
+
+# Use Nginx to serve the SPA static files in production
+FROM nginx:alpine
+
+# Copy built assets to Nginx html directory
+COPY --from=builder /app/artifacts/tiktok-luxury/dist/public /usr/share/nginx/html
+
+# Setup Nginx configuration to support client-side routing (fallback to index.html)
+RUN echo 'server { \
+    listen 80; \
+    location / { \
+        root /usr/share/nginx/html; \
+        index index.html index.htm; \
+        try_files $uri $uri/ /index.html; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
