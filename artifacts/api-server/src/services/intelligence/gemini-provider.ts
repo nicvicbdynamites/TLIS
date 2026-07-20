@@ -19,8 +19,8 @@ import { BaseAiProvider } from "./base-provider.js";
 export class GeminiProvider extends BaseAiProvider {
   readonly id          = "gemini";
   readonly name        = "Google Gemini";
-  readonly description = "Google's Gemini family (2.5 Flash → 2.0 Flash → Lite cascade)";
-  readonly models      = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"] as const;
+  readonly description = "Google's Gemini family (3.5 Flash → 3.1 Flash Lite cascade)";
+  readonly models      = ["gemini-3.5-flash", "gemini-3.1-flash-lite"] as const;
   readonly priority    = 1;
 
   private _status: ProviderStatus = "initializing";
