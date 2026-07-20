@@ -1,0 +1,39 @@
+name: Build & Verify Workspace
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    name: Build & Verify Workspace
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. Install pnpm v9 FIRST (Required for pnpm Catalogs)
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      # 2. Setup Node.js SECOND (with caching enabled)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      # 3. Bypass frozen lockfile check
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      # 4. Run build with PORT environment variable supplied
+      - name: Run Build
+        env:
+          PORT: 3000
+        run: pnpm run build
