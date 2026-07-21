@@ -98,12 +98,16 @@ export function isRateLimit(err: any): boolean {
 
 export function isCreditsDepleted(err: any): boolean {
   const msg = String(err?.message ?? "");
+  const status = err?.status;
   return (
-    err?.status === 429 && (
+    (status === 429 && (
       msg.includes("prepayment credits are depleted") ||
       msg.includes("monthly spending cap") ||
       msg.includes("spend")
-    )
+    )) ||
+    msg.includes("prepayment credits are depleted") ||
+    msg.includes("spending cap") ||
+    msg.includes("API_KEY_SERVICE_BLOCKED")
   );
 }
 
@@ -118,29 +122,35 @@ export function isPermDenied(err: any): boolean {
 }
 
 export function isMissingKey(err: any): boolean {
+  const msg = String(err?.message ?? "");
+  const status = err?.status;
   return (
     err?.message === "GEMINI_API_KEY_MISSING" ||
-    String(err?.message).includes("API_KEY_INVALID") ||
-    (err?.status === 400 && String(err?.message).includes("valid API key"))
+    msg.includes("API_KEY_INVALID") ||
+    msg.includes("UNAUTHENTICATED") ||
+    msg.includes("invalid authentication credentials") ||
+    msg.includes("ACCESS_TOKEN_TYPE_UNSUPPORTED") ||
+    status === 401 ||
+    (status === 400 && msg.includes("valid API key"))
   );
 }
 
 // ── Error Response Helper ──────────────────────────────────────────────────
 
 export function errorMessage(err: any): { status: number; message: string; code: string } {
-  if (isMissingKey(err)) {
-    return { status: 500, code: "NO_KEY", message: "Gemini API key not configured or invalid. Check your GEMINI_API_KEY secret." };
-  }
   if (isCreditsDepleted(err)) {
-    return { status: 429, code: "CREDITS_DEPLETED", message: "Your Google AI Studio project has exceeded its monthly spending cap." };
+    return { status: 429, code: "CREDITS_DEPLETED", message: "Your Google AI Studio project has exceeded its monthly spending cap or prepayment credits are depleted. Please top up your billing/prepayment balance in the Google AI Studio console." };
+  }
+  if (isMissingKey(err)) {
+    return { status: 401, code: "NO_KEY", message: "Gemini API key is unconfigured, invalid, or blocked. Please verify your GEMINI_API_KEY environment variable and ensure your credentials are valid." };
   }
   if (isRateLimit(err)) {
     return { status: 429, code: "QUOTA_EXHAUSTED", message: "Daily free-tier quota exhausted on all models. Quota resets at midnight Pacific." };
   }
   if (isPermDenied(err)) {
-    return { status: 403, code: "PERMISSION_DENIED", message: "All available models are blocked for this API key." };
+    return { status: 403, code: "PERMISSION_DENIED", message: "All available models are blocked or permission is denied for this API key." };
   }
-  return { status: 500, code: "ERROR", message: "Generation failed. Please try again." };
+  return { status: 500, code: "ERROR", message: "Generation failed. Please check your Gemini connection or API key status." };
 }
 
 // ── JSON Parse Helper ──────────────────────────────────────────────────────
