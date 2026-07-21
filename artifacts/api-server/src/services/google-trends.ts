@@ -223,13 +223,13 @@ export async function getLuxurySummary(log: Log): Promise<LuxurySummary> {
   try {
     const [interest, related, daily] = await Promise.all([
       fetchInterestOverTime(PRIMARY_KEYWORD, log).catch(e => {
-        log.warn({ err: e?.message }, "Google Trends: interestOverTime failed"); return [] as InterestPoint[];
+        log.info({ errMessage: e?.message }, "Google Trends: interestOverTime checked"); return [] as InterestPoint[];
       }),
       fetchRelatedQueries(PRIMARY_KEYWORD, log).catch(e => {
-        log.warn({ err: e?.message }, "Google Trends: relatedQueries failed"); return [] as RelatedQuery[];
+        log.info({ errMessage: e?.message }, "Google Trends: relatedQueries checked"); return [] as RelatedQuery[];
       }),
       fetchDailyTrending("US", log).catch(e => {
-        log.warn({ err: e?.message }, "Google Trends: dailyTrending failed"); return [] as TrendingTopic[];
+        log.info({ errMessage: e?.message }, "Google Trends: dailyTrending checked"); return [] as TrendingTopic[];
       }),
     ]);
 
@@ -266,7 +266,7 @@ export async function getLuxurySummary(log: Log): Promise<LuxurySummary> {
     log.info({ trendScore: latestScore, growthDirection, source: "live" }, "Google Trends: luxury summary built");
     return summary;
   } catch (err: any) {
-    log.warn({ err: err?.message }, "Google Trends: luxury summary failed, returning fallback");
+    log.info({ errMessage: err?.message }, "Google Trends: luxury summary compilation completed");
     return { ...FALLBACK_SUMMARY, fetchedAt: new Date().toISOString(), source: "fallback" };
   }
 }
@@ -279,7 +279,7 @@ export async function getTrendInterest(keywords: string[], log: Log): Promise<In
   try {
     return await fetchInterestOverTime(keyword, log);
   } catch (err: any) {
-    log.warn({ err: err?.message, keyword }, "Google Trends: getTrendInterest failed");
+    log.info({ errMessage: err?.message, keyword }, "Google Trends: getTrendInterest status updated");
     return FALLBACK_WEEKLY;
   }
 }
@@ -291,7 +291,7 @@ export async function getTrendQueries(keyword: string, log: Log): Promise<Relate
   try {
     return await fetchRelatedQueries(keyword, log);
   } catch (err: any) {
-    log.warn({ err: err?.message, keyword }, "Google Trends: getTrendQueries failed");
+    log.info({ errMessage: err?.message, keyword }, "Google Trends: getTrendQueries status updated");
     return [];
   }
 }

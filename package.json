@@ -1,20 +1,23 @@
 {
-  "name": "tlis-workspace",
-  "version": "1.0.0",
-  "private": true,
-  "type": "module",
+  "name": "workspace",
+  "version": "0.0.0",
+  "license": "MIT",
   "scripts": {
-    "dev": "tsx server.ts",
-    "build:install": "NODE_ENV=development npx pnpm@9 --dir TLIS_repo install",
-    "build:libs": "npx pnpm@9 --dir TLIS_repo --filter @workspace/api-server --filter @workspace/tiktok-luxury run build",
-    "build:vite": "vite build",
-    "build:dist": "mkdir -p dist/workspace && cp dist/index.html dist/workspace/index.html && rm dist/index.html && cp -r TLIS_repo/artifacts/tiktok-luxury/dist/public/* dist/",
-    "build:server": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "build": "pnpm run build:install && pnpm run build:libs && pnpm run build:vite && pnpm run build:dist && pnpm run build:server",
-    "start": "node dist/server.cjs",
-    "preview": "vite preview"
+    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "typecheck:libs": "tsc --build",
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
-  "engines": {
-    "node": ">=20"
+  "private": true,
+  "devDependencies": {
+    "prettier": "^3.8.3",
+    "typescript": "~5.9.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@google/genai",
+      "esbuild",
+      "protobufjs"
+    ]
   }
 }

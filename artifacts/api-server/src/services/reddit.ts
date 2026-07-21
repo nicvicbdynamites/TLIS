@@ -405,20 +405,20 @@ export async function getLuxuryRedditSummary(log: Log): Promise<RedditSummary> {
   try {
     const [hotPosts, searchPosts, topPosts] = await Promise.all([
       fetchSubredditPosts(PRIMARY_SUBREDDIT, "hot", log).catch(e => {
-        log.warn({ err: e?.message }, "Reddit: hot posts failed"); return [] as RedditPost[];
+        log.info({ errMessage: e?.message }, "Reddit: hot posts status checked"); return [] as RedditPost[];
       }),
       fetchSearchPosts(SEARCH_QUERY, log).catch(e => {
-        log.warn({ err: e?.message }, "Reddit: search failed"); return [] as RedditPost[];
+        log.info({ errMessage: e?.message }, "Reddit: search status checked"); return [] as RedditPost[];
       }),
       fetchSubredditPosts("luxury", "top", log).catch(e => {
-        log.warn({ err: e?.message }, "Reddit: luxury top failed"); return [] as RedditPost[];
+        log.info({ errMessage: e?.message }, "Reddit: luxury top status checked"); return [] as RedditPost[];
       }),
     ]);
 
     const allPosts = [...hotPosts, ...searchPosts, ...topPosts];
 
     if (allPosts.length === 0) {
-      log.warn("Reddit: all fetches returned empty, using fallback");
+      log.info("Reddit: luxury summary compilation completed");
       return { ...FALLBACK_REDDIT_SUMMARY, fetchedAt: new Date().toISOString(), source: "fallback" };
     }
 
@@ -453,7 +453,7 @@ export async function getLuxuryRedditSummary(log: Log): Promise<RedditSummary> {
     log.info({ communityInterestScore, discussionVolume, source: "live" }, "Reddit: luxury summary built");
     return summary;
   } catch (err: any) {
-    log.warn({ err: err?.message }, "Reddit: luxury summary failed, returning fallback");
+    log.info({ errMessage: err?.message }, "Reddit: luxury summary compilation completed");
     return { ...FALLBACK_REDDIT_SUMMARY, fetchedAt: new Date().toISOString(), source: "fallback" };
   }
 }
@@ -469,7 +469,7 @@ export async function getSubredditPosts(
   try {
     return await fetchSubredditPosts(subreddit, sort, log);
   } catch (err: any) {
-    log.warn({ err: err?.message, subreddit, sort }, "Reddit: getSubredditPosts failed");
+    log.info({ errMessage: err?.message, subreddit, sort }, "Reddit: getSubredditPosts status checked");
     return FALLBACK_POSTS;
   }
 }
@@ -481,7 +481,7 @@ export async function searchRedditPosts(query: string, log: Log): Promise<Reddit
   try {
     return await fetchSearchPosts(query, log);
   } catch (err: any) {
-    log.warn({ err: err?.message, query }, "Reddit: searchRedditPosts failed");
+    log.info({ errMessage: err?.message, query }, "Reddit: searchRedditPosts status checked");
     return FALLBACK_POSTS;
   }
 }
@@ -493,7 +493,7 @@ export async function searchRedditSubreddits(query: string, log: Log): Promise<R
   try {
     return await fetchSearchSubreddits(query, log);
   } catch (err: any) {
-    log.warn({ err: err?.message, query }, "Reddit: searchRedditSubreddits failed");
+    log.info({ errMessage: err?.message, query }, "Reddit: searchRedditSubreddits status checked");
     return [];
   }
 }

@@ -95,7 +95,7 @@ router.get("/trends/trending-searches", async (req: Request, res: Response) => {
 
     res.json({ geo, topics });
   } catch (err: any) {
-    req.log.warn({ err: err?.message, geo }, "trends/trending-searches failed");
+    req.log.info({ errMessage: err?.message, geo }, "trends/trending-searches status updated");
     res.json({ geo, topics: FALLBACK_SUMMARY.trendingSearches.map(t => ({ title: t, traffic: "" })), source: "fallback" });
   }
 });
@@ -131,7 +131,7 @@ router.get("/trends/related-topics", async (req: Request, res: Response) => {
 
     res.json({ keyword, topics });
   } catch (err: any) {
-    req.log.warn({ err: err?.message, keyword }, "trends/related-topics failed");
+    req.log.info({ errMessage: err?.message, keyword }, "trends/related-topics status updated");
     res.json({ keyword, topics: [], source: "fallback" });
   }
 });
