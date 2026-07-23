@@ -2,7 +2,7 @@ steps:
   # ---------------------------------------------------------
   # 1. Build Phase: Build Docker images for API and Frontend
   # ---------------------------------------------------------
-  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/docker'
+  - name: 'gcr.io/cloud-builders/docker'
     id: 'build-api'
     args:
       - 'build'
@@ -14,7 +14,7 @@ steps:
       - 'artifacts/api-server/Dockerfile'
       - '.'
 
-  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/docker'
+  - name: 'gcr.io/cloud-builders/docker'
     id: 'build-frontend'
     args:
       - 'build'
@@ -29,25 +29,25 @@ steps:
   # ---------------------------------------------------------
   # 2. Push Phase: Push Docker images to Artifact Registry
   # ---------------------------------------------------------
-  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/docker'
+  - name: 'gcr.io/cloud-builders/docker'
     id: 'push-api'
     args:
       - 'push'
       - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
 
-  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/docker'
+  - name: 'gcr.io/cloud-builders/docker'
     id: 'push-api-latest'
     args:
       - 'push'
       - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
 
-  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/docker'
+  - name: 'gcr.io/cloud-builders/docker'
     id: 'push-frontend'
     args:
       - 'push'
       - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'
 
-  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/docker'
+  - name: 'gcr.io/cloud-builders/docker'
     id: 'push-frontend-latest'
     args:
       - 'push'
@@ -56,7 +56,7 @@ steps:
   # ---------------------------------------------------------
   # 3. Deploy Phase: Deploy services to Cloud Run
   # ---------------------------------------------------------
-  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/gcloud'
+  - name: 'gcr.io/cloud-builders/gcloud'
     id: 'deploy-api'
     args:
       - 'run'
@@ -66,9 +66,9 @@ steps:
       - '--region=europe-west2'
       - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--port=5000'
+      - '--port=8080'
 
-  - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/gcloud'
+  - name: 'gcr.io/cloud-builders/gcloud'
     id: 'deploy-frontend'
     args:
       - 'run'
