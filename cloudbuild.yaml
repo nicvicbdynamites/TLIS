@@ -85,3 +85,8 @@ images:
   - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
   - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'
   - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+0
+
