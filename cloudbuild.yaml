@@ -7,7 +7,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:$COMMIT_SHA'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
       - '-t'
       - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
       - '-f'
@@ -19,7 +19,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:$COMMIT_SHA'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'
       - '-t'
       - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'
       - '-f'
@@ -33,7 +33,7 @@ steps:
     id: 'push-api'
     args:
       - 'push'
-      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:$COMMIT_SHA'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
 
   - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/docker'
     id: 'push-api-latest'
@@ -45,7 +45,7 @@ steps:
     id: 'push-frontend'
     args:
       - 'push'
-      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:$COMMIT_SHA'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'
 
   - name: 'us-east1-docker.pkg.dev/gcb-release/cloud-builders/docker'
     id: 'push-frontend-latest'
@@ -62,7 +62,7 @@ steps:
       - 'run'
       - 'deploy'
       - 'tlis-api'
-      - '--image=europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:$COMMIT_SHA'
+      - '--image=europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
       - '--region=europe-west2'
       - '--platform=managed'
       - '--allow-unauthenticated'
@@ -74,14 +74,14 @@ steps:
       - 'run'
       - 'deploy'
       - 'tlis-frontend'
-      - '--image=europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:$COMMIT_SHA'
+      - '--image=europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'
       - '--region=europe-west2'
       - '--platform=managed'
       - '--allow-unauthenticated'
       - '--port=80'
 
 images:
-  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:$COMMIT_SHA'
   - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
-  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:$COMMIT_SHA'
+  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
+  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'
   - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'
