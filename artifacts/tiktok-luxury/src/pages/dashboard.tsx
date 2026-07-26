@@ -544,9 +544,16 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    loadAll();
-    window.addEventListener("focus", loadAll);
-    return () => window.removeEventListener("focus", loadAll);
+    const refresh = () => { void loadAll(); };
+    refresh();
+    window.addEventListener("focus", refresh);
+    window.addEventListener("workspace:changed", refresh);
+    window.addEventListener("account:changed", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("workspace:changed", refresh);
+      window.removeEventListener("account:changed", refresh);
+    };
   }, [loadAll]);
 
   // ── Derived state ──────────────────────────────────────────────────────

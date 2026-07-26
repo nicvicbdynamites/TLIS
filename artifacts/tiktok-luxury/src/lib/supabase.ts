@@ -2,6 +2,22 @@ import { createClient, type SupabaseClient, type User } from "@supabase/supabase
 import type { CalendarPost } from "./calendar";
 import type { HistoryEntry } from "./usage";
 import type { VaultEntry, VaultCollection, VaultState } from "./vault";
+import {
+  createWorkspaceEngine,
+  type WorkspaceAuthAdapter,
+  type WorkspaceInput,
+  type WorkspaceRecord,
+  type WorkspaceStorageAdapter,
+  WorkspaceEngineError,
+} from "./workspace-engine";
+import {
+  createTikTokAccountEngine,
+  type TikTokAccountAuthAdapter,
+  type TikTokAccountInput,
+  type TikTokAccountRecord,
+  type TikTokAccountStorageAdapter,
+  TikTokAccountEngineError,
+} from "./tiktok-account-engine";
 
 // ──────────────────────────────────────────────
 //  Client initialisation
@@ -887,6 +903,12 @@ export interface WorkspaceStats {
   calendarPosts: number;
 }
 
+export interface WorkspaceMutationResult {
+  ok: boolean;
+  workspace?: TikTokWorkspace;
+  message: string | null;
+}
+
 function workspaceToRow(w: TikTokWorkspace, userId: string | null): Record<string, unknown> {
   return {
     id:                w.id,
@@ -902,6 +924,25 @@ function workspaceToRow(w: TikTokWorkspace, userId: string | null): Record<strin
     status:            w.status,
     notes:             w.notes,
     updated_at:        new Date().toISOString(),
+  };
+}
+
+function workspaceRecordToRow(record: WorkspaceRecord): Record<string, unknown> {
+  return {
+    id:                record.id,
+    user_id:           record.userId,
+    workspace_name:    record.workspaceName,
+    account_name:      record.accountName,
+    username:          record.username,
+    platform:          record.platform,
+    niche:             record.niche,
+    audience:          record.audience,
+    goal:              record.goal,
+    posting_frequency: record.postingFrequency,
+    status:            record.status,
+    notes:             record.notes,
+    created_at:        record.createdAt,
+    updated_at:        record.updatedAt,
   };
 }
 
@@ -924,51 +965,156 @@ function rowToWorkspace(row: Record<string, unknown>): TikTokWorkspace {
   };
 }
 
-export async function fetchWorkspacesFromCloud(): Promise<TikTokWorkspace[]> {
-  if (!supabase) return [];
-  try {
-    const userId = await getAuthUserId();
-    if (!userId) return [];
+function rowToWorkspaceRecord(row: Record<string, unknown>): WorkspaceRecord {
+  return {
+    id:               String(row.id),
+    userId:           String(row.user_id ?? ""),
+    createdAt:        String(row.created_at ?? new Date().toISOString()),
+    updatedAt:        String(row.updated_at ?? new Date().toISOString()),
+    workspaceName:    String(row.workspace_name    ?? ""),
+    accountName:      String(row.account_name      ?? ""),
+    username:         String(row.username           ?? ""),
+    platform:         String(row.platform           ?? "TikTok"),
+    niche:            String(row.niche              ?? ""),
+    audience:         String(row.audience           ?? ""),
+    goal:             String(row.goal               ?? ""),
+    postingFrequency: String(row.posting_frequency  ?? ""),
+    status:           (row.status as WorkspaceRecord["status"]) ?? "active",
+    notes:            String(row.notes              ?? ""),
+  };
+}
+
+function workspaceInputFromWorkspace(workspace: TikTokWorkspace): WorkspaceInput {
+  return {
+    workspaceName: workspace.workspaceName,
+    accountName: workspace.accountName,
+    username: workspace.username,
+    platform: workspace.platform,
+    niche: workspace.niche,
+    audience: workspace.audience,
+    goal: workspace.goal,
+    postingFrequency: workspace.postingFrequency,
+    status: workspace.status,
+    notes: workspace.notes,
+  };
+}
+
+function workspaceRecordToWorkspace(record: WorkspaceRecord): TikTokWorkspace {
+  return {
+    id: record.id,
+    userId: record.userId,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    workspaceName: record.workspaceName,
+    accountName: record.accountName,
+    username: record.username,
+    platform: record.platform,
+    niche: record.niche,
+    audience: record.audience,
+    goal: record.goal,
+    postingFrequency: record.postingFrequency,
+    status: record.status,
+    notes: record.notes,
+  };
+}
+
+const workspaceAuthAdapter: WorkspaceAuthAdapter = {
+  async getUserId() {
+    return getAuthUserId();
+  },
+};
+
+const workspaceStorageAdapter: WorkspaceStorageAdapter = {
+  async list(userId: string, options?: { page?: number; pageSize?: number }) {
+    if (!supabase) return [];
+    const page = options?.page ?? 1;
+    const pageSize = options?.pageSize ?? 50;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
     const { data, error } = await supabase
       .from("tiktok_workspaces")
       .select("*")
-      .order("created_at", { ascending: false });
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .range(from, to);
     if (error) throw error;
-    return (data ?? []).map(rowToWorkspace);
+    return (data ?? []).map(rowToWorkspaceRecord);
+  },
+  async getById(id: string) {
+    if (!supabase) return null;
+    const { data, error } = await supabase.from("tiktok_workspaces").select("*").eq("id", id).maybeSingle();
+    if (error) throw error;
+    return data ? rowToWorkspaceRecord(data as Record<string, unknown>) : null;
+  },
+  async create(record: WorkspaceRecord) {
+    if (!supabase) throw new Error("Supabase is not configured");
+    const { data, error } = await supabase
+      .from("tiktok_workspaces")
+      .insert(workspaceRecordToRow(record))
+      .select("*")
+      .single();
+    if (error) throw error;
+    return rowToWorkspaceRecord(data as Record<string, unknown>);
+  },
+  async update(record: WorkspaceRecord) {
+    if (!supabase) throw new Error("Supabase is not configured");
+    const { data, error } = await supabase
+      .from("tiktok_workspaces")
+      .update(workspaceRecordToRow(record))
+      .eq("id", record.id)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return rowToWorkspaceRecord(data as Record<string, unknown>);
+  },
+  async delete(id: string) {
+    if (!supabase) throw new Error("Supabase is not configured");
+    const { error } = await supabase.from("tiktok_workspaces").delete().eq("id", id);
+    if (error) throw error;
+  },
+};
+
+const workspaceEngine = createWorkspaceEngine({ auth: workspaceAuthAdapter, storage: workspaceStorageAdapter });
+
+export async function fetchWorkspacesFromCloud(page = 1, pageSize = 50): Promise<TikTokWorkspace[]> {
+  if (!supabase) return [];
+  try {
+    const records = await workspaceEngine.list({ page, pageSize });
+    return records.map(workspaceRecordToWorkspace);
   } catch (err) {
     console.error("[TLIS] fetchWorkspacesFromCloud:", err);
     return [];
   }
 }
 
-export async function upsertWorkspaceToCloud(workspace: TikTokWorkspace): Promise<boolean> {
-  if (!supabase) return false;
+export async function upsertWorkspaceToCloud(workspace: TikTokWorkspace): Promise<WorkspaceMutationResult> {
+  if (!supabase) return { ok: false, message: "Workspace service is unavailable right now." };
   try {
-    const userId = await getAuthUserId();
-    if (!userId) return false;
-    const { error } = await supabase
-      .from("tiktok_workspaces")
-      .upsert(workspaceToRow(workspace, userId), { onConflict: "id" });
-    if (error) throw error;
-    return true;
+    const input = workspaceInputFromWorkspace(workspace);
+    const result = workspace.id
+      ? await workspaceEngine.update(workspace.id, input)
+      : await workspaceEngine.create(input);
+    return { ok: true, message: null, workspace: workspaceRecordToWorkspace(result) };
   } catch (err) {
+    if (err instanceof WorkspaceEngineError) {
+      return { ok: false, message: err.message };
+    }
     console.error("[TLIS] upsertWorkspaceToCloud:", err);
-    return false;
+    return { ok: false, message: "We could not save this workspace. Please try again." };
   }
 }
 
-export async function deleteWorkspaceFromCloud(id: string): Promise<boolean> {
-  if (!supabase) return false;
+export async function deleteWorkspaceFromCloud(id: string): Promise<WorkspaceMutationResult> {
+  if (!supabase) return { ok: false, message: "Workspace service is unavailable right now." };
   try {
-    const { error } = await supabase
-      .from("tiktok_workspaces")
-      .delete()
-      .eq("id", id);
-    if (error) throw error;
-    return true;
+    await workspaceEngine.delete(id);
+    return { ok: true, message: null };
   } catch (err) {
+    if (err instanceof WorkspaceEngineError) {
+      return { ok: false, message: err.message };
+    }
     console.error("[TLIS] deleteWorkspaceFromCloud:", err);
-    return false;
+    return { ok: false, message: "We could not delete this workspace. Please try again." };
   }
 }
 
@@ -977,21 +1123,20 @@ export async function fetchWorkspaceStatsFromCloud(): Promise<WorkspaceStats> {
   if (!supabase) return zero;
   try {
     const userId = await getAuthUserId();
-    const devId  = getDeviceId();
-    const sb     = supabase;
+    if (!userId) return zero;
+    const sb = supabase;
 
-    const cnt = async (table: string, isAuth: boolean): Promise<number> => {
-      let q = sb.from(table).select("*", { count: "exact", head: true });
-      if (!isAuth) q = q.eq("device_id", devId);
-      const { count } = await q;
+    const cnt = async (table: string): Promise<number> => {
+      const { count, error } = await sb.from(table).select("*", { count: "exact", head: true }).eq("user_id", userId);
+      if (error) throw error;
       return count ?? 0;
     };
 
     const [workspaces, contentPacks, vaultEntries, calendarPosts] = await Promise.all([
-      userId ? cnt("tiktok_workspaces", true) : Promise.resolve(0),
-      cnt("content_packs",  !!userId),
-      cnt("vault_entries",  !!userId),
-      cnt("calendar_posts", !!userId),
+      cnt("tiktok_workspaces"),
+      cnt("content_packs"),
+      cnt("vault_entries"),
+      cnt("calendar_posts"),
     ]);
 
     return { workspaces, contentPacks, vaultEntries, calendarPosts };
@@ -1098,6 +1243,12 @@ export interface TikTokAccount {
   updatedAt:   string;
 }
 
+export interface AccountMutationResult {
+  ok: boolean;
+  account?: TikTokAccount;
+  message: string | null;
+}
+
 function accountToRow(a: TikTokAccount, userId: string | null): Record<string, unknown> {
   return {
     id:           a.id,
@@ -1137,51 +1288,225 @@ function rowToAccount(row: Record<string, unknown>): TikTokAccount {
   };
 }
 
-export async function fetchAccountsFromCloud(): Promise<TikTokAccount[]> {
-  if (!supabase) return [];
-  try {
-    const userId = await getAuthUserId();
-    if (!userId) return [];
+function accountToAccountRecord(account: TikTokAccount, userId: string): TikTokAccountRecord {
+  return {
+    id: account.id,
+    userId,
+    workspaceId: account.workspaceId ?? null,
+    accountName: account.accountName,
+    username: account.username,
+    email: account.email,
+    phone: account.phone,
+    country: account.country,
+    timezone: account.timezone,
+    language: account.language,
+    status: account.status,
+    notes: account.notes,
+    hasPassword: account.hasPassword,
+    createdAt: account.createdAt,
+    updatedAt: account.updatedAt,
+  };
+}
+
+function accountRecordToAccount(record: TikTokAccountRecord): TikTokAccount {
+  return {
+    id: record.id,
+    userId: record.userId,
+    workspaceId: record.workspaceId,
+    accountName: record.accountName,
+    username: record.username,
+    email: record.email,
+    phone: record.phone,
+    country: record.country,
+    timezone: record.timezone,
+    language: record.language,
+    status: record.status,
+    notes: record.notes,
+    hasPassword: record.hasPassword,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  };
+}
+
+function accountInputFromAccount(account: TikTokAccount): TikTokAccountInput {
+  return {
+    accountName: account.accountName,
+    username: account.username,
+    email: account.email,
+    phone: account.phone,
+    country: account.country,
+    timezone: account.timezone,
+    language: account.language,
+    workspaceId: account.workspaceId,
+    status: account.status,
+    notes: account.notes,
+    hasPassword: account.hasPassword,
+  };
+}
+
+const accountAuthAdapter: TikTokAccountAuthAdapter = {
+  async getUserId() {
+    return getAuthUserId();
+  },
+};
+
+const accountStorageAdapter: TikTokAccountStorageAdapter = {
+  async list(userId: string, options?: { page?: number; pageSize?: number }) {
+    if (!supabase) return [];
+    const page = options?.page ?? 1;
+    const pageSize = options?.pageSize ?? 50;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
     const { data, error } = await supabase
       .from("tiktok_accounts")
       .select("*")
-      .order("updated_at", { ascending: false });
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false })
+      .range(from, to);
     if (error) throw error;
-    return (data ?? []).map(rowToAccount);
+    return (data ?? []).map((row) => ({
+      id: String(row["id"]),
+      userId: row["user_id"] ? String(row["user_id"]) : userId,
+      workspaceId: row["workspace_id"] ? String(row["workspace_id"]) : null,
+      accountName: String(row["account_name"] ?? ""),
+      username: String(row["username"] ?? ""),
+      email: String(row["email"] ?? ""),
+      phone: String(row["phone"] ?? ""),
+      country: String(row["country"] ?? ""),
+      timezone: String(row["timezone"] ?? ""),
+      language: String(row["language"] ?? ""),
+      status: (row["status"] as TikTokAccount["status"]) ?? "active",
+      notes: String(row["notes"] ?? ""),
+      hasPassword: Boolean(row["has_password"]),
+      createdAt: String(row["created_at"] ?? new Date().toISOString()),
+      updatedAt: String(row["updated_at"] ?? new Date().toISOString()),
+    }));
+  },
+  async getById(id: string) {
+    if (!supabase) return null;
+    const { data, error } = await supabase.from("tiktok_accounts").select("*").eq("id", id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const fallbackUserId = (await getAuthUserId()) ?? "";
+    return {
+      id: String(data["id"]),
+      userId: data["user_id"] ? String(data["user_id"]) : fallbackUserId,
+      workspaceId: data["workspace_id"] ? String(data["workspace_id"]) : null,
+      accountName: String(data["account_name"] ?? ""),
+      username: String(data["username"] ?? ""),
+      email: String(data["email"] ?? ""),
+      phone: String(data["phone"] ?? ""),
+      country: String(data["country"] ?? ""),
+      timezone: String(data["timezone"] ?? ""),
+      language: String(data["language"] ?? ""),
+      status: (data["status"] as TikTokAccount["status"]) ?? "active",
+      notes: String(data["notes"] ?? ""),
+      hasPassword: Boolean(data["has_password"]),
+      createdAt: String(data["created_at"] ?? new Date().toISOString()),
+      updatedAt: String(data["updated_at"] ?? new Date().toISOString()),
+    };
+  },
+  async create(record: TikTokAccountRecord) {
+    if (!supabase) throw new Error("Supabase is not configured");
+    const { data, error } = await supabase
+      .from("tiktok_accounts")
+      .insert(accountToRow(accountRecordToAccount(record), record.userId))
+      .select("*")
+      .single();
+    if (error) throw error;
+    return {
+      id: String(data["id"]),
+      userId: data["user_id"] ? String(data["user_id"]) : record.userId,
+      workspaceId: data["workspace_id"] ? String(data["workspace_id"]) : null,
+      accountName: String(data["account_name"] ?? ""),
+      username: String(data["username"] ?? ""),
+      email: String(data["email"] ?? ""),
+      phone: String(data["phone"] ?? ""),
+      country: String(data["country"] ?? ""),
+      timezone: String(data["timezone"] ?? ""),
+      language: String(data["language"] ?? ""),
+      status: (data["status"] as TikTokAccount["status"]) ?? "active",
+      notes: String(data["notes"] ?? ""),
+      hasPassword: Boolean(data["has_password"]),
+      createdAt: String(data["created_at"] ?? new Date().toISOString()),
+      updatedAt: String(data["updated_at"] ?? new Date().toISOString()),
+    };
+  },
+  async update(record: TikTokAccountRecord) {
+    if (!supabase) throw new Error("Supabase is not configured");
+    const { data, error } = await supabase
+      .from("tiktok_accounts")
+      .update(accountToRow(accountRecordToAccount(record), record.userId))
+      .eq("id", record.id)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return {
+      id: String(data["id"]),
+      userId: data["user_id"] ? String(data["user_id"]) : record.userId,
+      workspaceId: data["workspace_id"] ? String(data["workspace_id"]) : null,
+      accountName: String(data["account_name"] ?? ""),
+      username: String(data["username"] ?? ""),
+      email: String(data["email"] ?? ""),
+      phone: String(data["phone"] ?? ""),
+      country: String(data["country"] ?? ""),
+      timezone: String(data["timezone"] ?? ""),
+      language: String(data["language"] ?? ""),
+      status: (data["status"] as TikTokAccount["status"]) ?? "active",
+      notes: String(data["notes"] ?? ""),
+      hasPassword: Boolean(data["has_password"]),
+      createdAt: String(data["created_at"] ?? new Date().toISOString()),
+      updatedAt: String(data["updated_at"] ?? new Date().toISOString()),
+    };
+  },
+  async delete(id: string) {
+    if (!supabase) throw new Error("Supabase is not configured");
+    const { error } = await supabase.from("tiktok_accounts").delete().eq("id", id);
+    if (error) throw error;
+  },
+};
+
+const accountEngine = createTikTokAccountEngine({ auth: accountAuthAdapter, storage: accountStorageAdapter });
+
+export async function fetchAccountsFromCloud(page = 1, pageSize = 50): Promise<TikTokAccount[]> {
+  if (!supabase) return [];
+  try {
+    const records = await accountEngine.list({ page, pageSize });
+    return records.map(accountRecordToAccount);
   } catch (err) {
     console.error("[TLIS] fetchAccountsFromCloud:", err);
     return [];
   }
 }
 
-export async function upsertAccountToCloud(account: TikTokAccount): Promise<boolean> {
-  if (!supabase) return false;
+export async function upsertAccountToCloud(account: TikTokAccount): Promise<AccountMutationResult> {
+  if (!supabase) return { ok: false, message: "Account service is unavailable right now." };
   try {
-    const userId = await getAuthUserId();
-    if (!userId) return false;
-    const { error } = await supabase
-      .from("tiktok_accounts")
-      .upsert(accountToRow(account, userId), { onConflict: "id" });
-    if (error) throw error;
-    return true;
+    const input = accountInputFromAccount(account);
+    const result = account.id
+      ? await accountEngine.update(account.id, input)
+      : await accountEngine.create(input);
+    return { ok: true, message: null, account: accountRecordToAccount(result) };
   } catch (err) {
+    if (err instanceof TikTokAccountEngineError) {
+      return { ok: false, message: err.message };
+    }
     console.error("[TLIS] upsertAccountToCloud:", err);
-    return false;
+    return { ok: false, message: "We could not save this account. Please try again." };
   }
 }
 
-export async function deleteAccountFromCloud(id: string): Promise<boolean> {
-  if (!supabase) return false;
+export async function deleteAccountFromCloud(id: string): Promise<AccountMutationResult> {
+  if (!supabase) return { ok: false, message: "Account service is unavailable right now." };
   try {
-    const { error } = await supabase
-      .from("tiktok_accounts")
-      .delete()
-      .eq("id", id);
-    if (error) throw error;
-    return true;
+    await accountEngine.delete(id);
+    return { ok: true, message: null };
   } catch (err) {
+    if (err instanceof TikTokAccountEngineError) {
+      return { ok: false, message: err.message };
+    }
     console.error("[TLIS] deleteAccountFromCloud:", err);
-    return false;
+    return { ok: false, message: "We could not delete this account. Please try again." };
   }
 }
 

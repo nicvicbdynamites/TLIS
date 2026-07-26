@@ -305,6 +305,7 @@ function FormPanel({
   initial,
   workspaces,
   saving,
+  serverError,
   onClose,
   onSave,
 }: {
@@ -313,6 +314,7 @@ function FormPanel({
   initial:    FormData;
   workspaces: TikTokWorkspace[];
   saving:     boolean;
+  serverError?: string | null;
   onClose:    () => void;
   onSave:     (data: FormData, passwordText: string) => void;
 }) {
@@ -371,10 +373,10 @@ function FormPanel({
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="px-5 py-4 space-y-5">
 
-            {error && (
+            {(serverError || error) && (
               <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-rose-400/10 border border-rose-400/30 text-rose-400 text-xs">
                 <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
-                {error}
+                {serverError ?? error}
               </div>
             )}
 
@@ -628,12 +630,14 @@ function DeleteDialog({
   open,
   accountName,
   deleting,
+  error,
   onCancel,
   onConfirm,
 }: {
   open:        boolean;
   accountName: string;
   deleting:    boolean;
+  error?:      string | null;
   onCancel:    () => void;
   onConfirm:   () => void;
 }) {
@@ -657,6 +661,12 @@ function DeleteDialog({
         <p className="text-xs text-muted-foreground mb-5">
           All account data will be permanently removed from Supabase.
         </p>
+        {error && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-xs text-rose-400">
+            <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+            {error}
+          </div>
+        )}
         <div className="flex gap-3">
           <button
             onClick={onCancel}
@@ -708,6 +718,9 @@ export default function TikTokAccountsPage() {
   const [loading,    setLoading]    = useState(true);
   const [saving,     setSaving]     = useState(false);
   const [deleting,   setDeleting]   = useState(false);
+  const [loadError,  setLoadError]  = useState<string | null>(null);
+  const [saveError,  setSaveError]  = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Filter state
   const [search,    setSearch]    = useState("");
@@ -732,19 +745,41 @@ export default function TikTokAccountsPage() {
   // Load data
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [accs, wss] = await Promise.all([
-      fetchAccountsFromCloud(),
-      fetchWorkspacesFromCloud(),
-    ]);
-    setAccounts(accs);
-    setWorkspaces(wss);
-    setLoading(false);
+    setLoadError(null);
+    try {
+      const [accs, wss] = await Promise.all([
+        fetchAccountsFromCloud(),
+        fetchWorkspacesFromCloud(),
+      ]);
+      setAccounts(accs);
+      setWorkspaces(wss);
+    } catch {
+      setLoadError("We could not load your TikTok accounts right now. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    if (user) loadData();
-    else if (!authLoading) setLoading(false);
+    if (user) void loadData();
+    else if (!authLoading) {
+      setLoading(false);
+      setAccounts([]);
+      setWorkspaces([]);
+    }
   }, [user, authLoading, loadData]);
+
+  useEffect(() => {
+    const refresh = () => { void loadData(); };
+    window.addEventListener("account:changed", refresh);
+    window.addEventListener("workspace:changed", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("account:changed", refresh);
+      window.removeEventListener("workspace:changed", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [loadData]);
 
   // Filtered accounts
   const filtered = useMemo(() => {
@@ -778,6 +813,7 @@ export default function TikTokAccountsPage() {
     setFormInitial(emptyForm());
     setPanelMode("create");
     setPanelOpen(true);
+    setSaveError(null);
   };
 
   // Open edit panel
@@ -798,11 +834,13 @@ export default function TikTokAccountsPage() {
     });
     setPanelMode("edit");
     setPanelOpen(true);
+    setSaveError(null);
   };
 
   // Save handler
   const handleSave = async (data: FormData, passwordText: string) => {
     setSaving(true);
+    setSaveError(null);
     const now = new Date().toISOString();
     const account: TikTokAccount = {
       id:          editingId ?? crypto.randomUUID(),
@@ -812,14 +850,19 @@ export default function TikTokAccountsPage() {
       ...data,
       hasPassword: passwordText.length > 0 ? true : data.hasPassword,
     };
-    const ok = await upsertAccountToCloud(account);
-    if (ok) {
+    const result = await upsertAccountToCloud(account);
+    if (result.ok) {
+      const savedAccount = result.account ?? account;
       setAccounts(prev => {
-        const existing = prev.find(a => a.id === account.id);
-        if (existing) return prev.map(a => a.id === account.id ? account : a);
-        return [account, ...prev];
+        const existing = prev.find(a => a.id === savedAccount.id);
+        if (existing) return prev.map(a => a.id === savedAccount.id ? savedAccount : a);
+        return [savedAccount, ...prev];
       });
       setPanelOpen(false);
+      window.dispatchEvent(new Event("account:changed"));
+      setDeleteError(null);
+    } else {
+      setSaveError(result.message ?? "We could not save this account. Please try again.");
     }
     setSaving(false);
   };
@@ -828,10 +871,14 @@ export default function TikTokAccountsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
-    const ok = await deleteAccountFromCloud(deleteTarget.id);
-    if (ok) {
+    setDeleteError(null);
+    const result = await deleteAccountFromCloud(deleteTarget.id);
+    if (result.ok) {
       setAccounts(prev => prev.filter(a => a.id !== deleteTarget.id));
       setDeleteTarget(null);
+      window.dispatchEvent(new Event("account:changed"));
+    } else {
+      setDeleteError(result.message ?? "We could not delete this account. Please try again.");
     }
     setDeleting(false);
   };
@@ -891,6 +938,13 @@ export default function TikTokAccountsPage() {
               </div>
             ))}
           </div>
+
+          {loadError && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-300">
+              <span>{loadError}</span>
+              <button onClick={() => void loadData()} className="text-sm font-semibold text-primary hover:underline">Retry</button>
+            </div>
+          )}
 
           {/* Search + filters */}
           <div className="flex flex-col sm:flex-row gap-3">
@@ -1002,7 +1056,8 @@ export default function TikTokAccountsPage() {
         initial={formInitial}
         workspaces={workspaces}
         saving={saving}
-        onClose={() => setPanelOpen(false)}
+        serverError={saveError}
+        onClose={() => { setPanelOpen(false); setSaveError(null); }}
         onSave={handleSave}
       />
 
@@ -1011,7 +1066,8 @@ export default function TikTokAccountsPage() {
         open={deleteTarget !== null}
         accountName={deleteTarget?.accountName ?? ""}
         deleting={deleting}
-        onCancel={() => setDeleteTarget(null)}
+        error={deleteError}
+        onCancel={() => { setDeleteTarget(null); setDeleteError(null); }}
         onConfirm={handleDelete}
       />
     </div>

@@ -24,6 +24,7 @@ import {
 import type { VaultEntry } from "@/lib/vault";
 import type { CalendarPost } from "@/lib/calendar";
 import { useActiveWorkspace } from "@/lib/workspace-context";
+import { logAudit } from "@/lib/audit";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -684,58 +685,94 @@ export default function WorkspacePage() {
   const [saving, setSaving]           = useState(false);
   const [deletingId, setDeletingId]   = useState<string | null>(null);
   const [saveError, setSaveError]     = useState<string | null>(null);
+  const [loadError, setLoadError]     = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoadingData(true);
-    const [ws, s] = await Promise.all([
+    setLoadError(null);
+
+    const [wsResult, statsResult] = await Promise.allSettled([
       fetchWorkspacesFromCloud(),
       fetchWorkspaceStatsFromCloud(),
     ]);
-    setWorkspaces(ws);
-    setStats(s);
+
+    if (wsResult.status === "fulfilled") {
+      setWorkspaces(wsResult.value);
+    } else {
+      setWorkspaces([]);
+      setLoadError("We could not load your workspaces right now. Please try again.");
+    }
+
+    if (statsResult.status === "fulfilled") {
+      setStats(statsResult.value);
+    } else {
+      setStats({ workspaces: 0, contentPacks: 0, vaultEntries: 0, calendarPosts: 0 });
+      setLoadError("We could not load your workspace counters right now.");
+    }
+
     setLoadingData(false);
   }, []);
 
   useEffect(() => {
-    if (!authLoading) load();
+    if (!authLoading) void load();
   }, [authLoading, load]);
+
+  useEffect(() => {
+    const refresh = () => { void load(); };
+    window.addEventListener("workspace:changed", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("workspace:changed", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [load]);
+
+  const broadcastWorkspaceChange = useCallback(() => {
+    window.dispatchEvent(new Event("workspace:changed"));
+  }, []);
 
   const handleSave = async (form: FormState) => {
     setSaving(true);
     setSaveError(null);
     const isEdit = view === "edit" && selected !== null;
     const workspace: TikTokWorkspace = {
-      id:        isEdit ? selected!.id : crypto.randomUUID(),
+      id:        isEdit ? selected!.id : "",
       userId:    null,
       createdAt: isEdit ? selected!.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       ...form,
     };
-    const ok = await upsertWorkspaceToCloud(workspace);
-    if (ok) {
+    const result = await upsertWorkspaceToCloud(workspace);
+    if (result.ok) {
+      const savedWorkspace = result.workspace ?? workspace;
       await load();
-      if (activeWorkspace?.id === workspace.id) setActiveWorkspace(workspace);
+      if (savedWorkspace) setActiveWorkspace(savedWorkspace);
       setView("list");
+      void logAudit({ action: isEdit ? "Updated workspace" : "Created workspace", module: "workspace", status: "success" });
       toast({
         title: isEdit ? "Workspace updated" : "Workspace created",
-        description: `"${workspace.workspaceName}" saved to your account.`,
+        description: result.message ?? `"${savedWorkspace.workspaceName}" is now synced to your account.`,
       });
+      broadcastWorkspaceChange();
     } else {
-      setSaveError("Save failed. Make sure you are signed in and the workspace table exists.");
+      setSaveError(result.message ?? "We could not save this workspace. Please try again.");
+      void logAudit({ action: isEdit ? "Failed workspace update" : "Failed workspace creation", module: "workspace", status: "error" });
     }
     setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
-    const ok = await deleteWorkspaceFromCloud(id);
-    if (ok) {
+    const result = await deleteWorkspaceFromCloud(id);
+    if (result.ok) {
       if (activeWorkspace?.id === id) setActiveWorkspace(null);
-      setWorkspaces(prev => prev.filter(w => w.id !== id));
-      setStats(s => ({ ...s, workspaces: Math.max(0, s.workspaces - 1) }));
+      await load();
+      void logAudit({ action: "Deleted workspace", module: "workspace", status: "success" });
       toast({ title: "Workspace deleted" });
+      broadcastWorkspaceChange();
     } else {
-      toast({ title: "Delete failed", description: "Please try again.", variant: "destructive" });
+      toast({ title: "Delete failed", description: result.message ?? "Please try again.", variant: "destructive" });
+      void logAudit({ action: "Failed workspace deletion", module: "workspace", status: "error" });
     }
     setDeletingId(null);
   };
@@ -871,6 +908,21 @@ export default function WorkspacePage() {
         <StatCard icon={Database}     label="Vault Entries"  value={loadingData ? "…" : stats.vaultEntries}  />
         <StatCard icon={CalendarDays} label="Calendar Posts" value={loadingData ? "…" : stats.calendarPosts} />
       </div>
+
+      {loadError && (
+        <div className="luxury-card p-4 border-destructive/30 bg-destructive/10 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <span>{loadError}</span>
+          </div>
+          <button
+            onClick={() => void load()}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-destructive/30 bg-background/70 text-sm text-foreground hover:bg-background transition min-h-[44px]"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> Retry
+          </button>
+        </div>
+      )}
 
       {loadingData ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
