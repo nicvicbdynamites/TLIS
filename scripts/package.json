@@ -8,7 +8,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "@types/node": "^0.38.3",
-    "tsx": "^0.38.3"
+    "@types/node": "*",
+    "tsx": "*"
   }
 }
