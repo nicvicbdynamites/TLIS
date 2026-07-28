@@ -1,0 +1,11 @@
+{
+  "apps": [
+    {
+      "appId": "YOUR_APPFLOW_APP_ID",
+      "root": "artifacts/tiktok-luxury",
+      "dependencyInstallCommand": "corepack enable && pnpm install --no-frozen-lockfile",
+      "webBuildCommand": "pnpm build",
+      "androidPath": "android"
+    }
+  ]
+}
