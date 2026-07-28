@@ -21,10 +21,16 @@ import {
 
 // ──────────────────────────────────────────────
 //  Client initialisation
-//  SUPABASE_URL and SUPABASE_ANON_KEY are exposed via vite.config envPrefix
+//  SUPABASE_URL and SUPABASE_ANON_KEY (or VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY) are exposed via vite.config envPrefix
 // ──────────────────────────────────────────────
-const supabaseUrl = (import.meta.env.SUPABASE_URL as string | undefined) ?? "";
-const supabaseAnonKey = (import.meta.env.SUPABASE_ANON_KEY as string | undefined) ?? "";
+const supabaseUrl =
+  (import.meta.env.VITE_SUPABASE_URL as string | undefined) ??
+  (import.meta.env.SUPABASE_URL as string | undefined) ??
+  "";
+const supabaseAnonKey =
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ??
+  (import.meta.env.SUPABASE_ANON_KEY as string | undefined) ??
+  "";
 
 const isConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 

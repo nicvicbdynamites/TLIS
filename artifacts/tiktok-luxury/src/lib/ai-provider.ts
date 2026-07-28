@@ -65,7 +65,15 @@ async function post<T>(path: string, body: object): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body:    JSON.stringify(body),
   });
-  const data = await res.json().catch(() => ({ error: "Failed to parse response" }));
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Server returned non-JSON response (${res.status}): ${text.slice(0, 100)}`);
+  }
+  const data = await res.json().catch(() => null);
+  if (!data) {
+    throw new Error(`Invalid JSON response from ${path}`);
+  }
   if (!res.ok) {
     throw new Error((data as { error?: string }).error ?? `Request failed (${res.status})`);
   }
