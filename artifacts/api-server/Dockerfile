@@ -7,7 +7,7 @@ WORKDIR /app
 RUN npm install -g pnpm
 
 # Copy root monorepo files
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json tsconfig.json ./
 
 # Copy internal shared libraries
 COPY lib/ ./lib/
@@ -16,7 +16,7 @@ COPY lib/ ./lib/
 COPY artifacts/api-server/ ./artifacts/api-server/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Compile the project and build the API server
 RUN pnpm run build
@@ -26,15 +26,14 @@ FROM node:22-slim
 
 WORKDIR /app
 
-# Copy built package and node_modules from the builder stage
-COPY --from=builder /app/artifacts/api-server/package.json ./package.json
-COPY --from=builder /app/artifacts/api-server/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
+# Copy entire built workspace from builder stage to preserve pnpm node_modules symlinks
+COPY --from=builder /app /app
 
-# Expose port 5000 (standard for the API server)
-EXPOSE 5000
+WORKDIR /app/artifacts/api-server
+
+# Expose port 8080 (standard for Cloud Run)
+EXPOSE 8080
 
 ENV NODE_ENV=production
-ENV PORT=5000
 
-CMD ["node", "--enable-source-maps", "dist/index.mjs"]
+CMD ["node", "--enable-source-maps", "dist/index.js"]

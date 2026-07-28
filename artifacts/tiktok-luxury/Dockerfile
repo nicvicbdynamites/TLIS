@@ -7,7 +7,7 @@ WORKDIR /app
 RUN npm install -g pnpm
 
 # Copy root monorepo files
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json tsconfig.json ./
 
 # Copy internal shared libraries
 COPY lib/ ./lib/
@@ -16,7 +16,7 @@ COPY lib/ ./lib/
 COPY artifacts/tiktok-luxury/ ./artifacts/tiktok-luxury/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Build the frontend static assets
 RUN pnpm --filter @workspace/tiktok-luxury run build
