@@ -1,0 +1,8 @@
+{
+  "appId": "com.tlis.app",
+  "appName": "TLIS Luxury Intelligence",
+  "webDir": "artifacts/tiktok-luxury/dist/public",
+  "server": {
+    "androidScheme": "https"
+  }
+}

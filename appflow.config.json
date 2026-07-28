@@ -3,7 +3,7 @@
     {
       "appId": "b9b0e564",
       "root": "artifacts/tiktok-luxury",
-      "dependencyInstallCommand": "npm install -g pnpm && pnpm install --no-frozen-lockfile",
+      "dependencyInstallCommand": "pnpm install --no-frozen-lockfile",
       "webBuildCommand": "pnpm build",
       "androidPath": "android"
     }
