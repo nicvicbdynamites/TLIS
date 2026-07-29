@@ -7,6 +7,8 @@
  *   No page component changes required.
  */
 
+import { buildApiUrl } from "@/lib/api-config";
+
 // ── Result Types (mirror server types) ────────────────────────────────────
 
 export interface ConnectionTestResult {
@@ -62,9 +64,10 @@ export interface ContentIdeaParams {
 // ── HTTP Helper ────────────────────────────────────────────────────────────
 
 async function post<T>(path: string, body: object): Promise<T> {
+  const url = buildApiUrl(`/api/integrations${path}`);
   let res: Response;
   try {
-    res = await fetch(`/api/integrations${path}`, {
+    res = await fetch(url, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify(body),
@@ -74,11 +77,14 @@ async function post<T>(path: string, body: object): Promise<T> {
   }
 
   let data: any = {};
+  const text = await res.text();
   try {
-    const text = await res.text();
     data = text ? JSON.parse(text) : {};
   } catch {
-    data = { error: `Server response error (HTTP ${res.status})` };
+    if (res.status === 405) {
+      throw new Error(`Endpoint Method Not Allowed (HTTP 405) at ${url}. Verify production backend service target.`);
+    }
+    throw new Error(`Server returned non-JSON response (HTTP ${res.status}): ${text.slice(0, 100)}`);
   }
 
   if (!res.ok) {

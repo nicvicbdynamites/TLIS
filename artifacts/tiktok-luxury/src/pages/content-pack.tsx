@@ -20,6 +20,7 @@ import {
   type ContentPackRecord,
 } from "@/lib/supabase";
 import { useActiveWorkspace } from "@/lib/workspace-context";
+import { buildApiUrl } from "@/lib/api-config";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -370,7 +371,7 @@ export default function ContentPackGenerator() {
     };
 
     try {
-      const res = await fetch("/api/generate/content-pack", {
+      const res = await fetch(buildApiUrl("/api/generate/content-pack"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

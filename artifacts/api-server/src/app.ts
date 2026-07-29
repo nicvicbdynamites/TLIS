@@ -26,24 +26,26 @@ app.use(
   }),
 );
 
-// Restrict CORS to known origins in production; allow all in dev
-const allowedOrigins = process.env["REPLIT_DOMAINS"]
-  ? process.env["REPLIT_DOMAINS"].split(",").map(d => `https://${d.trim()}`)
-  : [];
+// Restrict CORS to known origins in production; allow Cloud Run and configured origins
+const allowedOrigins = [
+  ...(process.env["ALLOWED_ORIGINS"] ? process.env["ALLOWED_ORIGINS"].split(",").map(s => s.trim()) : []),
+  ...(process.env["REPLIT_DOMAINS"] ? process.env["REPLIT_DOMAINS"].split(",").map(d => `https://${d.trim()}`) : []),
+];
 
 app.use(cors({
   origin: (origin, cb) => {
     // Allow requests with no origin (curl, server-to-server, SSE)
     if (!origin) return cb(null, true);
-    // In dev (no REPLIT_DOMAINS set), allow all origins
-    if (allowedOrigins.length === 0) return cb(null, true);
-    // In production, allow only known Replit domains
-    const allowed = allowedOrigins.some(o => origin.startsWith(o));
-    // Pass false (not an error) — browser will enforce the block client-side
-    cb(null, allowed);
+    // Allow all if no explicit allowed origins configured or wildcard
+    if (allowedOrigins.length === 0 || allowedOrigins.includes("*")) return cb(null, true);
+    const isAllowed = allowedOrigins.some(o => origin.startsWith(o)) ||
+                      origin.endsWith(".run.app") ||
+                      origin.includes("localhost") ||
+                      origin.includes("127.0.0.1");
+    cb(null, isAllowed);
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
 }));
 
 app.use(express.json());
