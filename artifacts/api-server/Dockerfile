@@ -20,10 +20,10 @@ FROM node:22-slim
 
 WORKDIR /app
 
-# Copy built package and node_modules from the builder stage
-COPY --from=builder /app/artifacts/api-server/package.json ./package.json
-COPY --from=builder /app/artifacts/api-server/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
+# Copy built workspace and node_modules from builder stage
+COPY --from=builder /app /app
+
+WORKDIR /app/artifacts/api-server
 
 # Expose port 8080 (standard for Cloud Run / Cloud Build deployments)
 EXPOSE 8080
