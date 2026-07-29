@@ -55,10 +55,22 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    proxy: {
+      "/api": {
+        target: `http://127.0.0.1:${process.env.API_PORT || "8080"}`,
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     port,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: {
+      "/api": {
+        target: `http://127.0.0.1:${process.env.API_PORT || "8080"}`,
+        changeOrigin: true,
+      },
+    },
   },
 });

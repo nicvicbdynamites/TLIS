@@ -1,0 +1,8 @@
+{
+	"appId": "com.tlis.app",
+	"appName": "TLIS Luxury Intelligence",
+	"webDir": "dist/public",
+	"server": {
+		"androidScheme": "https"
+	}
+}

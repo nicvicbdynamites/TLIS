@@ -494,7 +494,7 @@ export function addTimelineEvent(campaignId: string, event: Omit<TimelineEvent, 
   return campaigns[index];
 }
 
-export function createCampaign(data: Omit<Campaign, "id" | "createdAt">): Campaign {
+export function createCampaign(data: Partial<Campaign> & { name: string }): Campaign {
   const campaigns = loadCampaigns();
   const newId = `rev-${Date.now().toString().slice(-6)}`;
   const nowIso = new Date().toISOString();
@@ -502,14 +502,37 @@ export function createCampaign(data: Omit<Campaign, "id" | "createdAt">): Campai
   const newCampaign: Campaign = {
     ...data,
     id: newId,
+    name: data.name,
+    targetAccount: data.targetAccount || "@luxury.lifestyle",
+    status: data.status || "Awaiting Review",
+    aiConfidence: data.aiConfidence ?? 92,
     createdAt: nowIso,
-    timeline: [
+    niche: data.niche || "Quiet Luxury",
+    images: data.images || [],
+    videos: data.videos || [],
+    content: data.content || {
+      hook: "POV: Discovering quiet luxury elegance in daily details...",
+      caption: "Elevate your aesthetic with curated craftsmanship and timeless design.",
+      cta: "Link in bio for full collection.",
+      hashtags: ["#QuietLuxury", "#LuxuryLifestyle", "#Aesthetic"],
+      thumbnailDescription: "Curated aesthetic presentation frame with minimal typography",
+      musicRecommendation: "Ludovico Einaudi - Ambient Piano",
+    },
+    qualityCheck: data.qualityCheck || {
+      hookScore: 90,
+      captionScore: 90,
+      brandConsistency: 95,
+      visualQuality: 92,
+      aiConfidence: 94,
+      overallScore: 93,
+    },
+    timeline: data.timeline || [
       {
         id: `tl-${Date.now()}`,
         timestamp: nowIso,
         type: "status_change",
-        title: `Campaign Created (${data.status})`,
-        description: `Campaign initialized for ${data.targetAccount}`,
+        title: `Campaign Created (${data.status || "Awaiting Review"})`,
+        description: `Campaign initialized for ${data.targetAccount || "@luxury.lifestyle"}`,
         user: "TLIS Pipeline"
       }
     ]

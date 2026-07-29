@@ -140,9 +140,20 @@ export function saveCalendar(posts: CalendarPost[]): void {
   } catch {}
 }
 
-export function addPost(posts: CalendarPost[], post: Omit<CalendarPost, "id" | "createdAt">): CalendarPost[] {
+export function addPost(postsOrPost: CalendarPost[] | Omit<CalendarPost, "id" | "createdAt">, post?: Omit<CalendarPost, "id" | "createdAt">): CalendarPost[] {
+  let posts: CalendarPost[];
+  let newPostData: Omit<CalendarPost, "id" | "createdAt">;
+
+  if (Array.isArray(postsOrPost)) {
+    posts = postsOrPost;
+    newPostData = post!;
+  } else {
+    posts = loadCalendar();
+    newPostData = postsOrPost;
+  }
+
   const newPost: CalendarPost = {
-    ...post,
+    ...newPostData,
     id: `post-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     createdAt: new Date().toISOString(),
   };

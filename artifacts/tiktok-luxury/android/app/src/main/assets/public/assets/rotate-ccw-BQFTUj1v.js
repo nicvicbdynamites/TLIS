@@ -1,0 +1,1 @@
+import{c as o}from"./index-Bv6nQ1fA.js";const e=[["path",{d:"M12 5v14",key:"s699le"}],["path",{d:"m19 12-7 7-7-7",key:"1idqje"}]],c=o("arrow-down",e);const t=[["path",{d:"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8",key:"1357e3"}],["path",{d:"M3 3v5h5",key:"1xhq8a"}]],d=o("rotate-ccw",t);export{c as A,d as R};

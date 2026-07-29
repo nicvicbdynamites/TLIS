@@ -298,6 +298,31 @@ export default function ContentPackGenerator() {
     }).catch(() => setHistoryLoading(false));
   }, []);
 
+  // Pre-populate campaign from Executive Brief if available
+  useEffect(() => {
+    const rawData = sessionStorage.getItem("tlis_generated_campaign");
+    if (!rawData) return;
+    try {
+      const campaign = JSON.parse(rawData);
+      if (campaign.niche) {
+        setForm(f => ({
+          ...f,
+          niche: niches.includes(campaign.niche) ? campaign.niche : f.niche,
+        }));
+      }
+      if (campaign.pack) {
+        setPack(campaign.pack);
+      }
+      if (campaign.model) {
+        setModel(campaign.model);
+      }
+    } catch (err) {
+      console.error("Failed to parse pre-populated campaign data", err);
+    } finally {
+      sessionStorage.removeItem("tlis_generated_campaign");
+    }
+  }, []);
+
   // Cleanup
   useEffect(() => () => {
     abortRef.current?.abort();
