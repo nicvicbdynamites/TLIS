@@ -460,6 +460,8 @@ export function loadCampaigns(): Campaign[] {
   }
 }
 
+export const getCampaigns = loadCampaigns;
+
 export function saveCampaigns(campaigns: Campaign[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));

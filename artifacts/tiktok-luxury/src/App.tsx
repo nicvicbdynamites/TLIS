@@ -38,6 +38,8 @@ const TikTokAccountsPage = lazy(() => import("@/pages/tiktok-accounts"));
 const SettingsPage       = lazy(() => import("@/pages/settings"));
 const AuditLogPage       = lazy(() => import("@/pages/audit"));
 const PlatformHealthPage = lazy(() => import("@/pages/platform-health"));
+const CampaignManager    = lazy(() => import("@/pages/campaigns"));
+const NotificationsPage  = lazy(() => import("@/pages/notifications"));
 
 // Thin loading fallback — preserves layout, shows a subtle shimmer
 function PageLoader() {
@@ -91,11 +93,14 @@ function AppRoutes() {
               <Switch>
                 <Route path="/command"       component={ExecutiveCommandCenter} />
                 <Route path="/brief"         component={ExecutiveBrief}        />
+                <Route path="/notifications" component={NotificationsPage}      />
                 <Route path="/research"      component={ResearchCommandCenter}  />
                 <Route path="/pipeline"     component={IntelligencePipeline}   />
                 <Route path="/ai-engine"    component={AIIntelligenceEngine}   />
                 <Route path="/integrations" component={IntegrationHub}         />
                 <Route path="/"             component={Dashboard}             />
+                <Route path="/dashboard"    component={Dashboard}             />
+                <Route path="/campaigns"    component={CampaignManager}        />
                 <Route path="/niche"        component={Niche}              />
                 <Route path="/hooks"        component={Hooks}              />
                 <Route path="/prompts"      component={Prompts}            />

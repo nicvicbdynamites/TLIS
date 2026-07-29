@@ -596,14 +596,20 @@ export default function Dashboard() {
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 space-y-8">
 
       {/* ── Welcome Banner ── */}
-      <div className="luxury-card p-6 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+      <div className="luxury-card p-6 border-primary/20 bg-gradient-to-br from-primary/10 via-background to-transparent">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-primary/70 mb-1">Welcome back</p>
-            <h1 className="text-2xl md:text-3xl font-bold font-serif luxury-gradient-text tracking-tight">
-              {displayName}
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] uppercase font-mono tracking-widest text-primary font-bold">TLIS Central Headquarters</span>
+              <span className="text-muted-foreground/40">•</span>
+              <span className="text-[10px] font-mono text-emerald-400">System Active</span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold font-serif luxury-gradient-text tracking-tight flex items-center gap-3">
+              Mission Control Dashboard
             </h1>
-            <p className="text-xs text-muted-foreground mt-1 font-mono">{user?.email}</p>
+            <p className="text-xs text-muted-foreground mt-1 font-mono">
+              Welcome back, <span className="text-foreground font-semibold">{displayName}</span> ({user?.email})
+            </p>
           </div>
 
           {statsLoading ? (
