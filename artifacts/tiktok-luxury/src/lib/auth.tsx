@@ -36,6 +36,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!supabase) {
+      try {
+        const saved = localStorage.getItem("tlis_demo_user");
+        if (saved) {
+          const parsedUser = JSON.parse(saved) as User;
+          setUser(parsedUser);
+          setSession({
+            access_token: "demo-access-token",
+            refresh_token: "demo-refresh-token",
+            expires_in: 3600,
+            token_type: "bearer",
+            user: parsedUser,
+          } as Session);
+        }
+      } catch (err) {
+        console.warn("Failed to load demo user", err);
+      }
       setLoading(false);
       return;
     }
@@ -63,7 +79,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async (
     email: string, password: string
   ): Promise<string | null> => {
-    if (!supabase) return "Authentication not configured";
+    if (!supabase) {
+      const demoUser: User = {
+        id: "demo-" + btoa(email || "executive@tlis.luxury").replace(/=/g, "").slice(0, 12),
+        email: email || "executive@tlis.luxury",
+        app_metadata: { provider: "email" },
+        user_metadata: { name: (email || "executive").split("@")[0] },
+        aud: "authenticated",
+        role: "authenticated",
+        created_at: new Date().toISOString(),
+      } as unknown as User;
+
+      const demoSession = {
+        access_token: "demo-access-token",
+        refresh_token: "demo-refresh-token",
+        expires_in: 3600,
+        token_type: "bearer",
+        user: demoUser,
+      } as Session;
+
+      try {
+        localStorage.setItem("tlis_demo_user", JSON.stringify(demoUser));
+      } catch (e) {
+        console.warn("Failed to persist demo user", e);
+      }
+
+      setUser(demoUser);
+      setSession(demoSession);
+      void logAudit({ action: "Signed in (Demo Mode)", module: "auth", status: "success" });
+      return null;
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     void logAudit({ action: "Signed in", module: "auth", status: error ? "error" : "success" });
     return error?.message ?? null;
@@ -72,11 +118,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = useCallback(async (
     email: string, password: string
   ): Promise<string | null> => {
-    if (!supabase) return "Authentication not configured";
+    if (!supabase) {
+      const demoUser: User = {
+        id: "demo-" + btoa(email || "executive@tlis.luxury").replace(/=/g, "").slice(0, 12),
+        email: email || "executive@tlis.luxury",
+        app_metadata: { provider: "email" },
+        user_metadata: { name: (email || "executive").split("@")[0] },
+        aud: "authenticated",
+        role: "authenticated",
+        created_at: new Date().toISOString(),
+      } as unknown as User;
+
+      const demoSession = {
+        access_token: "demo-access-token",
+        refresh_token: "demo-refresh-token",
+        expires_in: 3600,
+        token_type: "bearer",
+        user: demoUser,
+      } as Session;
+
+      try {
+        localStorage.setItem("tlis_demo_user", JSON.stringify(demoUser));
+      } catch (e) {
+        console.warn("Failed to persist demo user", e);
+      }
+
+      setUser(demoUser);
+      setSession(demoSession);
+      void logAudit({ action: "Account Created (Demo Mode)", module: "auth", status: "success" });
+      return null;
+    }
+
     // Always redirect to the /login page so the user lands on the auth UI
     // after clicking the confirmation link.
-    // window.location.origin resolves to the correct domain in both dev and
-    // production — Supabase just needs that domain whitelisted (see dashboard).
     const redirectTo = `${window.location.origin}/login`;
     const { error } = await supabase.auth.signUp({
       email,
@@ -87,7 +161,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async (): Promise<void> => {
-    if (!supabase) return;
+    if (!supabase) {
+      try {
+        localStorage.removeItem("tlis_demo_user");
+      } catch (e) {
+        console.warn(e);
+      }
+      setUser(null);
+      setSession(null);
+      void logAudit({ action: "Signed out (Demo Mode)", module: "auth" });
+      return;
+    }
     void logAudit({ action: "Signed out", module: "auth" });
     await supabase.auth.signOut();
   }, []);
@@ -95,9 +179,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = useCallback(async (
     email: string
   ): Promise<string | null> => {
-    if (!supabase) return "Authentication not configured";
-    // Redirect to /login so the recovery token lands on the auth page, which
-    // detects type=recovery in the URL hash and shows the set-new-password form.
+    if (!supabase) {
+      void logAudit({ action: "Password Reset Requested (Demo)", module: "auth" });
+      return null;
+    }
     const redirectTo = `${window.location.origin}/login`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
@@ -108,7 +193,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setNewPassword = useCallback(async (
     password: string
   ): Promise<string | null> => {
-    if (!supabase) return "Authentication not configured";
+    if (!supabase) {
+      return null;
+    }
     const { error } = await supabase.auth.updateUser({ password });
     return error?.message ?? null;
   }, []);

@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">TLIS Luxury Intelligence</string>
-    <string name="title_activity_main">TLIS Luxury Intelligence</string>
-    <string name="package_name">com.tlis.app</string>
-    <string name="custom_url_scheme">com.tlis.app</string>
-</resources>

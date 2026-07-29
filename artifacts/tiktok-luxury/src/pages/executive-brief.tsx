@@ -244,8 +244,11 @@ export default function ExecutiveBrief() {
     try {
       const result = await aiService.generateExecutiveBrief("Quiet Luxury Lifestyle");
       setAiBrief(result);
+      if (result.isFallback && result.fallbackReason) {
+        setBriefError(result.fallbackReason);
+      }
     } catch (err: any) {
-      setBriefError(String(err?.message ?? "Generation failed. Please try again."));
+      setBriefError(String(err?.message ?? "AI-generated content is temporarily unavailable due to API rate limits. Showing cached intelligence."));
     } finally {
       setBriefLoading(false);
     }
@@ -545,8 +548,16 @@ export default function ExecutiveBrief() {
               : <><BrainCircuit className="h-3 w-3" /> {aiBrief ? "Regenerate" : "Generate AI Brief"}</>}
           </button>
         </div>
-        {briefError && (
-          <p className="mb-4 text-xs text-red-400 bg-red-400/8 border border-red-400/20 rounded-lg px-3 py-2">{briefError}</p>
+        {(briefError || aiBrief?.isFallback) && (
+          <div className="mb-4 flex items-start gap-3 p-3.5 rounded-lg border border-amber-400/25 bg-amber-400/8 text-amber-200">
+            <AlertTriangle className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 text-xs leading-relaxed font-mono">
+              <p className="font-semibold text-amber-300">AI Intelligence Mode: Offline / Cached</p>
+              <p className="text-amber-200/80 mt-0.5">
+                {aiBrief?.fallbackReason || briefError}
+              </p>
+            </div>
+          </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Opportunity */}

@@ -8,7 +8,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "@types/node": "*",
-    "tsx": "*"
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
   }
 }

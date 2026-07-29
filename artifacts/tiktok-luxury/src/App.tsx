@@ -25,6 +25,7 @@ const Hooks              = lazy(() => import("@/pages/hooks"));
 const Prompts            = lazy(() => import("@/pages/prompts"));
 const Competitors        = lazy(() => import("@/pages/competitors"));
 const Automation         = lazy(() => import("@/pages/automation"));
+const ReviewCenter       = lazy(() => import("@/pages/review-center"));
 const Generator          = lazy(() => import("@/pages/generator"));
 const UsagePage          = lazy(() => import("@/pages/usage"));
 const CalendarPage       = lazy(() => import("@/pages/calendar"));
@@ -100,6 +101,7 @@ function AppRoutes() {
                 <Route path="/prompts"      component={Prompts}            />
                 <Route path="/competitors"  component={Competitors}        />
                 <Route path="/automation"   component={Automation}         />
+                <Route path="/review-center" component={ReviewCenter}       />
                 <Route path="/generator"    component={Generator}          />
                 <Route path="/vault"        component={VaultPage}          />
                 <Route path="/calendar"     component={CalendarPage}       />

@@ -72,15 +72,7 @@ async function get<T>(path: string, params?: Record<string, string>): Promise<T>
   const url = new URL(`/api${path}`, window.location.origin);
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   const res  = await fetch(url.toString(), { headers: { Accept: "application/json" } });
-  const contentType = res.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Server returned non-JSON response (${res.status}): ${text.slice(0, 100)}`);
-  }
-  const data = await res.json().catch(() => null);
-  if (!data) {
-    throw new Error(`Invalid JSON response from ${path}`);
-  }
+  const data = await res.json().catch(() => ({ error: "Failed to parse response" }));
   if (!res.ok) throw new Error((data as { error?: string }).error ?? `Request failed (${res.status})`);
   return data as T;
 }

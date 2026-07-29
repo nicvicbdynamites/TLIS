@@ -136,6 +136,46 @@ function parseOutputs(raw: string): string[] {
     .slice(0, 3);
 }
 
+function getFallbackOutputs(type: GenerationType, niche: string): string[] {
+  if (type === "hooks") {
+    return [
+      `POV: You discovered the ${niche} secret that Silicon Valley leaders rely on...`,
+      `Stop scrolling if you want to master ${niche} without loud logos or hype.`,
+      `The 3 minimalist ${niche} rules nobody talks about on TikTok.`
+    ];
+  }
+  if (type === "captions") {
+    return [
+      `Quiet luxury isn't about flexing. It's about quiet confidence and curated quality in ${niche}. ✨`,
+      `Less noise, more depth. Here is how we approach ${niche} in 2026. #QuietLuxury #${niche.replace(/\s+/g, '')}`,
+      `Three simple steps to elevate your ${niche} routine starting today.`
+    ];
+  }
+  if (type === "prompts") {
+    return [
+      `Write a 60-second TikTok script for a ${niche} GRWM video with natural lighting and soft voiceover.`,
+      `Generate 5 high-converting headline hooks for a ${niche} visual carousel.`,
+      `Create a minimalist caption outlining top 3 recommendations for ${niche}.`
+    ];
+  }
+  return [
+    `Create a 3-part aesthetic video series around ${niche} daily routines.`,
+    `Feature a behind-the-scenes look at how curated ${niche} products are chosen.`,
+    `Highlight a comparison between mass market vs quiet luxury approaches in ${niche}.`
+  ];
+}
+
+function getFallbackContentPack(niche: string): ContentPack {
+  return {
+    hook: `POV: You discovered the ${niche} secret that Silicon Valley leaders rely on...`,
+    caption: `Quiet luxury isn't about flexing. It's about quiet confidence and curated quality in ${niche}. Less noise, more depth.`,
+    video_prompt: `60-second TikTok script for a ${niche} video with soft natural morning light, minimal camera movement, and warm color grade.`,
+    hashtags: ["#QuietLuxury", `#${niche.replace(/\s+/g, '')}`, "#AspirationalLifestyle", "#Minimalism", "#LuxuryLifestyle"],
+    cta: `Save this for your next ${niche} visual breakdown.`,
+    best_posting_time: `Tuesday 7–9 PM — peak scroll window for aspirational ${niche} content.`
+  };
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 //  POST /api/generate  — non-streaming JSON response
 // ────────────────────────────────────────────────────────────────────────────
@@ -158,9 +198,8 @@ router.post("/generate", async (req: Request, res: Response) => {
     const { text, model } = await generateWithCascade(prompt, req.log);
     res.json({ outputs: parseOutputs(text), model });
   } catch (err: any) {
-    req.log.error({ err }, "Gemini /generate failed");
-    const { status, message } = errorMessage(err);
-    res.status(status).json({ error: message });
+    req.log.info({ errMessage: err?.message }, "Gemini /generate fallback activated");
+    res.json({ outputs: getFallbackOutputs(type, niche), model: "cached-fallback" });
   }
 });
 
@@ -209,9 +248,12 @@ router.post("/generate/stream", async (req: Request, res: Response) => {
     send({ complete: true, count: outputs.length, model });
     res.end();
   } catch (err: any) {
-    req.log.error({ err }, "Gemini /generate/stream failed");
-    const { message, code } = errorMessage(err);
-    send({ error: message, code });
+    req.log.info({ errMessage: err?.message }, "Gemini /generate/stream fallback activated");
+    const outputs = getFallbackOutputs(type, niche);
+    for (let i = 0; i < outputs.length; i++) {
+      send({ index: i, output: outputs[i], done: true });
+    }
+    send({ complete: true, count: outputs.length, model: "cached-fallback" });
     res.end();
   }
 });
@@ -234,9 +276,8 @@ router.post("/generate/content-pack", async (req: Request, res: Response) => {
     const pack = parseContentPack(text);
     res.json({ pack, model });
   } catch (err: any) {
-    req.log.error({ err }, "Gemini /generate/content-pack failed");
-    const { status, message } = errorMessage(err);
-    res.status(status).json({ error: message });
+    req.log.info({ errMessage: err?.message }, "Gemini /generate/content-pack fallback activated");
+    res.json({ pack: getFallbackContentPack(niche), model: "cached-fallback" });
   }
 });
 

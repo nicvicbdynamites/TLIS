@@ -8,28 +8,40 @@ const router: IRouter = Router();
 router.get("/analytics/dashboard", async (_req: Request, res: Response) => {
   try {
     // 1. Fetch Calendar Posts aggregation
-    const calendarQuery = `
-      SELECT 
-        status,
-        platform,
-        niche,
-        COUNT(*)::integer as count
-      FROM public.calendar_posts
-      GROUP BY status, platform, niche
-    `;
-    const calendarRes = await pool.query(calendarQuery);
+    let calendarRows: any[] = [];
+    try {
+      const calendarQuery = `
+        SELECT 
+          status,
+          platform,
+          niche,
+          COUNT(*)::integer as count
+        FROM public.calendar_posts
+        GROUP BY status, platform, niche
+      `;
+      const calendarRes = await pool.query(calendarQuery);
+      calendarRows = calendarRes.rows;
+    } catch {
+      // Table or DB unavailable
+    }
 
     // 2. Fetch User Profile aggregation
-    const profilesQuery = `
-      SELECT 
-        plan,
-        COUNT(*)::integer as count,
-        SUM(credits_used)::integer as total_credits_used,
-        SUM(credits_limit)::integer as total_credits_limit
-      FROM public.profiles
-      GROUP BY plan
-    `;
-    const profilesRes = await pool.query(profilesQuery);
+    let profileRows: any[] = [];
+    try {
+      const profilesQuery = `
+        SELECT 
+          plan,
+          COUNT(*)::integer as count,
+          SUM(credits_used)::integer as total_credits_used,
+          SUM(credits_limit)::integer as total_credits_limit
+        FROM public.profiles
+        GROUP BY plan
+      `;
+      const profilesRes = await pool.query(profilesQuery);
+      profileRows = profilesRes.rows;
+    } catch {
+      // Table or DB unavailable
+    }
 
     // 3. Fetch Telemetry Stats (AI Requests) if table exists
     let telemetryStats = { totalRequests: 0, totalCostUsd: 0, avgLatencyMs: 0 };
@@ -81,7 +93,7 @@ router.get("/analytics/dashboard", async (_req: Request, res: Response) => {
     const platformCounts: Record<string, number> = {};
     const nicheCounts: Record<string, number> = {};
 
-    calendarRes.rows.forEach((row: any) => {
+    calendarRows.forEach((row: any) => {
       const { status, platform, niche, count } = row;
       if (status && statusCounts[status] !== undefined) {
         statusCounts[status] += count;
@@ -97,12 +109,12 @@ router.get("/analytics/dashboard", async (_req: Request, res: Response) => {
     res.json({
       success: true,
       summary: {
-        totalPosts: calendarRes.rows.reduce((sum: number, r: any) => sum + r.count, 0),
+        totalPosts: calendarRows.reduce((sum: number, r: any) => sum + r.count, 0),
         status: statusCounts,
         platforms: platformCounts,
         niches: nicheCounts,
       },
-      profiles: profilesRes.rows,
+      profiles: profileRows,
       telemetry: telemetryStats,
       costTrend: dailyCosts,
       timestamp: new Date().toISOString(),

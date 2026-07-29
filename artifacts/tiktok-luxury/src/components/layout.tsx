@@ -5,7 +5,7 @@ import {
   Package, UserCircle, Briefcase, UserCheck2,
   LogIn, LogOut, Menu, X, Search, Settings,
   User, Key, CreditCard, HelpCircle, ChevronUp, Crown, Radio, Layers, BrainCircuit, Plug, Monitor,
-  ScrollText, HeartPulse,
+  ScrollText, HeartPulse, ShieldCheck,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ import { useAuth } from "@/lib/auth";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { AppFooter } from "@/components/Footer";
+import { NotificationCenter } from "@/components/notification-center";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -34,6 +35,7 @@ const navItems = [
   { href: "/prompts",      label: "Prompt Vault",           icon: Film            },
   { href: "/competitors",  label: "Competitors",            icon: Users           },
   { href: "/automation",   label: "AI Automation",          icon: Bot             },
+  { href: "/review-center", label: "Review Center",        icon: ShieldCheck     },
   { href: "/generator",    label: "AI Content Generator",   icon: Sparkles        },
   { href: "/vault",        label: "Intelligence Vault",     icon: Database        },
   { href: "/calendar",     label: "Content Calendar",       icon: CalendarDays    },
@@ -315,7 +317,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none h-64" />
         <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 relative z-10 scroll-smooth">
           <div className="max-w-7xl mx-auto flex flex-col min-h-full">
-            <AppBreadcrumb />
+            <div className="flex items-center justify-between gap-4 mb-2">
+              <AppBreadcrumb />
+              <div className="ml-auto flex items-center gap-2 mb-3">
+                <NotificationCenter />
+              </div>
+            </div>
             <div className="flex-1">
               {children}
             </div>

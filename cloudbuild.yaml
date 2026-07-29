@@ -1,3 +1,6 @@
+substitutions:
+  _COMMIT_SHA: 'latest'
+
 steps:
   # ---------------------------------------------------------
   # 1. Build Phase: Build Docker images for API and Frontend
@@ -7,7 +10,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:${_COMMIT_SHA}'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:$_COMMIT_SHA'
       - '-t'
       - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
       - '-f'
@@ -19,17 +22,9 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:${_COMMIT_SHA}'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:$_COMMIT_SHA'
       - '-t'
       - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'
-      - '--build-arg'
-      - 'VITE_SUPABASE_URL=${_VITE_SUPABASE_URL}'
-      - '--build-arg'
-      - 'VITE_SUPABASE_ANON_KEY=${_VITE_SUPABASE_ANON_KEY}'
-      - '--build-arg'
-      - 'SUPABASE_URL=${_SUPABASE_URL}'
-      - '--build-arg'
-      - 'SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY}'
       - '-f'
       - 'artifacts/tiktok-luxury/Dockerfile'
       - '.'
@@ -41,7 +36,7 @@ steps:
     id: 'push-api'
     args:
       - 'push'
-      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:${_COMMIT_SHA}'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:$_COMMIT_SHA'
 
   - name: 'gcr.io/cloud-builders/docker'
     id: 'push-api-latest'
@@ -53,7 +48,7 @@ steps:
     id: 'push-frontend'
     args:
       - 'push'
-      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:${_COMMIT_SHA}'
+      - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:$_COMMIT_SHA'
 
   - name: 'gcr.io/cloud-builders/docker'
     id: 'push-frontend-latest'
@@ -70,12 +65,11 @@ steps:
       - 'run'
       - 'deploy'
       - 'tlis-api'
-      - '--image=europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:${_COMMIT_SHA}'
+      - '--image=europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:$_COMMIT_SHA'
       - '--region=europe-west2'
       - '--platform=managed'
       - '--allow-unauthenticated'
       - '--port=8080'
-      - '--set-env-vars=SUPABASE_URL=${_SUPABASE_URL},SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY},VITE_SUPABASE_URL=${_VITE_SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${_VITE_SUPABASE_ANON_KEY}'
 
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'deploy-frontend'
@@ -83,26 +77,18 @@ steps:
       - 'run'
       - 'deploy'
       - 'tlis-frontend'
-      - '--image=europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:${_COMMIT_SHA}'
+      - '--image=europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:$_COMMIT_SHA'
       - '--region=europe-west2'
       - '--platform=managed'
       - '--allow-unauthenticated'
       - '--port=80'
-      - '--set-env-vars=VITE_SUPABASE_URL=${_VITE_SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${_VITE_SUPABASE_ANON_KEY},SUPABASE_URL=${_SUPABASE_URL},SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY}'
-
-images:
-  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:${_COMMIT_SHA}'
-  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
-  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:${_COMMIT_SHA}'
-  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'
-
-substitutions:
-  _COMMIT_SHA: 'latest'
-  _VITE_SUPABASE_URL: 'https://qzprgjffapommkqeapwy.supabase.co'
-  _VITE_SUPABASE_ANON_KEY: 'sb_publishable_pJqakDM0nEj9-Z2NrGjRZA_2GZ3K17a'
-  _SUPABASE_URL: 'https://qzprgjffapommkqeapwy.supabase.co'
-  _SUPABASE_ANON_KEY: 'sb_publishable_pJqakDM0nEj9-Z2NrGjRZA_2GZ3K17a'
 
 options:
-  logging: CLOUD_LOGGING_ONLY
-  substitutionOption: 'ALLOW_LOOSE'
+  logging: 'CLOUD_LOGGING_ONLY'
+  substitution_option: 'ALLOW_LOOSE'
+
+images:
+  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:$_COMMIT_SHA'
+  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/api-server:latest'
+  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:$_COMMIT_SHA'
+  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/tlis/tiktok-luxury:latest'

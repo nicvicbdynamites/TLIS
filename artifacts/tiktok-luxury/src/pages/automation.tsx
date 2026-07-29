@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { Bot, CheckCircle2, Circle, Clock, Zap, ChevronDown, ChevronUp, Play, Pause } from "lucide-react";
+import { createCampaign } from "@/lib/review-center-store";
+import { addNotification } from "@/lib/notifications-store";
+import { useToast } from "@/hooks/use-toast";
 
 const plans = [
   {
@@ -104,6 +107,7 @@ const statusIcon = (status: string) => {
 };
 
 export default function Automation() {
+  const { toast } = useToast();
   const [enabled, setEnabled] = useState<Record<number, boolean>>(
     Object.fromEntries(plans.map(p => [p.id, p.enabled]))
   );
@@ -170,19 +174,50 @@ export default function Automation() {
                   </div>
                 </div>
 
-                <button
-                  onClick={e => {
-                    e.stopPropagation();
-                    setEnabled(prev => ({ ...prev, [plan.id]: !prev[plan.id] }));
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition duration-200 flex-shrink-0 ${
-                    isEnabled
-                      ? "bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
-                      : "border-border text-muted-foreground hover:border-primary/30"
-                  }`}
-                >
-                  {isEnabled ? <><Pause className="h-3 w-3" /> Pause</> : <><Play className="h-3 w-3" /> Resume</>}
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      // Trigger campaign creation in Review Center
+                      const newCamp = createCampaign({
+                        name: `${plan.name} - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+                        niche: plan.category,
+                        targetAccount: "@luxury.lifestyle",
+                        status: "Awaiting Review",
+                        aiConfidence: 96,
+                      });
+                      addNotification({
+                        type: "info",
+                        category: "campaign",
+                        title: "Campaign Ready for Review",
+                        message: `Automation plan "${plan.name}" generated new campaign "${newCamp.name}".`,
+                        actionUrl: `/review-center?id=${newCamp.id}`,
+                        campaignId: newCamp.id,
+                      });
+                      toast({
+                        title: "Workflow Triggered",
+                        description: `Generated campaign ${newCamp.name} and pushed to Review Center.`,
+                      });
+                    }}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-medium transition"
+                  >
+                    <Zap className="h-3 w-3" /> Run Now
+                  </button>
+
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      setEnabled(prev => ({ ...prev, [plan.id]: !prev[plan.id] }));
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition duration-200 flex-shrink-0 ${
+                      isEnabled
+                        ? "bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
+                        : "border-border text-muted-foreground hover:border-primary/30"
+                    }`}
+                  >
+                    {isEnabled ? <><Pause className="h-3 w-3" /> Pause</> : <><Play className="h-3 w-3" /> Resume</>}
+                  </button>
+                </div>
 
                 {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
               </div>

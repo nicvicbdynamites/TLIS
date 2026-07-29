@@ -2,13 +2,15 @@ import {
   TrendingUp, BarChart2, ArrowRight, Clock, Activity, Zap,
   Briefcase, UserCheck2, Package, Database, CalendarDays,
   CheckCircle2, AlertCircle, Loader2, Wifi, Plus, FolderOpen,
-  Inbox, Circle,
+  Inbox, Circle, ShieldCheck, Send, Sparkles, Check,
 } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { useLocation, Link } from "wouter";
 import { loadUsage, formatCost, type UsageData } from "@/lib/usage";
 import { useAuth } from "@/lib/auth";
 import { useActiveWorkspace } from "@/lib/workspace-context";
+import { getReviewCenterStats } from "@/lib/review-center-store";
+import { HealthMonitorBar } from "@/components/health-monitor-bar";
 import {
   checkSupabaseConnection,
   fetchWorkspaceStatsFromCloud,
@@ -519,8 +521,10 @@ export default function Dashboard() {
   const [statsLoading, setStatsLoading]       = useState(true);
   const [activity, setActivity]               = useState<ActivityEvent[]>([]);
   const [activityLoading, setActivityLoading] = useState(true);
+  const [rcStats, setRcStats]                 = useState(() => getReviewCenterStats());
 
   const loadAll = useCallback(async () => {
+    setRcStats(getReviewCenterStats());
     try {
       const [ws, accounts] = await Promise.all([
         fetchWorkspaceStatsFromCloud(),
@@ -544,15 +548,12 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const refresh = () => { void loadAll(); };
-    refresh();
-    window.addEventListener("focus", refresh);
-    window.addEventListener("workspace:changed", refresh);
-    window.addEventListener("account:changed", refresh);
+    loadAll();
+    window.addEventListener("focus", loadAll);
+    window.addEventListener("tlis_review_center_update", loadAll);
     return () => {
-      window.removeEventListener("focus", refresh);
-      window.removeEventListener("workspace:changed", refresh);
-      window.removeEventListener("account:changed", refresh);
+      window.removeEventListener("focus", loadAll);
+      window.removeEventListener("tlis_review_center_update", loadAll);
     };
   }, [loadAll]);
 
@@ -633,6 +634,89 @@ export default function Dashboard() {
               </button>
             </Link>
           )}
+        </div>
+      </div>
+
+      {/* ── System Platform Health Monitor ── */}
+      <HealthMonitorBar />
+
+      {/* ── Review Center Approval Stage Pipeline ── */}
+      <div className="luxury-card p-5 border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-background to-background space-y-4">
+        <div className="flex items-center justify-between border-b border-border/80 pb-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-amber-400" />
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">
+              Campaign Lifecycle Pipeline
+            </h2>
+          </div>
+          <button
+            onClick={() => navigate("/review-center")}
+            className="text-xs text-primary hover:underline font-mono flex items-center gap-1"
+          >
+            Open Review Center →
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+          <button
+            onClick={() => navigate("/review-center?filter=Draft")}
+            className="p-3 rounded-lg border border-border bg-card/60 hover:bg-card/90 text-left transition group"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground">Drafts</span>
+              <Circle className="h-3.5 w-3.5 text-muted-foreground group-hover:scale-110 transition" />
+            </div>
+            <div className="text-xl font-serif font-bold text-foreground">{rcStats.draft}</div>
+            <p className="text-[9px] text-muted-foreground mt-0.5">Initial setup</p>
+          </button>
+
+          <button
+            onClick={() => navigate("/review-center?filter=Awaiting+Review")}
+            className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-left transition group"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] uppercase font-semibold text-amber-300">Awaiting Review</span>
+              <Clock className="h-3.5 w-3.5 text-amber-400 group-hover:scale-110 transition" />
+            </div>
+            <div className="text-xl font-serif font-bold text-foreground">{rcStats.awaitingReview}</div>
+            <p className="text-[9px] text-muted-foreground mt-0.5">Pending approval</p>
+          </button>
+
+          <button
+            onClick={() => navigate("/review-center?filter=Approved")}
+            className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-left transition group"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] uppercase font-semibold text-emerald-300">Approved</span>
+              <Check className="h-3.5 w-3.5 text-emerald-400 group-hover:scale-110 transition" />
+            </div>
+            <div className="text-xl font-serif font-bold text-foreground">{rcStats.approvedToday}</div>
+            <p className="text-[9px] text-muted-foreground mt-0.5">Authorized for publish</p>
+          </button>
+
+          <button
+            onClick={() => navigate("/review-center?filter=Scheduled")}
+            className="p-3 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 text-left transition group"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] uppercase font-semibold text-primary">Scheduled</span>
+              <CalendarDays className="h-3.5 w-3.5 text-primary group-hover:scale-110 transition" />
+            </div>
+            <div className="text-xl font-serif font-bold text-foreground">{rcStats.scheduled}</div>
+            <p className="text-[9px] text-muted-foreground mt-0.5">In scheduler queue</p>
+          </button>
+
+          <button
+            onClick={() => navigate("/review-center?filter=Published")}
+            className="p-3 rounded-lg border border-chart-5/30 bg-chart-5/10 hover:bg-chart-5/20 text-left transition group"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] uppercase font-semibold text-chart-5">Published</span>
+              <Send className="h-3.5 w-3.5 text-chart-5 group-hover:scale-110 transition" />
+            </div>
+            <div className="text-xl font-serif font-bold text-foreground">{rcStats.published}</div>
+            <p className="text-[9px] text-muted-foreground mt-0.5">Live on TikTok</p>
+          </button>
         </div>
       </div>
 

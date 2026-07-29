@@ -47,6 +47,3 @@ Thumbs.db
 # Replit
 .cache/
 .local/
-service-account.json
-.env
-.firebase/

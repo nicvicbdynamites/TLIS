@@ -3,37 +3,32 @@ FROM node:22-slim AS builder
 
 WORKDIR /app
 
-# Install pnpm globally
-RUN npm install -g pnpm
+# Install pnpm 9 globally (matching root packageManager pnpm@9.15.9)
+RUN npm install -g pnpm@9.15.9
 
-# Copy root monorepo files
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json tsconfig.json ./
+# Copy root files and all workspace code needed for monorepo resolution
+COPY . .
 
-# Copy internal shared libraries
-COPY lib/ ./lib/
-
-# Copy the API server artifact
-COPY artifacts/api-server/ ./artifacts/api-server/
-
-# Install dependencies
+# Install dependencies for workspace without lockfile freezing
 RUN pnpm install --no-frozen-lockfile
 
-# Compile the project and build the API server
-RUN pnpm run build
+# Build the API server target
+RUN pnpm --filter @workspace/api-server run build
 
 # Production stage
 FROM node:22-slim
 
 WORKDIR /app
 
-# Copy entire built workspace from builder stage to preserve pnpm node_modules symlinks
-COPY --from=builder /app /app
+# Copy built package and node_modules from the builder stage
+COPY --from=builder /app/artifacts/api-server/package.json ./package.json
+COPY --from=builder /app/artifacts/api-server/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
 
-WORKDIR /app/artifacts/api-server
-
-# Expose port 8080 (standard for Cloud Run)
+# Expose port 8080 (standard for Cloud Run / Cloud Build deployments)
 EXPOSE 8080
 
 ENV NODE_ENV=production
+ENV PORT=8080
 
-CMD ["node", "--enable-source-maps", "dist/index.js"]
+CMD ["node", "--enable-source-maps", "dist/index.mjs"]

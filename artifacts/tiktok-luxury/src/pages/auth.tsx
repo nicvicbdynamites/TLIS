@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Eye, EyeOff, LogIn, UserPlus, KeyRound, CheckCircle, AlertCircle, Loader2, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { supabase, isSupabaseReady } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { signInSchema, signUpSchema, newPasswordSchema, emailSchema, firstIssueMessage } from "@/lib/validation";
 
@@ -250,6 +250,26 @@ export default function AuthPage() {
                 <p className="text-sm font-semibold text-foreground tracking-wide">Set New Password</p>
                 <p className="text-xs text-muted-foreground">Choose a strong password for your account</p>
               </div>
+            </div>
+          )}
+
+          {/* ── Demo Mode Notice ── */}
+          {!isSupabaseReady() && (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-xs flex items-center justify-between gap-2">
+              <div>
+                <span className="font-semibold block text-amber-400">Demo Mode Active</span>
+                <span className="text-[11px] text-amber-200/80">Sign in with any email & password or use Executive Guest mode.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("executive@tlis.luxury");
+                  setPassword("Executive2026!");
+                }}
+                className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-mono text-[10px] tracking-wider uppercase border border-amber-500/40 transition shrink-0"
+              >
+                Fill Demo
+              </button>
             </div>
           )}
 

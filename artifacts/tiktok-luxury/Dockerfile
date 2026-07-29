@@ -3,30 +3,13 @@ FROM node:22-slim AS builder
 
 WORKDIR /app
 
-# Accept Supabase environment variables as build arguments for Vite bundle
-ARG VITE_SUPABASE_URL
-ARG VITE_SUPABASE_ANON_KEY
-ARG SUPABASE_URL
-ARG SUPABASE_ANON_KEY
+# Install pnpm 9 globally (matching root packageManager pnpm@9.15.9)
+RUN npm install -g pnpm@9.15.9
 
-ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
-ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
-ENV SUPABASE_URL=$SUPABASE_URL
-ENV SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+# Copy root files and all workspace code needed for monorepo resolution
+COPY . .
 
-# Install pnpm globally
-RUN npm install -g pnpm
-
-# Copy root monorepo files
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json tsconfig.json ./
-
-# Copy internal shared libraries
-COPY lib/ ./lib/
-
-# Copy the frontend artifact
-COPY artifacts/tiktok-luxury/ ./artifacts/tiktok-luxury/
-
-# Install dependencies
+# Install dependencies for workspace without lockfile freezing
 RUN pnpm install --no-frozen-lockfile
 
 # Build the frontend static assets

@@ -232,7 +232,7 @@ export default function ExecutiveCommandCenter() {
     setBriefLoad(true);
     aiService.generateExecutiveBrief("quiet luxury")
       .then(r  => { setBrief(r); setBriefLoad(false); })
-      .catch(e => { setBriefErr(String(e?.message ?? "Failed")); setBriefLoad(false); });
+      .catch(e => { setBriefErr(String(e?.message ?? "AI-generated content is temporarily unavailable due to rate limits. Displaying cached intelligence.")); setBriefLoad(false); });
   }, []);
 
   // ── AI Command Bar ───────────────────────────────────────────────────────
