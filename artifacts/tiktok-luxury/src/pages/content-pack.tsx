@@ -577,7 +577,7 @@ export default function ContentPackGenerator() {
               </div>
             )}
 
-            <SelectField label="Niche"           options={niches}     value={form.niche}    onChange={v => setForm(f => ({ ...f, niche: v }))} />
+            <SelectField label="Niche"           options={Array.from(new Set([form.niche, ...niches]))} value={form.niche} onChange={v => setForm(f => ({ ...f, niche: v }))} />
             <SelectField label="Video Style"     options={styles}     value={form.style}    onChange={v => setForm(f => ({ ...f, style: v }))} />
             <SelectField label="Tone"            options={tones}      value={form.tone}     onChange={v => setForm(f => ({ ...f, tone: v }))} />
             <SelectField label="Platform"        options={platforms}  value={form.platform} onChange={v => setForm(f => ({ ...f, platform: v }))} />

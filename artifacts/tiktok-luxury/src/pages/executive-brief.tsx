@@ -13,6 +13,8 @@ import { useTrendSummary } from "@/lib/trends-provider";
 import { useRedditSummary } from "@/lib/reddit-provider";
 import { useSearchConsoleAnalytics } from "@/lib/search-console-provider";
 import { useAhrefsIntelligence }     from "@/lib/ahrefs-provider";
+import { createCampaign }            from "@/lib/review-center-store";
+import { pushNotification }          from "@/lib/notifications-store";
 
 // ── Greeting ──────────────────────────────────────────────────────────────
 
@@ -268,20 +270,57 @@ export default function ExecutiveBrief() {
     const recs = brief?.contentRecs && brief.contentRecs.length > 0 ? brief.contentRecs : CONTENT_RECS;
     const findRec = (term: string) => recs.find((r: any) => r.type.toLowerCase().includes(term.toLowerCase()))?.content;
 
+    const hook = findRec("hook") || "POV: You found the skincare routine that Silicon Valley billionaires actually use — and it costs less than your daily coffee.";
+    const caption = findRec("caption") || "Quiet luxury isn't about logos. It's about knowing what to use — and what to leave behind. Here's what's actually on my shelf. 🖤";
+    const videoPrompt = findRec("prompt") || "Write a TikTok caption for a 60-second 'Get Ready With Me' video focused on a 3-step minimalist skincare routine...";
+    const hashtags = findRec("hashtag") ? findRec("hashtag")!.split(" ").filter(Boolean) : ["#QuietLuxury", "#LuxurySkincare", "#MinimalistBeauty", "#CleanGirl", "#SkincareTok"];
+    const cta = findRec("cta") || "Save this if you're upgrading your routine in 2026. Drop a 🖤 if you want Part 2.";
+    const postingTime = brief?.postingTime || "Saturday 11 AM";
+    const niche = brief?.topNiche || "Quiet Luxury Lifestyle";
+
+    // 1. Actually generate and save Campaign in Review Center Pipeline
+    const campaign = createCampaign({
+      name: `${niche} Executive Campaign`,
+      niche: niche,
+      status: "Awaiting Review",
+      aiConfidence: brief?.confidence ?? 94,
+      content: {
+        hook,
+        caption,
+        cta,
+        hashtags,
+        thumbnailDescription: "Minimalist luxury editorial frame with soft golden lighting.",
+        musicRecommendation: "Soft ambient piano or lo-fi beats (70-85 BPM)",
+      }
+    });
+
+    // 2. Prepare campaign data object for Content Pack Generator
     const campaignData = {
-      niche: brief?.topNiche || "Quiet Luxury Lifestyle",
+      campaignId: campaign.id,
+      niche: niche,
       pack: {
-        hook: findRec("hook") || "POV: You found the skincare routine that Silicon Valley billionaires actually use — and it costs less than your daily coffee.",
-        caption: findRec("caption") || "Quiet luxury isn't about logos. It's about knowing what to use — and what to leave behind. Here's what's actually on my shelf. 🖤",
-        video_prompt: findRec("prompt") || "Write a TikTok caption for a 60-second 'Get Ready With Me' video focused on a 3-step minimalist skincare routine...",
-        hashtags: findRec("hashtag") ? findRec("hashtag")!.split(" ").filter(Boolean) : ["#QuietLuxury", "#LuxurySkincare", "#MinimalistBeauty", "#CleanGirl", "#SkincareTok"],
-        cta: findRec("cta") || "Save this if you're upgrading your routine in 2026. Drop a 🖤 if you want Part 2.",
-        best_posting_time: brief?.postingTime || "Saturday 11 AM",
+        hook,
+        caption,
+        video_prompt: videoPrompt,
+        hashtags,
+        cta,
+        best_posting_time: postingTime,
       },
       model: brief?.model || "gemini-2.5-flash",
     };
 
     sessionStorage.setItem("tlis_generated_campaign", JSON.stringify(campaignData));
+
+    // 3. Dispatch real-time system notification
+    pushNotification({
+      title: "Campaign Generated",
+      message: `Created campaign "${campaign.name}" from Executive Brief. Ready for review & content pack dispatch.`,
+      type: "success",
+      category: "campaign",
+      actionUrl: `/review-center?id=${campaign.id}`,
+      campaignId: campaign.id,
+    });
+
     setGeneratingCampaign(false);
     navigate("/content-pack");
   }, [aiBrief, generateBrief, navigate]);
