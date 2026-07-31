@@ -20,7 +20,6 @@ import {
   type ContentPackRecord,
 } from "@/lib/supabase";
 import { useActiveWorkspace } from "@/lib/workspace-context";
-import { buildApiUrl } from "@/lib/api-config";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -299,31 +298,6 @@ export default function ContentPackGenerator() {
     }).catch(() => setHistoryLoading(false));
   }, []);
 
-  // Pre-populate campaign from Executive Brief if available
-  useEffect(() => {
-    const rawData = sessionStorage.getItem("tlis_generated_campaign");
-    if (!rawData) return;
-    try {
-      const campaign = JSON.parse(rawData);
-      if (campaign.niche) {
-        setForm(f => ({
-          ...f,
-          niche: niches.includes(campaign.niche) ? campaign.niche : f.niche,
-        }));
-      }
-      if (campaign.pack) {
-        setPack(campaign.pack);
-      }
-      if (campaign.model) {
-        setModel(campaign.model);
-      }
-    } catch (err) {
-      console.error("Failed to parse pre-populated campaign data", err);
-    } finally {
-      sessionStorage.removeItem("tlis_generated_campaign");
-    }
-  }, []);
-
   // Cleanup
   useEffect(() => () => {
     abortRef.current?.abort();
@@ -371,7 +345,7 @@ export default function ContentPackGenerator() {
     };
 
     try {
-      const res = await fetch(buildApiUrl("/api/generate/content-pack"), {
+      const res = await fetch("/api/generate/content-pack", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -578,7 +552,7 @@ export default function ContentPackGenerator() {
               </div>
             )}
 
-            <SelectField label="Niche"           options={Array.from(new Set([form.niche, ...niches]))} value={form.niche} onChange={v => setForm(f => ({ ...f, niche: v }))} />
+            <SelectField label="Niche"           options={niches}     value={form.niche}    onChange={v => setForm(f => ({ ...f, niche: v }))} />
             <SelectField label="Video Style"     options={styles}     value={form.style}    onChange={v => setForm(f => ({ ...f, style: v }))} />
             <SelectField label="Tone"            options={tones}      value={form.tone}     onChange={v => setForm(f => ({ ...f, tone: v }))} />
             <SelectField label="Platform"        options={platforms}  value={form.platform} onChange={v => setForm(f => ({ ...f, platform: v }))} />
