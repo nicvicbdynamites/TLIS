@@ -44,10 +44,10 @@ const NAV_SECTIONS: NavSectionDef[] = [
   {
     title: "Dashboard",
     items: [
-      { href: "/",             label: "Dashboard text",        icon: LayoutDashboard },
-      { href: "/command",      label: "Executive Command", icon: Monitor },
-      { href: "/brief",        label: "Executive Brief",   icon: Crown },
-      { href: "/notifications",label: "Notifications",     icon: Bell, badgeKey: "notifications" },
+      { href: "/",             label: "Dashboard",          icon: LayoutDashboard },
+      { href: "/command",      label: "Executive Command",  icon: Monitor },
+      { href: "/brief",        label: "Executive Brief",    icon: Crown },
+      { href: "/notifications",label: "Notifications",      icon: Bell, badgeKey: "notifications" },
     ]
   },
   {
@@ -56,7 +56,7 @@ const NAV_SECTIONS: NavSectionDef[] = [
       { href: "/campaigns",    label: "Campaign Manager",  icon: Target, badgeKey: "campaigns" },
       { href: "/review-center", label: "Review Center",    icon: ShieldCheck, badgeKey: "reviewCenter" },
       { href: "/generator",     label: "Content Studio",    icon: Sparkles },
-      { href: "/calendar text", label: "Content Calendar",  icon: CalendarDays },
+      { href: "/calendar",      label: "Content Calendar",  icon: CalendarDays },
     ]
   },
   {
@@ -78,7 +78,7 @@ const NAV_SECTIONS: NavSectionDef[] = [
     items: [
       { href: "/accounts",     label: "TikTok Accounts",  icon: UserCheck2, badgeKey: "accounts" },
       { href: "/workspace",    label: "TikTok Workspace", icon: Briefcase },
-      { href: "/integrations", label: "Integration Hub", icon: Plug },
+      { href: "/integrations", label: "Integration Hub",  icon: Plug },
     ]
   },
   {
@@ -109,19 +109,8 @@ const NAV_SECTIONS: NavSectionDef[] = [
 // Flat list for lookup
 const ALL_NAV_ITEMS: NavItemDef[] = NAV_SECTIONS.flatMap(s => s.items);
 
-// Clean label fixes
-const CLEAN_ITEMS: NavItemDef[] = ALL_NAV_ITEMS.map(item => ({
-  ...item,
-  label: item.label.replace(/ text$/, "").replace(/ font$/, "")
-}));
-
-const FINAL_SECTIONS: NavSectionDef[] = NAV_SECTIONS.map(section => ({
-  ...section,
-  items: section.items.map(item => ({
-    ...item,
-    label: item.label.replace(/ text$/, "").replace(/ font$/, "")
-  }))
-}));
+const CLEAN_ITEMS: NavItemDef[] = ALL_NAV_ITEMS;
+const FINAL_SECTIONS: NavSectionDef[] = NAV_SECTIONS;
 
 // ── User dropdown ─────────────────────────────────────────────────────────
 
