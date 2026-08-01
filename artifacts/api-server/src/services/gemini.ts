@@ -233,12 +233,12 @@ export async function generateWithCascade(
           throw err;
         }
 
-        log.info({ model, attempt, status: err?.status }, "Gemini cascade attempt error");
-
         if (isCreditsDepleted(err)) {
-          log.info({ model }, "Prepayment credits depleted or spending cap reached, aborting cascade to fallback mode");
+          log.info({ model, status: err?.status }, "Prepayment credits depleted or spending cap reached, aborting cascade to fallback mode");
           throw err;
         }
+
+        log.info({ model, attempt, status: err?.status }, "Gemini cascade attempt error");
         if (isPermDenied(err)) {
           log.warn({ model }, "Model permission denied, trying next in cascade");
           break;
