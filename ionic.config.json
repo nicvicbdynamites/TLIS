@@ -1,0 +1,8 @@
+{
+  "name": "TLIS",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "custom",
+  "packageManager": "pnpm"
+}
