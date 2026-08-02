@@ -1,8 +1,5 @@
 {
-  "name": "TLIS",
-  "integrations": {
-    "capacitor": {}
-  },
+  "name": "tiktok-luxury",
   "type": "custom",
   "packageManager": "pnpm",
   "build": {
