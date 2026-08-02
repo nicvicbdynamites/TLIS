@@ -6,7 +6,7 @@
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; corepack enable pnpm 2>/dev/null || npm install -g pnpm@9.15.9'",
     "prebuild": "corepack enable pnpm 2>/dev/null || npm install -g pnpm@9.15.9 && pnpm install --no-frozen-lockfile",
-    "build": "pnpm --filter tiktok-luxury build",
+    "build": "pnpm --filter tiktok-luxury build && mkdir -p dist && cp -r artifacts/tiktok-luxury/dist/public dist/",
     "build:all": "pnpm run typecheck && pnpm -r --if-present run build",
     "build:mobile": "pnpm --filter tiktok-luxury build",
     "typecheck:libs": "tsc --build --force",
