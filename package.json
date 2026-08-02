@@ -4,7 +4,7 @@
   "license": "MIT",
   "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; corepack enable pnpm 2>/dev/null || npm install -g pnpm@9.15.9'",
+    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; corepack enable pnpm 2>/dev/null || npm install -g pnpm@9.15.9; if echo \"$npm_config_user_agent\" | grep -q \"^npm/\"; then pnpm install --no-frozen-lockfile; fi'",
     "build": "pnpm --filter tiktok-luxury build",
     "build:all": "pnpm run typecheck && pnpm -r --if-present run build",
     "build:mobile": "pnpm --filter tiktok-luxury build",
@@ -13,6 +13,8 @@
   },
   "private": true,
   "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "prettier": "^3.8.3",
     "typescript": "~5.9.3"
   },

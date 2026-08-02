@@ -1,5 +1,8 @@
 {
   "name": "tiktok-luxury",
+  "integrations": {
+    "capacitor": {}
+  },
   "type": "custom",
   "packageManager": "pnpm",
   "build": {

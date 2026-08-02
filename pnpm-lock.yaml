@@ -74,6 +74,12 @@ importers:
 
   .:
     devDependencies:
+      '@capacitor/cli':
+        specifier: ^8.5.0
+        version: 8.5.0
+      '@capacitor/core':
+        specifier: ^8.5.0
+        version: 8.5.0
       prettier:
         specifier: ^3.8.3
         version: 3.8.3
