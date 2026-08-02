@@ -47,14 +47,4 @@ Thumbs.db
 # Replit
 .cache/
 .local/
-
-# Secrets & Environment
-.env
-*.env
-service-account.json
-
-# Build & Test Artifacts
-.firebase/
-test-results/
-supabase/.temp/
-supabase/.branches/
+node-compile-cache/

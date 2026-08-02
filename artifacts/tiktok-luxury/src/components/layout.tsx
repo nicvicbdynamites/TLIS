@@ -43,21 +43,20 @@ export interface NavSectionDef {
 const NAV_SECTIONS: NavSectionDef[] = [
   {
     title: "Dashboard",
-    collapsible: true,
     items: [
-      { href: "/",             label: "Dashboard",            icon: LayoutDashboard },
-      { href: "/brief",        label: "Executive Brief",      icon: Crown },
-      { href: "/notifications",label: "Notifications",        icon: Bell, badgeKey: "notifications" },
+      { href: "/",             label: "Dashboard",          icon: LayoutDashboard },
+      { href: "/command",      label: "Executive Command",  icon: Monitor },
+      { href: "/brief",        label: "Executive Brief",    icon: Crown },
+      { href: "/notifications",label: "Notifications",      icon: Bell, badgeKey: "notifications" },
     ]
   },
   {
     title: "Campaign Operations",
-    collapsible: true,
     items: [
-      { href: "/campaigns",    label: "Campaign Manager",     icon: Target, badgeKey: "campaigns" },
-      { href: "/review-center", label: "Review Center",       icon: ShieldCheck, badgeKey: "reviewCenter" },
-      { href: "/generator",     label: "Content Studio",       icon: Sparkles },
-      { href: "/calendar",      label: "Content Calendar",     icon: CalendarDays },
+      { href: "/campaigns",    label: "Campaign Manager",  icon: Target, badgeKey: "campaigns" },
+      { href: "/review-center", label: "Review Center",    icon: ShieldCheck, badgeKey: "reviewCenter" },
+      { href: "/generator",     label: "Content Studio",    icon: Sparkles },
+      { href: "/calendar",      label: "Content Calendar",  icon: CalendarDays },
     ]
   },
   {
@@ -76,24 +75,21 @@ const NAV_SECTIONS: NavSectionDef[] = [
   },
   {
     title: "Accounts",
-    collapsible: true,
     items: [
-      { href: "/accounts",     label: "TikTok Accounts",     icon: UserCheck2, badgeKey: "accounts" },
-      { href: "/workspace",    label: "TikTok Workspace",    icon: Briefcase },
-      { href: "/integrations", label: "Integration Hub",    icon: Plug },
+      { href: "/accounts",     label: "TikTok Accounts",  icon: UserCheck2, badgeKey: "accounts" },
+      { href: "/workspace",    label: "TikTok Workspace", icon: Briefcase },
+      { href: "/integrations", label: "Integration Hub",  icon: Plug },
     ]
   },
   {
     title: "Automation",
-    collapsible: true,
     items: [
-      { href: "/automation",   label: "Automation Engine",   icon: Bot, badgeKey: "automation" },
+      { href: "/automation",   label: "Automation Engine",       icon: Bot, badgeKey: "automation" },
       { href: "/content-pack", label: "Content Pack Generator", icon: Package },
     ]
   },
   {
     title: "Analytics",
-    collapsible: true,
     items: [
       { href: "/analytics",    label: "Analytics Intelligence", icon: BarChart3 },
       { href: "/usage",        label: "Usage Tracker",         icon: Activity },
@@ -103,10 +99,9 @@ const NAV_SECTIONS: NavSectionDef[] = [
   },
   {
     title: "Administration",
-    collapsible: true,
     items: [
-      { href: "/profile",      label: "User Profile",         icon: UserCircle },
-      { href: "/settings",     label: "Settings",             icon: Settings },
+      { href: "/profile",      label: "User Profile", icon: UserCircle },
+      { href: "/settings",     label: "Settings",     icon: Settings },
     ]
   }
 ];
@@ -114,19 +109,8 @@ const NAV_SECTIONS: NavSectionDef[] = [
 // Flat list for lookup
 const ALL_NAV_ITEMS: NavItemDef[] = NAV_SECTIONS.flatMap(s => s.items);
 
-// Clean label fixes
-const CLEAN_ITEMS: NavItemDef[] = ALL_NAV_ITEMS.map(item => ({
-  ...item,
-  label: item.label.replace(/ text$/, "").replace(/ font$/, "")
-}));
-
-const FINAL_SECTIONS: NavSectionDef[] = NAV_SECTIONS.map(section => ({
-  ...section,
-  items: section.items.map(item => ({
-    ...item,
-    label: item.label.replace(/ text$/, "").replace(/ font$/, "")
-  }))
-}));
+const CLEAN_ITEMS: NavItemDef[] = ALL_NAV_ITEMS;
+const FINAL_SECTIONS: NavSectionDef[] = NAV_SECTIONS;
 
 // ── User dropdown ─────────────────────────────────────────────────────────
 

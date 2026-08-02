@@ -13,8 +13,6 @@ import { useTrendSummary } from "@/lib/trends-provider";
 import { useRedditSummary } from "@/lib/reddit-provider";
 import { useSearchConsoleAnalytics } from "@/lib/search-console-provider";
 import { useAhrefsIntelligence }     from "@/lib/ahrefs-provider";
-import { createCampaign }            from "@/lib/review-center-store";
-import { pushNotification }          from "@/lib/notifications-store";
 
 // ── Greeting ──────────────────────────────────────────────────────────────
 
@@ -234,14 +232,13 @@ export default function ExecutiveBrief() {
   const [aiBrief, setAiBrief]               = useState<BriefResult | null>(null);
   const [briefLoading, setBriefLoading]     = useState(false);
   const [briefError, setBriefError]         = useState<string | null>(null);
-  const [generatingCampaign, setGeneratingCampaign] = useState(false);
 
   const { data: trendSummary, loading: trendLoading } = useTrendSummary();
   const { data: redditSummary }                       = useRedditSummary();
   const { data: gscData, loading: gscLoading }        = useSearchConsoleAnalytics();
   const { data: ahrefsData, loading: ahrefsLoading }  = useAhrefsIntelligence();
 
-  const generateBrief = useCallback(async (): Promise<BriefResult | null> => {
+  const generateBrief = useCallback(async () => {
     setBriefLoading(true);
     setBriefError(null);
     try {
@@ -250,80 +247,12 @@ export default function ExecutiveBrief() {
       if (result.isFallback && result.fallbackReason) {
         setBriefError(result.fallbackReason);
       }
-      return result;
     } catch (err: any) {
-      const msg = String(err?.message ?? "AI-generated content is temporarily unavailable due to API rate limits. Showing cached intelligence.");
-      setBriefError(msg);
-      return null;
+      setBriefError(String(err?.message ?? "AI-generated content is temporarily unavailable due to API rate limits. Showing cached intelligence."));
     } finally {
       setBriefLoading(false);
     }
   }, []);
-
-  const handleGenerateCampaign = useCallback(async () => {
-    setGeneratingCampaign(true);
-    let brief = aiBrief;
-    if (!brief) {
-      brief = await generateBrief();
-    }
-
-    const recs = brief?.contentRecs && brief.contentRecs.length > 0 ? brief.contentRecs : CONTENT_RECS;
-    const findRec = (term: string) => recs.find((r: any) => r.type.toLowerCase().includes(term.toLowerCase()))?.content;
-
-    const hook = findRec("hook") || "POV: You found the skincare routine that Silicon Valley billionaires actually use — and it costs less than your daily coffee.";
-    const caption = findRec("caption") || "Quiet luxury isn't about logos. It's about knowing what to use — and what to leave behind. Here's what's actually on my shelf. 🖤";
-    const videoPrompt = findRec("prompt") || "Write a TikTok caption for a 60-second 'Get Ready With Me' video focused on a 3-step minimalist skincare routine...";
-    const hashtags = findRec("hashtag") ? findRec("hashtag")!.split(" ").filter(Boolean) : ["#QuietLuxury", "#LuxurySkincare", "#MinimalistBeauty", "#CleanGirl", "#SkincareTok"];
-    const cta = findRec("cta") || "Save this if you're upgrading your routine in 2026. Drop a 🖤 if you want Part 2.";
-    const postingTime = brief?.postingTime || "Saturday 11 AM";
-    const niche = brief?.topNiche || "Quiet Luxury Lifestyle";
-
-    // 1. Actually generate and save Campaign in Review Center Pipeline
-    const campaign = createCampaign({
-      name: `${niche} Executive Campaign`,
-      niche: niche,
-      status: "Awaiting Review",
-      aiConfidence: brief?.confidence ?? 94,
-      content: {
-        hook,
-        caption,
-        cta,
-        hashtags,
-        thumbnailDescription: "Minimalist luxury editorial frame with soft golden lighting.",
-        musicRecommendation: "Soft ambient piano or lo-fi beats (70-85 BPM)",
-      }
-    });
-
-    // 2. Prepare campaign data object for Content Pack Generator
-    const campaignData = {
-      campaignId: campaign.id,
-      niche: niche,
-      pack: {
-        hook,
-        caption,
-        video_prompt: videoPrompt,
-        hashtags,
-        cta,
-        best_posting_time: postingTime,
-      },
-      model: brief?.model || "gemini-2.5-flash",
-    };
-
-    sessionStorage.setItem("tlis_generated_campaign", JSON.stringify(campaignData));
-
-    // 3. Dispatch real-time system notification
-    pushNotification({
-      title: "Campaign Generated",
-      message: `Created campaign "${campaign.name}" from Executive Brief. Ready for review & content pack dispatch.`,
-      type: "success",
-      category: "campaign",
-      actionUrl: `/review-center?id=${campaign.id}`,
-      campaignId: campaign.id,
-    });
-
-    setGeneratingCampaign(false);
-    navigate("/content-pack");
-  }, [aiBrief, generateBrief, navigate]);
 
   const displayName = user?.email
     ? user.email.split("@")[0]!.replace(/[._]/g, " ").replace(/\b\w/g, l => l.toUpperCase())
@@ -754,21 +683,11 @@ export default function ExecutiveBrief() {
           </div>
 
           <button
-            onClick={handleGenerateCampaign}
-            disabled={generatingCampaign || briefLoading}
-            className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition text-xs font-semibold uppercase tracking-widest min-h-[44px] disabled:opacity-50 cursor-pointer"
+            onClick={() => navigate("/content-pack")}
+            className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition text-xs font-semibold uppercase tracking-widest min-h-[44px]"
           >
-            {generatingCampaign || briefLoading ? (
-              <>
-                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                Generating AI Brief & Campaign...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-3.5 w-3.5" />
-                Generate Campaign
-              </>
-            )}
+            <Sparkles className="h-3.5 w-3.5" />
+            Generate Campaign
           </button>
         </div>
       </div>

@@ -14,7 +14,6 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { buildApiUrl } from "@/lib/api-config";
 
 // ── Types mirrored from api-server integration-core ─────────────────────────
 
@@ -118,7 +117,7 @@ export function useIntegrationRegistry(): IntegrationRegistryResponse & { loadin
 
   const fetch_ = useCallback(async () => {
     try {
-      const res = await fetch(buildApiUrl("/api/integration-core/registry"));
+      const res = await fetch("/api/integration-core/registry");
       if (!res.ok) return;
       const json = await res.json() as IntegrationRegistryResponse;
       setData(json);
@@ -149,7 +148,7 @@ export function useIntegrationActivity(limit = 20): { activity: IntegrationActiv
 
   const fetch_ = useCallback(async () => {
     try {
-      const res = await fetch(buildApiUrl(`/api/integration-core/activity?limit=${limit}`));
+      const res = await fetch(`/api/integration-core/activity?limit=${limit}`);
       if (!res.ok) return;
       const json = await res.json() as { activity: IntegrationActivityEntry[] };
       setActivity(json.activity ?? []);
@@ -175,7 +174,7 @@ export function useIntegrationActivity(limit = 20): { activity: IntegrationActiv
 
 export async function testIntegrationConnection(id: string): Promise<IntegrationTestResult> {
   try {
-    const res = await fetch(buildApiUrl(`/api/integration-core/${id}/test`), { method: "POST" });
+    const res = await fetch(`/api/integration-core/${id}/test`, { method: "POST" });
     const data = await res.json() as {
       ok?: boolean;
       error?: string;

@@ -2,7 +2,7 @@ import {
   TrendingUp, BarChart2, ArrowRight, Clock, Activity, Zap,
   Briefcase, UserCheck2, Package, Database, CalendarDays,
   CheckCircle2, AlertCircle, Loader2, Wifi, Plus, FolderOpen,
-  Inbox, Circle, ShieldCheck, Send, Sparkles, Check, Bot, Bell, HeartPulse
+  Inbox, Circle, ShieldCheck, Send, Sparkles, Check,
 } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { useLocation, Link } from "wouter";
@@ -10,7 +10,6 @@ import { loadUsage, formatCost, type UsageData } from "@/lib/usage";
 import { useAuth } from "@/lib/auth";
 import { useActiveWorkspace } from "@/lib/workspace-context";
 import { getReviewCenterStats } from "@/lib/review-center-store";
-import { getNotifications } from "@/lib/notifications-store";
 import { HealthMonitorBar } from "@/components/health-monitor-bar";
 import {
   checkSupabaseConnection,
@@ -646,166 +645,6 @@ export default function Dashboard() {
 
       {/* ── System Platform Health Monitor ── */}
       <HealthMonitorBar />
-
-      {/* ── Mission Control Operations Cards ── */}
-      <div className="space-y-3">
-        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono font-bold">
-          Mission Control Operations
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-          {/* 1. Campaigns Awaiting Review */}
-          <button
-            onClick={() => navigate("/review-center?filter=Awaiting+Review")}
-            className="luxury-card p-5 text-left hover:border-amber-500/50 hover:bg-amber-500/5 transition duration-200 group relative overflow-hidden"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
-                {rcStats.awaitingReview} Awaiting
-              </span>
-            </div>
-            <h3 className="text-sm font-bold text-foreground group-hover:text-amber-300 transition-colors">
-              Campaigns Awaiting Review
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-              Review and approve creative assets before dispatching to TikTok.
-            </p>
-            <div className="mt-4 pt-2 border-t border-border/50 flex items-center justify-between text-[11px] text-amber-400 font-mono">
-              <span>Open Review Center</span>
-              <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
-
-          {/* 2. Scheduled Posts Queue */}
-          <button
-            onClick={() => navigate("/calendar")}
-            className="luxury-card p-5 text-left hover:border-primary/50 hover:bg-primary/5 transition duration-200 group relative overflow-hidden"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 text-primary">
-                <CalendarDays className="h-5 w-5" />
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-primary/20 text-primary font-bold border border-primary/30">
-                {rcStats.scheduled} Scheduled
-              </span>
-            </div>
-            <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-              Scheduled Content Queue
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-              Manage multi-account posting schedule and publication timeline.
-            </p>
-            <div className="mt-4 pt-2 border-t border-border/50 flex items-center justify-between text-[11px] text-primary font-mono">
-              <span>Open Content Calendar</span>
-              <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
-
-          {/* 3. Connected Accounts */}
-          <button
-            onClick={() => navigate("/accounts")}
-            className="luxury-card p-5 text-left hover:border-chart-2/50 hover:bg-chart-2/5 transition duration-200 group relative overflow-hidden"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 rounded-lg bg-chart-2/10 border border-chart-2/20 text-chart-2">
-                <UserCheck2 className="h-5 w-5" />
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-chart-2/20 text-chart-2 font-bold border border-chart-2/30">
-                {stats?.accounts || 1} Connected
-              </span>
-            </div>
-            <h3 className="text-sm font-bold text-foreground group-hover:text-chart-2 transition-colors">
-              TikTok Connected Accounts
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-              Sync profile authorization, permissions, and publishing tokens.
-            </p>
-            <div className="mt-4 pt-2 border-t border-border/50 flex items-center justify-between text-[11px] text-chart-2 font-mono">
-              <span>Manage TikTok Accounts</span>
-              <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
-
-          {/* 4. Active Automation Jobs */}
-          <button
-            onClick={() => navigate("/automation")}
-            className="luxury-card p-5 text-left hover:border-chart-5/50 hover:bg-chart-5/5 transition duration-200 group relative overflow-hidden"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 rounded-lg bg-chart-5/10 border border-chart-5/20 text-chart-5">
-                <Bot className="h-5 w-5" />
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-chart-5/20 text-chart-5 font-bold border border-chart-5/30">
-                2 Active Jobs
-              </span>
-            </div>
-            <h3 className="text-sm font-bold text-foreground group-hover:text-chart-5 transition-colors">
-              Automation Engine
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-              Auto-generate hooks, automated content cycles, and pipeline triggers.
-            </p>
-            <div className="mt-4 pt-2 border-t border-border/50 flex items-center justify-between text-[11px] text-chart-5 font-mono">
-              <span>Open Automation Engine</span>
-              <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
-
-          {/* 5. System Health Status */}
-          <button
-            onClick={() => navigate("/platform-health")}
-            className="luxury-card p-5 text-left hover:border-emerald-500/50 hover:bg-emerald-500/5 transition duration-200 group relative overflow-hidden"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                <HeartPulse className="h-5 w-5" />
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
-                100% Operational
-              </span>
-            </div>
-            <h3 className="text-sm font-bold text-foreground group-hover:text-emerald-300 transition-colors">
-              System & Platform Health
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-              Monitor cloud API status, database latency, and storage connectivity.
-            </p>
-            <div className="mt-4 pt-2 border-t border-border/50 flex items-center justify-between text-[11px] text-emerald-400 font-mono">
-              <span>Inspect System Health</span>
-              <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
-
-          {/* 6. Recent Notifications */}
-          <button
-            onClick={() => navigate("/notifications")}
-            className="luxury-card p-5 text-left hover:border-primary/50 hover:bg-primary/5 transition duration-200 group relative overflow-hidden"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 text-primary">
-                <Bell className="h-5 w-5" />
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-primary/20 text-primary font-bold border border-primary/30">
-                {getNotifications().filter(n => !n.read).length} Unread
-              </span>
-            </div>
-            <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-              Notification Center
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-              Real-time audit alerts, pipeline milestones, and publication logs.
-            </p>
-            <div className="mt-4 pt-2 border-t border-border/50 flex items-center justify-between text-[11px] text-primary font-mono">
-              <span>View Notifications</span>
-              <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
-
-        </div>
-      </div>
 
       {/* ── Review Center Approval Stage Pipeline ── */}
       <div className="luxury-card p-5 border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-background to-background space-y-4">

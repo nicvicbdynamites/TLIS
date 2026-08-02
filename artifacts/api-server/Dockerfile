@@ -20,7 +20,7 @@ FROM node:22-slim
 
 WORKDIR /app
 
-# Copy built workspace and node_modules from builder stage
+# Copy built workspace and node_modules from builder stage to preserve monorepo symlinks
 COPY --from=builder /app /app
 
 WORKDIR /app/artifacts/api-server
@@ -31,4 +31,4 @@ EXPOSE 8080
 ENV NODE_ENV=production
 ENV PORT=8080
 
-CMD ["node", "--enable-source-maps", "dist/index.js"]
+CMD ["node", "--enable-source-maps", "dist/index.mjs"]

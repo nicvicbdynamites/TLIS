@@ -1,4 +1,4 @@
-import { addPost } from "./calendar";
+import { addPost, loadCalendar } from "./calendar";
 import { pushNotification } from "./notifications-store";
 
 export type CampaignStatus = 
@@ -494,45 +494,43 @@ export function addTimelineEvent(campaignId: string, event: Omit<TimelineEvent, 
   return campaigns[index];
 }
 
-export function createCampaign(data: Partial<Campaign> & { name: string }): Campaign {
+export function createCampaign(data: Partial<Omit<Campaign, "id" | "createdAt">> & { name: string; targetAccount: string }): Campaign {
   const campaigns = loadCampaigns();
   const newId = `rev-${Date.now().toString().slice(-6)}`;
   const nowIso = new Date().toISOString();
 
   const newCampaign: Campaign = {
-    ...data,
     id: newId,
-    name: data.name,
-    targetAccount: data.targetAccount || "@luxury.lifestyle",
-    status: data.status || "Awaiting Review",
-    aiConfidence: data.aiConfidence ?? 92,
     createdAt: nowIso,
-    niche: data.niche || "Quiet Luxury",
+    status: data.status || "Awaiting Review",
+    aiConfidence: data.aiConfidence ?? 95,
+    niche: data.niche || "Quiet Luxury Lifestyle",
     images: data.images || [],
     videos: data.videos || [],
     content: data.content || {
-      hook: "POV: Discovering quiet luxury elegance in daily details...",
-      caption: "Elevate your aesthetic with curated craftsmanship and timeless design.",
-      cta: "Link in bio for full collection.",
-      hashtags: ["#QuietLuxury", "#LuxuryLifestyle", "#Aesthetic"],
-      thumbnailDescription: "Curated aesthetic presentation frame with minimal typography",
-      musicRecommendation: "Ludovico Einaudi - Ambient Piano",
+      hook: "POV: Discovering the quiet luxury secret that changes everything.",
+      caption: "Elevate your daily routine with timeless elegance.",
+      cta: "Follow for more luxury insights.",
+      hashtags: ["#QuietLuxury", "#OldMoney", "#Elegance"],
+      thumbnailDescription: "Minimalist luxury aesthetic",
+      musicRecommendation: "Soft piano & ambient strings",
     },
     qualityCheck: data.qualityCheck || {
-      hookScore: 90,
-      captionScore: 90,
-      brandConsistency: 95,
-      visualQuality: 92,
-      aiConfidence: 94,
-      overallScore: 93,
+      hookScore: 95,
+      captionScore: 92,
+      brandConsistency: 98,
+      visualQuality: 96,
+      aiConfidence: data.aiConfidence ?? 95,
+      overallScore: 95,
     },
-    timeline: data.timeline || [
+    ...data,
+    timeline: [
       {
         id: `tl-${Date.now()}`,
         timestamp: nowIso,
         type: "status_change",
         title: `Campaign Created (${data.status || "Awaiting Review"})`,
-        description: `Campaign initialized for ${data.targetAccount || "@luxury.lifestyle"}`,
+        description: `Campaign initialized for ${data.targetAccount}`,
         user: "TLIS Pipeline"
       }
     ]
@@ -661,7 +659,7 @@ export function scheduleCampaign(id: string, scheduledDate: string): Campaign | 
     const scheduledDay = dateObj.toISOString().slice(0, 10);
     const scheduledTime = dateObj.toTimeString().slice(0, 5);
 
-    addPost({
+    addPost(loadCalendar(), {
       title: campaigns[index].name,
       content: `${campaigns[index].content.hook}\n\n${campaigns[index].content.caption}`,
       type: "hook",
@@ -711,7 +709,7 @@ export function publishCampaign(id: string): Campaign | undefined {
   try {
     const today = nowIso.slice(0, 10);
     const timeNow = new Date().toTimeString().slice(0, 5);
-    addPost({
+    addPost(loadCalendar(), {
       title: campaigns[index].name,
       content: `${campaigns[index].content.hook}\n\n${campaigns[index].content.caption}`,
       type: "hook",

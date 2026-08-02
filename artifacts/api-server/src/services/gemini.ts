@@ -122,17 +122,22 @@ export function isRateLimit(err: any): boolean {
 }
 
 export function isCreditsDepleted(err: any): boolean {
+  if (!err) return false;
   const msg = String(err?.message ?? "");
-  const status = err?.status;
+  const errStr = typeof err === "object" ? JSON.stringify(err) : String(err);
+  const status = err?.status ?? err?.code ?? err?.error?.code;
+
   return (
-    (status === 429 && (
-      msg.includes("prepayment credits are depleted") ||
-      msg.includes("monthly spending cap") ||
-      msg.includes("spend")
-    )) ||
+    status === 429 ||
     msg.includes("prepayment credits are depleted") ||
     msg.includes("spending cap") ||
-    msg.includes("API_KEY_SERVICE_BLOCKED")
+    msg.includes("Spending cap exceeded") ||
+    msg.includes("API_KEY_SERVICE_BLOCKED") ||
+    errStr.includes("prepayment credits are depleted") ||
+    errStr.includes("spending cap") ||
+    errStr.includes("Spending cap exceeded") ||
+    errStr.includes("API_KEY_SERVICE_BLOCKED") ||
+    errStr.includes("RESOURCE_EXHAUSTED")
   );
 }
 
@@ -228,12 +233,12 @@ export async function generateWithCascade(
           throw err;
         }
 
-        log.info({ model, attempt, status: err?.status }, "Gemini cascade attempt error");
-
         if (isCreditsDepleted(err)) {
-          log.error({ model }, "Spending cap exceeded, aborting cascade");
+          log.info({ model, status: err?.status }, "Prepayment credits depleted or spending cap reached, aborting cascade to fallback mode");
           throw err;
         }
+
+        log.info({ model, attempt, status: err?.status }, "Gemini cascade attempt error");
         if (isPermDenied(err)) {
           log.warn({ model }, "Model permission denied, trying next in cascade");
           break;
