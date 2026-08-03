@@ -3,3 +3,36 @@ include ':capacitor-cordova-android-plugins'
 project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
 
 apply from: 'capacitor.settings.gradle'
+
+// Ensure :capacitor-android points correctly to the resolved node_modules path using node_modules/@capacitor/android/package.json
+def findCapacitorAndroidDir() {
+    def relativeCandidates = [
+        "node_modules/@capacitor/android/package.json",
+        "../node_modules/@capacitor/android/package.json",
+        "../../node_modules/@capacitor/android/package.json",
+        "../../../node_modules/@capacitor/android/package.json",
+        "artifacts/tiktok-luxury/node_modules/@capacitor/android/package.json"
+    ]
+    def currentDir = settingsDir
+    while (currentDir != null) {
+        for (String relPath : relativeCandidates) {
+            def pkgFile = new File(currentDir, relPath)
+            if (pkgFile.exists()) {
+                def capDir = new File(pkgFile.getCanonicalFile().getParentFile(), "capacitor")
+                if (capDir.exists()) {
+                    return capDir
+                }
+            }
+        }
+        currentDir = currentDir.getParentFile()
+    }
+    return null
+}
+
+def resolvedCapAndroidDir = findCapacitorAndroidDir()
+if (resolvedCapAndroidDir != null) {
+    if (findProject(':capacitor-android') == null) {
+        include ':capacitor-android'
+    }
+    project(':capacitor-android').projectDir = resolvedCapAndroidDir
+}
