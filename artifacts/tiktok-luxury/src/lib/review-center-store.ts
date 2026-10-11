@@ -78,6 +78,7 @@ export interface Campaign {
   createdAt: string;
   scheduledDate?: string;
   publishedDate?: string;
+  publishedUrl?: string; // Manually supplied evidence of an external TikTok post
   rejectionReason?: string;
   niche: string;
   images: ImageAsset[];
@@ -633,32 +634,32 @@ export function rejectCampaign(id: string, reason?: string): Campaign | undefine
   return campaigns[index];
 }
 
+/**
+ * Records a PLANNED calendar slot only. This code does not call TikTok.
+ * The campaign must pass creative approval first.
+ */
 export function scheduleCampaign(id: string, scheduledDate: string): Campaign | undefined {
   const campaigns = loadCampaigns();
   const index = campaigns.findIndex(c => c.id === id);
-  if (index === -1) return undefined;
+  if (index === -1 || !["Approved", "Scheduled"].includes(campaigns[index].status)) return undefined;
+  const plannedAt = new Date(scheduledDate);
+  if (!Number.isFinite(plannedAt.getTime()) || plannedAt.getTime() <= Date.now()) return undefined;
 
   campaigns[index].status = "Scheduled";
-  campaigns[index].scheduledDate = scheduledDate;
+  campaigns[index].scheduledDate = plannedAt.toISOString();
 
   const newEvent: TimelineEvent = {
     id: `tl-${Date.now()}`,
     timestamp: new Date().toISOString(),
     type: "schedule",
-    title: "Scheduled for Publishing",
-    description: `Target publish time: ${new Date(scheduledDate).toLocaleString()}`,
-    user: "Scheduler"
+    title: "Publication planned in TLIS calendar",
+    description: `Planned for ${plannedAt.toLocaleString()}. No TikTok publishing request was sent.`,
+    user: "TLIS Calendar",
   };
-
   campaigns[index].timeline = [newEvent, ...(campaigns[index].timeline || [])];
   saveCampaigns(campaigns);
 
-  // Send to Content Calendar automatically!
   try {
-    const dateObj = new Date(scheduledDate);
-    const scheduledDay = dateObj.toISOString().slice(0, 10);
-    const scheduledTime = dateObj.toTimeString().slice(0, 5);
-
     addPost(loadCalendar(), {
       title: campaigns[index].name,
       content: `${campaigns[index].content.hook}\n\n${campaigns[index].content.caption}`,
@@ -666,49 +667,54 @@ export function scheduleCampaign(id: string, scheduledDate: string): Campaign | 
       platform: "TikTok",
       niche: campaigns[index].niche || "Quiet Luxury",
       status: "scheduled",
-      scheduledDay,
-      scheduledTime,
+      scheduledDay: plannedAt.toISOString().slice(0, 10),
+      scheduledTime: plannedAt.toTimeString().slice(0, 5),
     });
   } catch (e) {
-    console.warn("Failed to push scheduled campaign to calendar", e);
+    console.warn("Failed to push planned campaign to calendar", e);
   }
 
   pushNotification({
-    title: "Campaign Scheduled",
-    message: `'${campaigns[index].name}' scheduled for ${new Date(scheduledDate).toLocaleString()}.`,
+    title: "Calendar Plan Saved",
+    message: `'${campaigns[index].name}' is planned for ${plannedAt.toLocaleString()}. Publish separately through TikTok; no automatic upload has occurred.`,
     type: "success",
     category: "publish",
     actionUrl: `/review-center?id=${id}`,
-    campaignId: id
+    campaignId: id,
   });
-
   return campaigns[index];
 }
 
-export function publishCampaign(id: string): Campaign | undefined {
+/**
+ * Records the URL of a TikTok video already published outside TLIS.
+ * Manual evidence only: no OAuth, upload or live verification occurs here.
+ */
+export function recordExternalPublication(id: string, postUrl: string): Campaign | undefined {
+  const url = typeof postUrl === "string" ? postUrl.trim() : "";
+  if (!/^https:\/\/(?:www\.)?tiktok\.com\/@[A-Za-z0-9._]+\/video\/\d+(?:[/?#]|$)/.test(url)) {
+    return undefined;
+  }
   const campaigns = loadCampaigns();
   const index = campaigns.findIndex(c => c.id === id);
-  if (index === -1) return undefined;
+  if (index === -1 || !["Approved", "Scheduled"].includes(campaigns[index].status)) return undefined;
 
   const nowIso = new Date().toISOString();
   campaigns[index].status = "Published";
   campaigns[index].publishedDate = nowIso;
+  campaigns[index].publishedUrl = url;
 
   const newEvent: TimelineEvent = {
     id: `tl-${Date.now()}`,
     timestamp: nowIso,
     type: "publish",
-    title: "Published Live to TikTok",
-    description: `Successfully broadcasted to target account ${campaigns[index].targetAccount}`,
-    user: "Publisher Engine"
+    title: "External TikTok post link recorded",
+    description: `Manually supplied TikTok URL: ${url}. TLIS did not upload or independently verify the post.`,
+    user: "Manual Record",
   };
-
   campaigns[index].timeline = [newEvent, ...(campaigns[index].timeline || [])];
   saveCampaigns(campaigns);
 
   try {
-    const today = nowIso.slice(0, 10);
-    const timeNow = new Date().toTimeString().slice(0, 5);
     addPost(loadCalendar(), {
       title: campaigns[index].name,
       content: `${campaigns[index].content.hook}\n\n${campaigns[index].content.caption}`,
@@ -716,22 +722,21 @@ export function publishCampaign(id: string): Campaign | undefined {
       platform: "TikTok",
       niche: campaigns[index].niche || "Quiet Luxury",
       status: "posted",
-      scheduledDay: today,
-      scheduledTime: timeNow,
+      scheduledDay: nowIso.slice(0, 10),
+      scheduledTime: new Date().toTimeString().slice(0, 5),
     });
   } catch (e) {
-    console.warn("Failed to push published campaign to calendar", e);
+    console.warn("Failed to record external campaign in calendar", e);
   }
 
   pushNotification({
-    title: "Publish Successful! 🚀",
-    message: `'${campaigns[index].name}' is now live on TikTok @ ${campaigns[index].targetAccount}.`,
-    type: "publish",
+    title: "External Post Link Recorded",
+    message: `'${campaigns[index].name}' now has a manually supplied TikTok post URL. TLIS did not publish or independently verify the video.`,
+    type: "info",
     category: "publish",
-    actionUrl: `/analytics`,
-    campaignId: id
+    actionUrl: `/review-center?id=${id}`,
+    campaignId: id,
   });
-
   return campaigns[index];
 }
 
