@@ -16,7 +16,7 @@ import {
   approveCampaign,
   rejectCampaign,
   scheduleCampaign,
-  publishCampaign,
+  recordExternalPublication,
   refineContentWithAI,
   getReviewCenterStats,
   type Campaign,
@@ -64,6 +64,8 @@ export default function ReviewCenterPage() {
   // Modal states
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [publishedUrlInput, setPublishedUrlInput] = useState("");
   const [scheduleDate, setScheduleDate] = useState<string>(
     new Date(Date.now() + 86400000).toISOString().slice(0, 16)
   );
@@ -181,21 +183,40 @@ export default function ReviewCenterPage() {
 
   const handleScheduleConfirm = () => {
     if (!selectedCampaign) return;
-    scheduleCampaign(selectedCampaign.id, scheduleDate);
+    const planned = scheduleCampaign(selectedCampaign.id, scheduleDate);
+    if (!planned) {
+      toast({
+        title: "Cannot plan publication",
+        description: "The campaign must be approved and the planned time must be in the future.",
+        variant: "destructive",
+      });
+      return;
+    }
     refreshCampaigns();
     setScheduleModalOpen(false);
     toast({
-      title: "Campaign Scheduled",
-      description: `Scheduled for ${new Date(scheduleDate).toLocaleString()} and sent to Content Calendar.`,
+      title: "Added to TLIS Calendar",
+      description: "A calendar plan was saved; no TikTok video was uploaded or scheduled on TikTok.",
     });
   };
 
-  const handlePublishNow = (id: string) => {
-    publishCampaign(id);
+  const handleRecordPublished = () => {
+    if (!selectedCampaign) return;
+    const recorded = recordExternalPublication(selectedCampaign.id, publishedUrlInput);
+    if (!recorded) {
+      toast({
+        title: "Post link not accepted",
+        description: "Approve the campaign first, then paste its full TikTok video URL (tiktok.com/@handle/video/123...).",
+        variant: "destructive",
+      });
+      return;
+    }
     refreshCampaigns();
+    setPublishModalOpen(false);
+    setPublishedUrlInput("");
     toast({
-      title: "Campaign Published!",
-      description: "Campaign live on TikTok target account and pushed to Analytics.",
+      title: "External TikTok Link Recorded",
+      description: "Manual record only. TLIS did not upload the video or independently verify publication.",
     });
   };
 
@@ -334,11 +355,13 @@ export default function ReviewCenterPage() {
             </button>
 
             <button
-              onClick={() => handlePublishNow(selectedCampaign.id)}
-              className="px-4 py-2 rounded-lg bg-gradient-to-r from-primary/90 to-amber-500 hover:from-primary hover:to-amber-400 text-black font-semibold text-xs shadow-lg transition flex items-center gap-1.5"
+              onClick={() => setPublishModalOpen(true)}
+              disabled={!["Approved", "Scheduled"].includes(selectedCampaign.status)}
+              title="After publishing in TikTok, record the actual video URL here. This button does not upload a video."
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-primary/90 to-amber-500 hover:from-primary hover:to-amber-400 text-black font-semibold text-xs shadow-lg transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="h-4 w-4" />
-              Publish Now
+              Record External Post
             </button>
 
             {selectedCampaign.status !== "Rejected" && (
@@ -749,6 +772,14 @@ export default function ReviewCenterPage() {
                     <span className="font-mono text-emerald-400">{formatDate(selectedCampaign.publishedDate)}</span>
                   </div>
                 )}
+                {selectedCampaign.publishedUrl && (
+                  <div className="flex items-center justify-between gap-2 py-1 border-b border-border/40">
+                    <span className="text-muted-foreground">External TikTok link (manual)</span>
+                    <a href={selectedCampaign.publishedUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline break-all text-right">
+                      View recorded post
+                    </a>
+                  </div>
+                )}
                 {selectedCampaign.rejectionReason && (
                   <div className="p-2.5 rounded bg-destructive/10 border border-destructive/30 text-destructive text-[11px] space-y-1">
                     <p className="font-semibold flex items-center gap-1">
@@ -828,7 +859,7 @@ export default function ReviewCenterPage() {
                   className="w-full rounded-lg bg-background border border-border p-3 text-sm font-mono text-primary focus:outline-none focus:border-primary"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  AI Recommended Peak Window: <span className="text-amber-300 font-mono">Tomorrow @ 11:00 AM EST</span>
+                  This saves an internal TLIS calendar plan only. It does not schedule or send a TikTok API post.
                 </p>
               </div>
 
@@ -844,6 +875,40 @@ export default function ReviewCenterPage() {
                   className="px-4 py-2 rounded-lg bg-primary text-black font-semibold text-xs hover:bg-primary/90"
                 >
                   Confirm Schedule
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Manual external-publish evidence modal; no TikTok API is invoked */}
+        {publishModalOpen && selectedCampaign && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="luxury-card w-full max-w-md p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <h3 className="font-serif font-bold text-foreground">Record TikTok Publication</h3>
+                <button onClick={() => setPublishModalOpen(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Publish the approved video from the authorized TikTok account first. Then paste its public TikTok video URL.
+                TLIS will record your confirmation but cannot independently verify the post.
+              </p>
+              <label htmlFor="external-video-url" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Published TikTok Video URL
+              </label>
+              <input
+                id="external-video-url"
+                type="url"
+                inputMode="url"
+                value={publishedUrlInput}
+                onChange={e => setPublishedUrlInput(e.target.value)}
+                placeholder="https://www.tiktok.com/@handle/video/123456789"
+                className="w-full rounded-lg bg-background border border-border p-3 text-sm text-foreground focus:outline-none focus:border-primary"
+              />
+              <div className="flex justify-end gap-2 pt-2">
+                <button onClick={() => setPublishModalOpen(false)} className="px-4 py-2 rounded-lg border border-border text-xs text-muted-foreground">Cancel</button>
+                <button onClick={handleRecordPublished} className="px-4 py-2 rounded-lg bg-primary text-black font-semibold text-xs hover:bg-primary/90">
+                  Record External Link
                 </button>
               </div>
             </div>
